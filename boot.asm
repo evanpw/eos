@@ -21,12 +21,12 @@ main:
     mov cr0, eax
 
     ; Far jump to set cs to the code selector (and clear the instruction pipeline)
-    jmp GDT.codeSelector:.set32
+    jmp GDT.code:.set32
 
 BITS 32
 .set32:
     ; Set data segment registers to data selector (offset into gdt)
-    mov ax, GDT.dataSelector
+    mov ax, GDT.data
     mov ds, ax
     mov ss, ax
     mov es, ax
@@ -53,17 +53,17 @@ BITS 32
 
 ; Global descriptor table
 GDT:
-    .nullSelector: equ $ - GDT
+    .null: equ $ - GDT
         dq 0
 
-    .codeSelector: equ $ - GDT
+    .code: equ $ - GDT
         dw 0xFFFF           ; size of 4gb
         db 0, 0, 0          ; base address of 0 (lower 3 bytes)
         db 10011010b        ; present, ring 0, not system, code, non-conforming, readable, not accessed
         db 11001111b        ; granularity 4kb, 32-bit default address size, reserved=0, available=0, top nibble of size
         db 0                ; upper byte of base address
 
-    .dataSelector: equ $ - GDT
+    .data: equ $ - GDT
         dw 0xFFFF           ; size of 4gb
         db 0, 0, 0          ; base address of 0 (lower 3 bytes)
         db 10010010b        ; present, ring 0, not system, data, non-conforming, writeable, not accessed
