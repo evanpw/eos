@@ -10,6 +10,24 @@ main:
     jmp 0x0000:.setcs
 
 .setcs:
+    ; Load the rest of the boot loader from disk
+    mov si, dap  ; data structure describing read
+    mov ah, 0x42 ; extended read
+    mov dl, 0x80 ; drive number 0
+    int 0x13
+    jnc .readSuccess
+
+    ; If there was an error during reading, fill the screen with red
+    cld
+    mov ax, 0xB800
+    mov es, ax
+    mov di, 0
+    mov ax, 0x4020
+    mov cx, 80 * 25
+    rep stosw
+    hlt
+
+.readSuccess:
     ; For paging we need an empty buffer of 16KiB (4 levels of tables, each 4KiB long)
     ; Place it at es:di = 0x0000:0x9000
     xor ax, ax
@@ -76,37 +94,8 @@ main:
     or ebx, 0x80000001
     mov cr0, ebx
 
-    ; Far jump to set cs to the code selector (and clear the instruction pipeline)
-    jmp GDT.code:.set64
-
-BITS 64
-.set64:
-    ; Zero out data-segment registers not used in 64-bit mode
-    xor ax, ax
-    mov ds, ax
-    mov es, ax
-    mov fs, ax
-    mov gs, ax
-
-    ; Set up a stack
-    mov ax, GDT.data
-    mov ss, ax
-
-    ; Clear the screen
-    cld
-    mov edi, 0xB8000
-    mov ecx, 80 * 25
-    xor eax, eax
-    rep stosw
-
-    ; Print "OK"
-    mov byte [0xB8000], 'O'
-    mov byte [0xB8001], 0x0F
-    mov byte [0xB8002], 'K'
-    mov byte [0xB8003], 0x0F
-
-    ; Hang forever
-    jmp $
+    ; Far jump to the second (64-bit) stage of the boot loader
+    jmp GDT.code:stage2
 
 ; Global descriptor table
 GDT:
@@ -128,9 +117,47 @@ GDT:
         dw $ - GDT - 1
         dd GDT
 
+; Disk address packet structure describing how to load the rest of the boot loader
+dap:
+    db 0x10     ; size of packet (16 bytes)
+    db 0        ; always zero
+    dw 1        ; number of sectors to transfer (each is 512 bytes)
+    dw stage2   ; destination offset (right after boot sector)
+    dw 0x0      ; destination segment
+    dd 1        ; lower 32-bits of starting LBA
+    dd 0        ; upper 16-bits of starting LBA
+
 ; Boot sector must be 512 bytes
 times 510 - ($ - $$) db 0
 
 ; Boot sector must end with this magic number
 db 0x55
 db 0xAA
+
+; Second stage of the boot loader. The boot loader loads this from disk, switches to long
+; mode, and then jumps here
+BITS 64
+stage2:
+    ; Zero out data-segment registers (not used in 64-bit mode)
+    xor ax, ax
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+
+    ; Set up a stack right below the boot sector
+    mov ax, GDT.data
+    mov ss, ax
+    mov rsp, 0x7C00
+    mov rbp, rsp
+
+    ; Fill the screen with green and then stop
+    cld
+    mov edi, 0xB8000
+    mov rax, 0xA020A020A020A020 ; green
+    mov ecx, 500
+    rep stosq
+    hlt
+
+; Pad stage 2 to one sector
+times 512 - ($ - stage2) db 0
