@@ -1,72 +1,69 @@
-; Tell the assembler that this will be loaded at address 0x7C00
+[bits 16]
 [org 0x7C00]
-    mov ax, 0x12AB
-    call printReg
+    ; Disable interrupts
+    cli
+
+    ; Load gdt
+    xor ax, ax
+    mov ds, ax
+    lgdt [gdt_desc]
+
+    ; Enter protected mode by setting lower bit of cr0
+    mov eax, cr0
+    or eax, 1
+    mov cr0, eax
+
+    ; Far jump to set cs to the code selector
+    jmp 0x08:stage2
+
+[bits 32]
+stage2:
+    ; Set data segment registers to data selector (offset into gdt)
+    mov ax, 0x10
+    mov ds, ax
+    mov ss, ax
+    mov es, ax
+
+    ; Create a stack in free memory above our code
+    mov esp, 0x90000
+
+    ; Print something to the screen by writing to video RAM
+    mov byte [0xB8000], 'P'
+    mov byte [0xB8001], 0x1B
+
+    ; Enable a20 gate to allow addresses above 1mb
+    mov al, 2
+    out 0x92, al
 
     ; Hang forever
     jmp $
 
 
-    ; Routine which prints the string pointed to by ds:si to the screen
-print:
-    cld
+    ; Global descriptor table
+gdt:
+gdt_null:
+    dq 0
 
-ch_loop:
-    ; Load one byte from ds:si into al
-    lodsb
+gdt_code:
+    dw 0xFFFF           ; size of 4gb
+    db 0, 0, 0          ; base address of 0 (lower 3 bytes)
+    db 0b10011010    ; present, ring 0, system, code, non-conforming, readable, not accessed
+    db 0b11001111   ; granularity 4kb, 32-bit default address size, reserved=0, available=0, top nibble of size
+    db 0                ; upper byte of base address
 
-    ; When the null terminator is reached, exit the loop
-    or al, al
-    jz done
+gdt_data:
+    dw 0xFFFF           ; size of 4gb
+    db 0, 0, 0          ; base address of 0 (lower 3 bytes)
+    db 0b10010010    ; present, ring 0, system, data, non-conforming, writeable, not accessed
+    db 0b11001111   ; granularity 4kb, 32-bit default address size, reserved=0, available=0, top nibble of size
+    db 0                ; upper byte of base address
+gdt_end:
 
-    ; Call the BIOS to print one character
-    mov ah, 0x0E
-    mov bh, 0
-    int 0x10
+    ; GDT descriptor
+gdt_desc:
+    dw gdt_end - gdt - 1
+    dd gdt
 
-    ; Continue to the next character
-    jmp ch_loop
-
-done:
-    ret
-
-
-    ; Routine which prints the value of the register ax
-printReg:
-    ; Move the value into dx so we can use ax
-    mov dx, ax
-
-    ; Point si to the hex-character lookup table
-    mov si, hexstr
-
-    ; 4 nibbles in a word
-    mov cx, 4
-
-hexloop:
-    ; Iterate from most to least significant nibble
-    rol dx, 4
-
-    ; Mask out the lower 4 bits
-    mov bx, dx
-    and bx, 0x0F
-
-    ; Convert to a character by table lookup
-    mov al, [si + bx]
-
-    ; Call the BIOS to print one character
-    mov ah, 0x0E
-    mov bh, 0
-    int 0x10
-
-    ; Continue the loop for all 4 nibbles
-    loop hexloop
-
-    ret
-
-
-    ; Data
-msg     db 'Hello World', 13, 10, 0
-hexstr  db '0123456789ABCDEF'
 
     ; Boot sector must be 512 bytes
     times 510-($-$$) db 0
