@@ -83,11 +83,16 @@ main:
 
 BITS 64
 .set64:
-    ; Set data segment registers to data selector (offset into gdt)
-    mov ax, GDT.data
+    ; Zero out data-segment registers not used in 64-bit mode
+    xor ax, ax
     mov ds, ax
-    mov ss, ax
     mov es, ax
+    mov fs, ax
+    mov gs, ax
+
+    ; Set up a stack
+    mov ax, GDT.data
+    mov ss, ax
 
     ; Clear the screen
     cld
@@ -111,18 +116,15 @@ GDT:
         dq 0
 
     .code: equ $ - GDT
-        dw 0xFFFF           ; size of 4gb
-        db 0, 0, 0          ; base address of 0 (lower 3 bytes)
-        db 10011010b        ; present, ring 0, not system, code, non-conforming, readable, not accessed
-        db 11101111b        ; granularity 4kb, 32-bit default address size, long mode, top nibble of size
-        db 0                ; upper byte of base address
+        times 5 db 0
+        db 10011000b        ; present, ring 0, non-system, executable, non-conforming
+        db 00100000b        ; long mode
+        db 0
 
     .data: equ $ - GDT
-        dw 0xFFFF           ; size of 4gb
-        db 0, 0, 0          ; base address of 0 (lower 3 bytes)
-        db 10010010b        ; present, ring 0, not system, data, non-conforming, writeable, not accessed
-        db 11001111b        ; granularity 4kb, 32-bit default address size, top nibble of size
-        db 0                ; upper byte of base address
+        times 5 db 0
+        db 10010010b        ; present, ring 0, non-system, data, writeable
+        times 2 db 0
 
     .pointer:
         dw $ - GDT - 1
