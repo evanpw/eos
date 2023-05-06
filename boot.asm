@@ -52,8 +52,6 @@ main:
     cmp eax, 0x200000
     jb .pageTableLoop
 
-    ; Now enter long mode and enable paging directly from real mode
-
     ; Set PAE (Physical Address Extension) and PGE (Page Global Enabled) flags
     mov eax, 10100000b
     mov cr4, eax
@@ -68,15 +66,15 @@ main:
     or eax, 0x00000100
     wrmsr
 
-    ; Activate long mode by enabling paging and protected mode at the same time
-    mov ebx, cr0
-    or ebx, 0x80000001
-    mov cr0, ebx
-
     ; Load the GDT (global descriptor table)
     xor ax, ax
     mov ds, ax
     lgdt [GDT.pointer]
+
+    ; Activate long mode by enabling paging and entering protected mode at the same time
+    mov ebx, cr0
+    or ebx, 0x80000001
+    mov cr0, ebx
 
     ; Far jump to set cs to the code selector (and clear the instruction pipeline)
     jmp GDT.code:.set64
