@@ -1,6 +1,6 @@
 ; vim: syntax=nasm
 BITS 16
-ORG 0x7C00
+; ORG 0x7C00 - this is done during linking
 
 main:
     ; Disable interrupts
@@ -148,7 +148,7 @@ stage2:
     ; Set up a stack right below the boot sector
     mov ax, GDT.data
     mov ss, ax
-    mov rsp, 0x7C00
+    mov rsp, main
     mov rbp, rsp
 
     ; Fill the screen with green and then stop
