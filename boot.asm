@@ -94,8 +94,31 @@ main:
     or ebx, 0x80000001
     mov cr0, ebx
 
-    ; Far jump to the second (64-bit) stage of the boot loader
-    jmp GDT.code:stage2
+    ; Far jump to clear the instruction pipeline and load cs with the correct selector
+    jmp GDT.code:.longMode
+
+BITS 64
+.longMode:
+    ; Zero out data-segment registers (not used in 64-bit mode)
+    xor ax, ax
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+
+    ; Set up a stack right below the boot sector
+    mov ax, GDT.data
+    mov ss, ax
+    mov rsp, main
+    mov rbp, rsp
+
+    ; Jump to entry point of the kernel (indirect so that the linker doesn't try to relocate it)
+    mov rax, 0x7E00
+    call rax
+
+    ; The kernel shouldn't return, but just in case, halt and loop
+    hlt
+    jmp $
 
 ; Global descriptor table
 GDT:
@@ -122,7 +145,7 @@ dap:
     db 0x10     ; size of packet (16 bytes)
     db 0        ; always zero
     dw 1        ; number of sectors to transfer (each is 512 bytes)
-    dw stage2   ; destination offset (right after boot sector)
+    dw 0x7E00   ; destination offset (right after boot sector)
     dw 0x0      ; destination segment
     dd 1        ; lower 32-bits of starting LBA
     dd 0        ; upper 16-bits of starting LBA
@@ -133,31 +156,3 @@ times 510 - ($ - $$) db 0
 ; Boot sector must end with this magic number
 db 0x55
 db 0xAA
-
-; Second stage of the boot loader. The boot loader loads this from disk, switches to long
-; mode, and then jumps here
-BITS 64
-stage2:
-    ; Zero out data-segment registers (not used in 64-bit mode)
-    xor ax, ax
-    mov ds, ax
-    mov es, ax
-    mov fs, ax
-    mov gs, ax
-
-    ; Set up a stack right below the boot sector
-    mov ax, GDT.data
-    mov ss, ax
-    mov rsp, main
-    mov rbp, rsp
-
-    ; Fill the screen with green and then stop
-    cld
-    mov edi, 0xB8000
-    mov rax, 0xA020A020A020A020 ; green
-    mov ecx, 500
-    rep stosq
-    hlt
-
-; Pad stage 2 to one sector
-times 512 - ($ - stage2) db 0
