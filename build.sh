@@ -7,7 +7,8 @@ $HOME/opt/cross/bin/x86_64-elf-objcopy -O binary build/boot.elf build/boot.bin
 
 # Kernel
 $HOME/opt/cross/bin/x86_64-elf-gcc -g -ffreestanding -mno-red-zone -O -c kernel.c -o build/kernel.o
-$HOME/opt/cross/bin/x86_64-elf-gcc -Ttext=0x7E00 -ekmain -nostdlib -lgcc build/kernel.o -o build/kernel.elf
+$HOME/opt/cross/bin/x86_64-elf-gcc -g -ffreestanding -mno-red-zone -O -c video.c -o build/video.o
+$HOME/opt/cross/bin/x86_64-elf-gcc -Ttext=0x7E00 -ekmain -nostdlib -lgcc build/kernel.o build/video.o -o build/kernel.elf
 $HOME/opt/cross/bin/x86_64-elf-objcopy -O binary build/kernel.elf build/kernel.bin
 
 # Disk image
