@@ -1,7 +1,7 @@
 #include "video.h"
 
 // This must be the first function in the file
-void kmain() {
+extern "C" void kmain() {
     // Print a startup message to the debug console
     puts("Kernel started\n");
 
@@ -31,13 +31,13 @@ void kmain() {
         size_t bufLength;
         ustr(base, buffer, 16);
         bufLength = strlen(buffer);
-        pad(bufLength, 16, 1);
+        pad(bufLength, 16, true);
         puts(buffer);
 
         ustr(end, buffer, 16);
         puts(":");
         bufLength = strlen(buffer);
-        pad(bufLength, 16, 1);
+        pad(bufLength, 16, true);
         puts(buffer);
         puts("\n");
     }

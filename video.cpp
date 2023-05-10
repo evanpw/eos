@@ -15,7 +15,7 @@ void kputc(char c) {
 
 // Output the number of spaces (or zeros if useZeros) to pad from
 // n to padding
-void pad(int n, int padding, int useZeros) {
+void pad(int n, int padding, bool useZeros) {
     if (n >= padding)
         return;
 
