@@ -10,6 +10,46 @@ main:
     jmp 0x0000:.setcs
 
 .setcs:
+    ; Enable the A20 line
+    in al, 0x92
+    or al, 2
+    out 0x92, al
+
+    ; Probe the BIOS memory map, store at 0x1000-0x1FFF (with first dword = # of entries)
+    xor ax, ax
+    mov es, ax
+    mov di, 0x1004
+    mov eax, 0xE820
+    mov ebx, 0
+    mov ecx, 24
+    mov edx, 'PAMS'
+    int 0x15
+    jc .error
+
+    ; Check that the first call at least succeeded
+    mov edx, 'PAMS'
+    cmp eax, edx
+    jne .error
+    test ebx, ebx
+    jz .error
+    jmp .loopNext
+
+.e820loop:
+    mov eax, 0xE820
+    mov ecx, 24
+    mov edx, 'PAMS'
+    int 0x15
+    jc .e820finished
+
+.loopNext:
+    inc dword [0x1000]
+    add di, 24
+
+    ; Finished when ebx=0
+    test ebx, ebx
+    jne .e820loop
+
+.e820finished:
     ; Load the rest of the boot loader from disk
     mov si, dap  ; data structure describing read
     mov ah, 0x42 ; extended read
@@ -18,6 +58,7 @@ main:
     jnc .readSuccess
 
     ; If there was an error during reading, fill the screen with red
+.error:
     cld
     mov ax, 0xB800
     mov es, ax
@@ -26,6 +67,7 @@ main:
     mov cx, 80 * 25
     rep stosw
     hlt
+    jmp $
 
 .readSuccess:
     ; For paging we need an empty buffer of 16KiB (4 levels of tables, each 4KiB long)
@@ -142,9 +184,9 @@ GDT:
 
 ; Disk address packet structure describing how to load the rest of the boot loader
 dap:
-    db 0x10     ; size of packet (16 bytes)
+    db 0x10     ; size of this structure (16 bytes)
     db 0        ; always zero
-    dw 1        ; number of sectors to transfer (each is 512 bytes)
+    dw 2        ; number of sectors to transfer (each is 512 bytes)
     dw 0x7E00   ; destination offset (right after boot sector)
     dw 0x0      ; destination segment
     dd 1        ; lower 32-bits of starting LBA
