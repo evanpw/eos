@@ -1,11 +1,5 @@
+#include "mem.h"
 #include "video.h"
-
-struct __attribute__ ((packed)) SMapEntry {
-    uint64_t base;
-    uint64_t length;
-    uint32_t type;
-    uint32_t extended;
-};
 
 // Should be the only function in this file
 extern "C" void kmain() {
