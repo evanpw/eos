@@ -1,5 +1,6 @@
 #include "mem.h"
 #include "video.h"
+#include "misc.h"
 
 // Should be the only function in this file
 extern "C" void kmain() {
@@ -18,17 +19,13 @@ extern "C" void kmain() {
         if (entry->length == 0 || entry->type != 1)
             continue;
 
-        size_t bufLength;
-        ustr(entry->base, buffer, 16);
-        bufLength = strlen(buffer);
-        pad(bufLength, 16, true);
+        ustr(entry->base, buffer, 16, 16, '0');
         puts(buffer);
 
-        uint64_t end = entry->base + entry->length - 1;
-        ustr(end, buffer, 16);
         puts(":");
-        bufLength = strlen(buffer);
-        pad(bufLength, 16, true);
+
+        uint64_t end = entry->base + entry->length - 1;
+        ustr(end, buffer, 16, 16, '0');
         puts(buffer);
         puts("\n");
     }

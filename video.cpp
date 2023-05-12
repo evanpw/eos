@@ -1,4 +1,6 @@
 #include "video.h"
+#include "cstring.h"
+#include "misc.h"
 
 void clearScreen(uint8_t color) {
     char* screen = (char*)0xB8000;
@@ -13,22 +15,8 @@ void kputc(char c) {
     asm volatile("outb %0, $0xE9" ::"a"(c));
 }
 
-// Output the number of spaces (or zeros if useZeros) to pad from
-// n to padding
-void pad(int n, int padding, bool useZeros) {
-    if (n >= padding)
-        return;
-
-    char padChar = useZeros ? '0' : ' ';
-    for (int i = 0; i < (padding - n); ++i) {
-        kputc(padChar);
-    }
-}
-
-char* ustr(uint64_t value, char* buffer, int radix) {
-    // We only handle binary to hex
-    if (radix < 2 || radix > 16)
-        return 0;
+size_t ustr(uint64_t value, char* buffer, int radix, int padTo, char padChar) {
+    ASSERT(radix >= 2 && radix <= 16);
 
     char digits[] = "0123456789ABCDEF";
     char* p = buffer;
@@ -40,29 +28,32 @@ char* ustr(uint64_t value, char* buffer, int radix) {
     } while (value != 0);
 
     // Reverse the string
-    int count = p - buffer;
-    for (int i = 0; i < count / 2; ++i) {
-        char c = buffer[i];
-        buffer[i] = buffer[count - i - 1];
-        buffer[count - i - 1] = c;
+    size_t length = p - buffer;
+    for (size_t i = 0; i < length / 2; ++i) {
+        swap(buffer[length - i - 1], buffer[i]);
     }
 
     *p = 0;
-    return buffer;
+
+    // Pad if necessary
+    if (length < padTo) {
+        // Move the unpadded digits to their final location
+        int neededPadding = padTo - length;
+        memmove(buffer + neededPadding, buffer, length + 1);
+
+        // Fill in the beginning of the string with zeros or spaces
+        for (int i = 0; i < neededPadding; ++i) {
+            buffer[i] = padChar;
+        }
+
+        length = padTo;
+    }
+
+    return length;
 }
 
 void puts(const char* msg) {
     for (const char* p = msg; *p != '\0'; ++p) {
         kputc(*p);
     }
-}
-
-size_t strlen(const char* s) {
-    const char* p = s;
-
-    while (*p != '\0') {
-        ++p;
-    }
-
-    return (size_t)(p - s);
 }
