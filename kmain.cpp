@@ -19,13 +19,13 @@ extern "C" void kmain() {
         if (entry->length == 0 || entry->type != 1)
             continue;
 
-        ustr(entry->base, buffer, 16, 16, '0');
+        ustr(entry->base, buffer, 16, 8, '0');
         puts(buffer);
 
         puts(":");
 
         uint64_t end = entry->base + entry->length - 1;
-        ustr(end, buffer, 16, 16, '0');
+        ustr(end, buffer, 16, 8, '0');
         puts(buffer);
         puts("\n");
     }
