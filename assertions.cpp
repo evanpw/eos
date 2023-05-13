@@ -1,5 +1,5 @@
-#include "misc.h"
-#include "video.h"
+#include "assertions.h"
+#include "print.h"
 
 void halt() {
    while (true) {
@@ -8,6 +8,6 @@ void halt() {
 }
 
 void panic() {
-    puts("\nKernel panicked!\n");
+    println("\nKernel panicked!\n");
     halt();
 }

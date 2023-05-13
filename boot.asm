@@ -186,7 +186,7 @@ GDT:
 dap:
     db 0x10     ; size of this structure (16 bytes)
     db 0        ; always zero
-    dw 2        ; number of sectors to transfer (each is 512 bytes)
+    dw 4        ; number of sectors to transfer (each is 512 bytes)
     dw 0x7E00   ; destination offset (right after boot sector)
     dw 0x0      ; destination segment
     dd 1        ; lower 32-bits of starting LBA

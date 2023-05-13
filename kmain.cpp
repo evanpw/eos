@@ -1,17 +1,17 @@
 #include "mem.h"
 #include "video.h"
-#include "misc.h"
+#include "print.h"
 
 // Should be the only function in this file
 extern "C" void kmain() {
     // Print a startup message to the debug console
-    puts("Kernel started\n");
+    println("Kernel started");
 
     // Fill the screen with green
     clearScreen(0xA0);
 
     uint32_t numEntries = *(uint32_t*)0x1000;
-    puts("Available memory:\n");
+    println("Available memory:");
 
     char buffer[32];
     SMapEntry* entry = (SMapEntry*)0x1004;
@@ -19,14 +19,7 @@ extern "C" void kmain() {
         if (entry->length == 0 || entry->type != 1)
             continue;
 
-        ustr(entry->base, buffer, 16, 8, '0');
-        puts(buffer);
-
-        puts(":");
-
         uint64_t end = entry->base + entry->length - 1;
-        ustr(end, buffer, 16, 8, '0');
-        puts(buffer);
-        puts("\n");
+        println("{:08X}:{:08X}", entry->base, end);
     }
 }
