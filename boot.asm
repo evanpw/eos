@@ -2,17 +2,26 @@
 BITS 16
 ; ORG 0x7C00 - this is done during linking
 
+; Useful constants
+SECTOR_SIZE    equ 512
+PAGE_SIZE      equ 4096
+MiB            equ 1024 * 1024
+
 ; Fixed memory locations
 MEMORY_MAP     equ 0x01000
 BOOT_LOADER    equ 0x07C00
 STACK_TOP      equ BOOT_LOADER
 KERNEL_START   equ 0x07E00
-PAGE_MAP       equ 0x09000
+PAGE_MAP       equ 0x7C000 ; right before the EBDA
+PML4           equ PAGE_MAP
+PDP            equ PML4 + PAGE_SIZE
+PD             equ PDP + PAGE_SIZE
+PT0            equ PD + PAGE_SIZE
 VIDEO_MEM_TEXT equ 0xB8000
 
 ; Check size of kernel image vs. available memory
 MAX_KERNEL_SIZE equ PAGE_MAP - KERNEL_START
-%if KERNEL_SIZE_IN_SECTORS * 512 > MAX_KERNEL_SIZE
+%if KERNEL_SIZE_IN_SECTORS * SECTOR_SIZE > MAX_KERNEL_SIZE
 %error Kernel is too large
 %endif
 
@@ -84,33 +93,35 @@ main:
     jmp $
 
 .readSuccess:
-    ; For paging we need an empty buffer of 16KiB (4 levels of tables, each 4KiB long)
-    xor ax, ax
+    ; Clear space for the entire page map
+    mov ax, PAGE_MAP / 16
     mov es, ax
-    mov edi, PAGE_MAP
-    mov ecx, 0x1000 ; 0x1000 dwords
+    xor di, di
+    mov ecx, 4 * PAGE_SIZE / 4 ; 4 levels of tables, each one page, in dwords
     xor eax, eax
     cld
     rep stosd
 
     ; Page Map Level 4
-    mov edi, PAGE_MAP
-    lea eax, [es:di + 0x1000] ; eax = pointer to the page directory pointer table
+    mov di, PML4 - PAGE_MAP
+    mov eax, PDP
     or eax, 3 ; PAGE_PRESENT | PAGE_WRITE
     mov [es:di], eax
 
     ; Page Directory Pointer Table
-    lea eax, [es:di + 0x2000] ; eax = pointer to the page directory
+    mov di, PDP - PAGE_MAP
+    mov eax, PD
     or eax, 3 ; PAGE_PRESENT | PAGE_WRITE
-    mov [es:di + 0x1000], eax
+    mov [es:di], eax
 
     ; Page Directory
-    lea eax, [es:di + 0x3000] ; eax = pointer to the page table
+    mov di, PD - PAGE_MAP
+    mov eax, PT0
     or eax, 3 ; PAGE_PRESENT | PAGE_WRITE
-    mov [es:di + 0x2000], eax
+    mov [es:di], eax
 
     ; Page Table
-    lea di, [di + 0x3000] ; di = pointer to the page table
+    mov di, PT0 - PAGE_MAP
     mov eax, 3 ; address 0 + PAGE_PRESENT | PAGE_WRITE
 
 .pageTableLoop:
@@ -118,11 +129,11 @@ main:
     mov [es:di], eax
 
     ; Move to the next page in memory and the next page table entry
-    add eax, 0x1000
+    add eax, PAGE_SIZE
     add di, 8
 
     ; Loop for the first 2MiB of memory
-    cmp eax, 0x200000
+    cmp eax, 2 * MiB
     jb .pageTableLoop
 
     ; Set PAE (Physical Address Extension) and PGE (Page Global Enabled) flags
