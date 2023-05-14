@@ -1,3 +1,4 @@
+set -e
 mkdir -p build
 
 # Kernel
@@ -5,7 +6,8 @@ $HOME/opt/cross/bin/x86_64-elf-g++ -g -ffreestanding -mno-red-zone -fno-rtti -fn
 $HOME/opt/cross/bin/x86_64-elf-g++ -g -ffreestanding -mno-red-zone -fno-rtti -fno-exceptions -O -c video.cpp -o build/video.o
 $HOME/opt/cross/bin/x86_64-elf-g++ -g -ffreestanding -mno-red-zone -fno-rtti -fno-exceptions -O -c assertions.cpp -o build/assertions.o
 $HOME/opt/cross/bin/x86_64-elf-g++ -g -ffreestanding -mno-red-zone -fno-rtti -fno-exceptions -O -c print.cpp -o build/print.o
-$HOME/opt/cross/bin/x86_64-elf-g++ -Ttext=0x7E00 -ekmain -nostdlib -lgcc build/kmain.o build/video.o build/assertions.o build/print.o -o build/kernel.elf
+$HOME/opt/cross/bin/x86_64-elf-g++ -g -ffreestanding -mno-red-zone -fno-rtti -fno-exceptions -O -c mem.cpp -o build/mem.o
+$HOME/opt/cross/bin/x86_64-elf-g++ -Ttext=0x7E00 -ekmain -nostdlib -lgcc build/kmain.o build/video.o build/assertions.o build/print.o build/mem.o -o build/kernel.elf
 $HOME/opt/cross/bin/x86_64-elf-objcopy -O binary build/kernel.elf build/kernel.bin
 
 # Boot loader

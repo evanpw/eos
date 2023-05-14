@@ -105,24 +105,33 @@ main:
     ; Page Map Level 4
     mov di, PML4 - PAGE_MAP
     mov eax, PDP
-    or eax, 3 ; PAGE_PRESENT | PAGE_WRITE
+    or eax, 3 ; PAGE_PRESENT | PAGE_WRITEABLE
     mov [es:di], eax
+
+    ; Add a recursive entry to the PML4. This provides an easy way to compute the
+    ; virtual address of any page map entry at the expense of "wasting" 512GiB of
+    ; virtual address space at the top of memory
+    ;mov eax, PML4
+    ;or eax, 3 ; PAGE_PRESENT | PAGE_WRITEABLE
+    ;mov di, 511 * 8
+    ;mov [es:di], eax
 
     ; Page Directory Pointer Table
     mov di, PDP - PAGE_MAP
     mov eax, PD
-    or eax, 3 ; PAGE_PRESENT | PAGE_WRITE
+    or eax, 3 ; PAGE_PRESENT | PAGE_WRITEABLE
     mov [es:di], eax
 
     ; Page Directory
     mov di, PD - PAGE_MAP
     mov eax, PT0
-    or eax, 3 ; PAGE_PRESENT | PAGE_WRITE
+    or eax, 3 ; PAGE_PRESENT | PAGE_WRITEABLE
     mov [es:di], eax
 
     ; Page Table
     mov di, PT0 - PAGE_MAP
-    mov eax, 3 ; address 0 + PAGE_PRESENT | PAGE_WRITE
+    xor eax, eax ; Start at address 0
+    or eax, 3 ; PAGE_PRESENT | PAGE_WRITEABLE
 
 .pageTableLoop:
     ; Identity map

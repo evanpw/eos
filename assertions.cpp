@@ -8,6 +8,12 @@ void halt() {
 }
 
 void panic() {
-    println("\nKernel panicked!\n");
+    println("\nKernel panic\n");
+    halt();
+}
+
+void panic(const char* msg) {
+    print("\nKernel panic: ");
+    println(msg);
     halt();
 }

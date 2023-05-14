@@ -1,6 +1,7 @@
 #include "mem.h"
 #include "video.h"
 #include "print.h"
+#include "assertions.h"
 
 // Should be the only function in this file
 extern "C" void kmain() {
@@ -22,4 +23,16 @@ extern "C" void kmain() {
         uint64_t end = entry->base + entry->length - 1;
         println("{:08X}:{:08X}", entry->base, end);
     }
+
+    // We want to map all physical memory in virtual memory at the beginning
+    // of the top-half of memory
+    PhysicalAddress zero(0);
+    VirtualAddress pageOffsetBase(0xFFFF800000000000);
+
+    // Attempt to map the first 2MiB of physical memory to high virtual memory
+    BootstrapAllocator alloc(1 * MiB, 2 * MiB);
+    for (size_t i = 0; i < 512; ++i) {
+        mapPage(alloc, pageOffsetBase + i * PAGE_SIZE, zero + i * PAGE_SIZE);
+    }
 }
+

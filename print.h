@@ -2,6 +2,8 @@
 #include "assertions.h"
 #include <stdint.h>
 
+// TODO: better error handling / checking
+
 // To hide the template paramter of SizedFormatArgs, so that we can implement
 // more of this file in the source file rather than the header
 struct FormatArgs {
