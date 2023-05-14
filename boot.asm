@@ -1,6 +1,20 @@
-; vim: syntax=nasm
+; vim: filetype=nasm
 BITS 16
 ; ORG 0x7C00 - this is done during linking
+
+; Fixed memory locations
+MEMORY_MAP     equ 0x01000
+BOOT_LOADER    equ 0x07C00
+STACK_TOP      equ BOOT_LOADER
+KERNEL_START   equ 0x07E00
+PAGE_MAP       equ 0x09000
+VIDEO_MEM_TEXT equ 0xB8000
+
+; Check size of kernel image vs. available memory
+MAX_KERNEL_SIZE equ PAGE_MAP - KERNEL_START
+%if KERNEL_SIZE_IN_SECTORS * 512 > MAX_KERNEL_SIZE
+%error Kernel is too large
+%endif
 
 main:
     ; Disable interrupts
@@ -15,10 +29,10 @@ main:
     or al, 2
     out 0x92, al
 
-    ; Probe the BIOS memory map, store at 0x1000-0x1FFF (with first dword = # of entries)
+    ; Probe the BIOS memory map, store at MEMORY_MAP (with first dword = # of entries)
     xor ax, ax
     mov es, ax
-    mov di, 0x1004
+    mov di, MEMORY_MAP + 4
     mov eax, 0xE820
     mov ebx, 0
     mov ecx, 24
@@ -42,7 +56,7 @@ main:
     jc .e820finished
 
 .loopNext:
-    inc dword [0x1000]
+    inc dword [MEMORY_MAP]
     add di, 24
 
     ; Finished when ebx=0
@@ -60,7 +74,7 @@ main:
     ; If there was an error during reading, fill the screen with red
 .error:
     cld
-    mov ax, 0xB800
+    mov ax, VIDEO_MEM_TEXT / 16
     mov es, ax
     mov di, 0
     mov ax, 0x4020
@@ -71,17 +85,16 @@ main:
 
 .readSuccess:
     ; For paging we need an empty buffer of 16KiB (4 levels of tables, each 4KiB long)
-    ; Place it at es:di = 0x0000:0x9000
     xor ax, ax
     mov es, ax
-    mov edi, 0x9000
+    mov edi, PAGE_MAP
     mov ecx, 0x1000 ; 0x1000 dwords
     xor eax, eax
     cld
     rep stosd
 
     ; Page Map Level 4
-    mov edi, 0x9000
+    mov edi, PAGE_MAP
     lea eax, [es:di + 0x1000] ; eax = pointer to the page directory pointer table
     or eax, 3 ; PAGE_PRESENT | PAGE_WRITE
     mov [es:di], eax
@@ -117,7 +130,7 @@ main:
     mov cr4, eax
 
     ; Point cr3 to the PML4 to set up paging
-    mov edx, 0x9000
+    mov edx, PAGE_MAP
     mov cr3, edx
 
     ; Set the LME (long mode enabled) bit of the EFER (extended feature enable register) MSR (model-specific register)
@@ -151,11 +164,11 @@ BITS 64
     ; Set up a stack right below the boot sector
     mov ax, GDT.data
     mov ss, ax
-    mov rsp, main
+    mov rsp, STACK_TOP
     mov rbp, rsp
 
     ; Jump to entry point of the kernel (indirect so that the linker doesn't try to relocate it)
-    mov rax, 0x7E00
+    mov rax, KERNEL_START
     call rax
 
     ; The kernel shouldn't return, but just in case, halt and loop
@@ -187,7 +200,7 @@ dap:
     db 0x10                    ; size of this structure (16 bytes)
     db 0                       ; always zero
     dw KERNEL_SIZE_IN_SECTORS  ; number of sectors to transfer (each is 512 bytes)
-    dw 0x7E00                  ; destination offset (right after boot sector)
+    dw KERNEL_START            ; destination offset (right after boot sector)
     dw 0x0                     ; destination segment
     dd 1                       ; lower 32-bits of starting LBA
     dd 0                       ; upper 16-bits of starting LBA
