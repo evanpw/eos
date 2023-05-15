@@ -34,5 +34,7 @@ extern "C" void kmain() {
     for (size_t i = 0; i < 512; ++i) {
         mapPage(alloc, pageOffsetBase + i * PAGE_SIZE, zero + i * PAGE_SIZE);
     }
+
+    // At this point, we're ready to implement real memory management and kmalloc
 }
 

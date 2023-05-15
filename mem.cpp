@@ -140,109 +140,53 @@ void mapPage(BootstrapAllocator& alloc, VirtualAddress virtAddr, PhysicalAddress
     // The bottom 12 bits must be zero (page-aligned)
     ASSERT(virtAddr.pageOffset() == 0);
 
-    // The remaining bits are offsets into the page maps
-    uint16_t index1 = virtAddr.pageMapIndex(1);
-    uint16_t index2 = virtAddr.pageMapIndex(2);
-    uint16_t index3 = virtAddr.pageMapIndex(3);
-    uint16_t index4 = virtAddr.pageMapIndex(4);
+    // The pointer to the current page map level (PML4, PDP, PD, PT), starting with PML4
+    uint64_t* pml = reinterpret_cast<uint64_t*>(0x7C000);
 
-    // Level 4
-    uint64_t* pml4 = reinterpret_cast<uint64_t*>(0x7C000);
-    uint64_t entry4 = pml4[index4];
-    if (entry4 != 0) {
-        // The page containing the PDP should always be present and writable
-        ASSERT((entry4 & PAGE_PRESENT) && (entry4 & PAGE_WRITABLE));
+    // Traverse the first 3 PMLs in order (PML4, PDP, PD)
+    for (int n = 4; n > 1; --n) {
+        uint16_t index = virtAddr.pageMapIndex(n);
 
-        // Masking out the flag bits gives us the physical address of the PDP
-        uint64_t pdpPhysAddr = clearLowBits(entry4, 12);
+        uint64_t entry = pml[index];
+        if (entry != 0) {
+            // The page containing the next PML should always be present and writable
+            ASSERT((entry & PAGE_PRESENT) && (entry & PAGE_WRITABLE));
 
-        // At this stage, the PDP should be in identity-mapped sub-2MiB memory, so
-        // the virtual address is the same
-        ASSERT(pdpPhysAddr < 2 * MiB);
-    } else {
-        // No existing entry in the PML4
+            // Masking out the flag bits gives us the physical address of the next PML
+            uint64_t pmlNextPhysAddr = clearLowBits(entry, 12);
 
-        // Create a new empty PDP in fresh physical memory
-        uint64_t* pdp = static_cast<uint64_t*>(alloc.allocatePhysicalPage());
-        memset(pdp, 0, PAGE_SIZE);
+            // At this stage, the next PML should be in identity-mapped sub-2MiB memory, so
+            // the virtual address is the same
+            ASSERT(pmlNextPhysAddr < 2 * MiB);
+        } else {
+            // No existing entry in the current PML
 
-        // Point the correct entry in the PML4 to the new PDP and mark it present
-        // and writable
-        entry4 = reinterpret_cast<uint64_t>(pdp) | PAGE_PRESENT | PAGE_WRITABLE;
-        pml4[index4] = entry4;
+            // Create a new empty next PML in fresh physical memory
+            uint64_t* pmlNext = static_cast<uint64_t*>(alloc.allocatePhysicalPage());
+            memset(pmlNext, 0, PAGE_SIZE);
+
+            // Point the correct entry in the PML4 to the new PDP and mark it present
+            // and writable
+            entry = reinterpret_cast<uint64_t>(pmlNext) | PAGE_PRESENT | PAGE_WRITABLE;
+            pml[index] = entry;
+        }
+
+        // Advance to the next level
+        pml = reinterpret_cast<uint64_t*>(clearLowBits(entry, 12));
     }
 
-    uint64_t* pdp = reinterpret_cast<uint64_t*>(clearLowBits(entry4, 12));
+    // After reaching this point, pml is a pointer to the correct page table
+    uint16_t index = virtAddr.pageMapIndex(1);
 
     // All of the page maps have to be in identity-mapped sub-2MiB memory at this point
-    ASSERT(pdp < reinterpret_cast<uint64_t*>(2 * MiB));
-
-    // Level 3
-    uint64_t entry3 = pdp[index3];
-    if (entry3 != 0) {
-        // The page containing the PD should always be present and writable
-        ASSERT((entry3 & PAGE_PRESENT) && (entry3 & PAGE_WRITABLE));
-
-        // Masking out the flag bits gives us the physical address of the PD
-        uint64_t pdPhysAddr = clearLowBits(entry3, 12);
-
-        // At this stage, the PD should be in identity-mapped sub-2MiB memory, so
-        // the virtual address is the same
-        ASSERT(pdPhysAddr < 2 * MiB);
-    } else {
-        // No existing entry in the PDP
-
-        // Create a new empty PD in fresh physical memory
-        uint64_t* pd = static_cast<uint64_t*>(alloc.allocatePhysicalPage());
-        memset(pd, 0, PAGE_SIZE);
-
-        // Point the correct entry in the PDP to the new PD and mark it present
-        // and writable
-        entry3 = reinterpret_cast<uint64_t>(pd) | PAGE_PRESENT | PAGE_WRITABLE;
-        pdp[index3] = entry3;
-    }
-
-    uint64_t* pd = reinterpret_cast<uint64_t*>(clearLowBits(entry3, 12));
-
-    // All of the page maps have to be in identity-mapped sub-2MiB memory at this point
-    ASSERT(pd < reinterpret_cast<uint64_t*>(2 * MiB));
-
-    // Level 2
-    uint64_t entry2 = pd[index2];
-    if (entry2 != 0) {
-        // The page containing the PT should always be present and writable
-        ASSERT((entry2 & PAGE_PRESENT) && (entry2 & PAGE_WRITABLE));
-
-        // Masking out the flag bits gives us the physical address of the PT
-        uint64_t ptPhysAddr = clearLowBits(entry2, 12);
-
-        // At this stage, the PT should be in identity-mapped sub-2MiB memory, so
-        // the virtual address is the same
-        ASSERT(ptPhysAddr < 2 * MiB);
-    } else {
-        // No existing entry in the PD
-
-        // Create a new empty PT in fresh physical memory
-        uint64_t* pt = static_cast<uint64_t*>(alloc.allocatePhysicalPage());
-        memset(pt, 0, PAGE_SIZE);
-
-        // Point the correct entry in the PD to the new PT and mark it present
-        // and writable
-        entry2 = reinterpret_cast<uint64_t>(pt) | PAGE_PRESENT | PAGE_WRITABLE;
-        pd[index2] = entry2;
-    }
-
-    uint64_t* pt = reinterpret_cast<uint64_t*>(clearLowBits(entry2, 12));
-
-    // All of the page maps have to be in identity-mapped sub-2MiB memory at this point
-    ASSERT(pt < reinterpret_cast<uint64_t*>(2 * MiB));
+    ASSERT(pml < reinterpret_cast<uint64_t*>(2 * MiB));
 
     // Level 1
-    uint64_t entry1 = pt[index1];
+    uint64_t entry = pml[index];
 
     // We can't remap existing pages yet
-    ASSERT(entry1 == 0);
-    pt[index1] = physAddr.value | PAGE_PRESENT | PAGE_WRITABLE;
+    ASSERT(entry == 0);
+    pml[index] = physAddr.value | PAGE_PRESENT | PAGE_WRITABLE;
 
     // We don't need to flush the TLB when mapping a previously-unmapped virtual page,
     // because only "present" pages reside in the cache (AMD Vol 3A, 4.10.2.3)
