@@ -38,7 +38,7 @@ PhysicalAddress BootstrapAllocator::allocatePhysicalPage()
     ASSERT(_next < _end);
 
     PhysicalAddress result = _next;
-    _next += 4 * KiB;
+    _next += PAGE_SIZE;
     return result;
 }
 
@@ -72,12 +72,12 @@ MemoryManager::MemoryManager(uint32_t numEntries, SMapEntry* smap) {
 }
 
 VirtualAddress MemoryManager::physicalToVirtual(PhysicalAddress physAddr) {
-    if (physAddr < _identityMapEnd) {
-        return VirtualAddress(physAddr.value);
+    if (physAddr < _linearMapEnd) {
+        return _linearMapOffset + physAddr.value;
     }
 
-    ASSERT(physAddr < _linearMapEnd);
-    return _linearMapOffset + physAddr.value;
+    ASSERT(physAddr < _identityMapEnd);
+    return VirtualAddress(physAddr.value);
 }
 
 void MemoryManager::buildLinearMemoryMap(BootstrapAllocator& alloc, uint64_t physicalMemoryRange) {
@@ -116,40 +116,31 @@ void MemoryManager::mapPage(BootstrapAllocator& alloc, VirtualAddress virtAddr, 
     ASSERT(virtAddr.pageOffset() == 0);
 
     // The pointer to the current page map level (PML4, PDP, PD, PT), starting with PML4
-    uint64_t* pml = reinterpret_cast<uint64_t*>(0x7C000);
+    PageMapEntry* pml = reinterpret_cast<PageMapEntry*>(0x7C000);
 
     // Traverse the PMLs in order (PML4, PDP, PD)
     for (int n = 4; n > pageSize + 1; --n) {
         uint16_t index = virtAddr.pageMapIndex(n);
 
-        uint64_t entry = pml[index];
-        if (entry != 0) {
-            // The page containing the next PML should always be present and writable
-            ASSERT((entry & PAGE_PRESENT) && (entry & PAGE_WRITABLE));
-
-            // Masking out the flag bits gives us the physical address of the next PML
-            uint64_t pmlNextPhysAddr = clearLowBits(entry, 12);
-
-            // At this stage, the next PML should be in identity-mapped sub-2MiB memory, so
-            // the virtual address is the same
-            ASSERT(pmlNextPhysAddr < 2 * MiB);
-        } else {
+        PageMapEntry entry = pml[index];
+        if (!entry) {
             // No existing entry in the current PML
 
             // Create a new empty next PML in fresh physical memory
             PhysicalAddress pmlNextPhysAddr = alloc.allocatePhysicalPage();
-            uint64_t* pmlNext = physicalToVirtual(pmlNextPhysAddr).asPtr<uint64_t>();
+            void* pmlNext = physicalToVirtual(pmlNextPhysAddr);
             memset(pmlNext, 0, PAGE_SIZE);
 
             // Point the correct entry in the PML4 to the new PDP and mark it present
             // and writable
-            entry = pmlNextPhysAddr.value | PAGE_PRESENT | PAGE_WRITABLE;
+            entry = PageMapEntry(pmlNextPhysAddr, PAGE_PRESENT | PAGE_WRITABLE);
             pml[index] = entry;
+        } else {
+            ASSERT(entry.hasFlags(PAGE_PRESENT | PAGE_WRITABLE));
         }
 
         // Advance to the next level
-        ASSERT(clearLowBits(entry, 12) < 2 * MiB);
-        pml = physicalToVirtual(PhysicalAddress(clearLowBits(entry, 12))).asPtr<uint64_t>();
+        pml = physicalToVirtual(entry.addr()).ptr<PageMapEntry>();
     }
 
     // After reaching this point, pml is a pointer to the correct page table (or higher page map,
@@ -157,8 +148,12 @@ void MemoryManager::mapPage(BootstrapAllocator& alloc, VirtualAddress virtAddr, 
     uint16_t index = virtAddr.pageMapIndex(pageSize + 1);
 
     // We can't remap existing pages yet
-    ASSERT(pml[index] == 0);
+    ASSERT(!pml[index]);
 
-    uint64_t entry = physAddr.value | PAGE_PRESENT | PAGE_WRITABLE | (pageSize > 0 ? PAGE_SIZE_FLAG : 0);
+    PageMapEntry entry(physAddr, PAGE_PRESENT | PAGE_WRITABLE);
+    if (pageSize > 0) {
+        entry.setFlags(PAGE_SIZE_FLAG);
+    }
+
     pml[index] = entry;
 }

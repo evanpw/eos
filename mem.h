@@ -101,12 +101,44 @@ struct VirtualAddress {
     }
 
     template <typename T>
-    T* asPtr() const {
+    T* ptr() const {
         return reinterpret_cast<T*>(value);
     }
 
+    operator void*() const { return ptr<void>(); }
+
     uint64_t value;
 };
+
+struct PageMapEntry {
+    PageMapEntry() : raw(0) {}
+    PageMapEntry(PhysicalAddress addr) : raw(addr.value) {}
+    PageMapEntry(uint64_t value) : raw(value) {}
+
+    PageMapEntry(PhysicalAddress addr, uint64_t flags)
+    : raw(addr.value)
+    {
+        setFlags(flags);
+    }
+
+    operator bool() const { return raw != 0; }
+    PhysicalAddress addr() const { return clearLowBits(raw, 12); }
+    uint64_t flags() const { return lowBits(raw, 12); }
+
+    void setFlags(uint64_t flags) {
+        ASSERT(flags == lowBits(flags, 12));
+        raw |= flags;
+    }
+
+    bool hasFlags(uint64_t flags) {
+        ASSERT(flags == lowBits(flags, 12));
+        return (raw & flags) == flags;
+    }
+
+    uint64_t raw;
+};
+
+static_assert(sizeof(PageMapEntry) == 8);
 
 // Totally stupid bump-allocator for physical frames, used to allocate
 // memory for the initial page map before anything else is set up.
