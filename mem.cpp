@@ -33,118 +33,93 @@ uint64_t clearLowBits(uint64_t value, int count) {
     return value & ~((1 << count) - 1);
 }
 
-void* BootstrapAllocator::allocatePhysicalPage()
+PhysicalAddress BootstrapAllocator::allocatePhysicalPage()
 {
     ASSERT(_next < _end);
 
-    void* result = reinterpret_cast<void*>(_next.value);
+    PhysicalAddress result = _next;
     _next += 4 * KiB;
     return result;
 }
 
-void explainVirtualAddress(VirtualAddress virtAddr)
-{
-    println("virtAddr = 0x{:X}", virtAddr.value);
+MemoryManager::MemoryManager(uint32_t numEntries, SMapEntry* smap) {
+    uint64_t availableBytes = 0;
+    uint64_t physicalMemoryRange = 0;
+    uint64_t availableAt1MiB = 0;
 
-    // Break down the virtual address into its components
+    // TODO: check for overlapping entries
+    for (uint32_t i = 0; i < numEntries; ++i) {
+        const auto& entry = smap[i];
+        uint64_t end = entry.base + entry.length - 1;
+        physicalMemoryRange = max(physicalMemoryRange, end + 1);
 
-    // The top 18 bits must be all 1 or all zero (canonical form)
-    ASSERT(virtAddr.isCanonical());
+        if (entry.type != 1) {
+            continue;
+        }
 
-    // The remaining bits are offsets into the page maps
-    uint16_t index1 = virtAddr.pageMapIndex(1);
-    uint16_t index2 = virtAddr.pageMapIndex(2);
-    uint16_t index3 = virtAddr.pageMapIndex(3);
-    uint16_t index4 = virtAddr.pageMapIndex(4);
-    println("index1={}, index2={}, index3={}, index4={}", index1, index2, index3, index4);
+        availableBytes += entry.length;
 
-    // Determine how this address is currently mapped
+        if (entry.base <= 1 * MiB && end >= 1 * MiB) {
+            availableAt1MiB = end - 1 * MiB + 1;
+        }
 
-    // Level 4
-    uint64_t* pml4 = reinterpret_cast<uint64_t*>(0x7C000);
-    uint64_t entry4 = pml4[index4];
-    if (entry4 == 0) {
-        println("pml4[index4] = 0");
-        return;
     }
 
-    uint64_t* pdp = reinterpret_cast<uint64_t*>(clearLowBits(entry4, 12));
-    println("pml4[index4] = 0x{:X}, present={}, writable={}, pdp=0x{:X}",
-        entry4,
-        entry4 & 1,
-        (entry4 >> 1) & 1,
-        reinterpret_cast<uint64_t>(pdp)
-    );
+    println("Available memory: {}MiB", availableBytes / MiB);
 
-    // All of the page maps have to be in identity-mapped sub-2MiB memory at this point
-    ASSERT(pdp < reinterpret_cast<uint64_t*>(2 * MiB));
-
-    // Level 3
-    uint64_t entry3 = pdp[index3];
-    if (entry3 == 0) {
-        println("pdp[index3] = 0");
-        return;
-    }
-
-    uint64_t* pd = reinterpret_cast<uint64_t*>(clearLowBits(entry3, 12));
-    println("pdp[index3] = 0x{:X}, present={}, writable={}, pd=0x{:X}",
-        entry3,
-        entry3 & 1,
-        (entry3 >> 1) & 1,
-        reinterpret_cast<uint64_t>(pd)
-    );
-
-    // All of the page maps have to be in identity-mapped sub-2MiB memory at this point
-    ASSERT(pd < reinterpret_cast<uint64_t*>(2 * MiB));
-
-    // Level 2
-    uint64_t entry2 = pd[index2];
-    if (entry2 == 0) {
-        println("pml2[index2] = 0");
-        return;
-    }
-
-    uint64_t* pt = reinterpret_cast<uint64_t*>(clearLowBits(entry2, 12));
-    println("pt[index2] = 0x{:X}, present={}, writable={}, pt=0x{:X}",
-        entry2,
-        entry2 & 1,
-        (entry2 >> 1) & 1,
-        reinterpret_cast<uint64_t>(pt)
-    );
-
-    // All of the page maps have to be in identity-mapped sub-2MiB memory at this point
-    ASSERT(pt < reinterpret_cast<uint64_t*>(2 * MiB));
-
-    // Level 1
-    uint64_t entry1 = pt[index1];
-    if (entry1 == 0) {
-        println("pt[index1] = 0");
-        return;
-    }
-
-    uint64_t* physAddr = reinterpret_cast<uint64_t*>(clearLowBits(entry1, 12));
-    println("pt[index1] = 0x{:X}, present={}, writable={}, physAddr=0x{:X}",
-        entry1,
-        entry1 & 1,
-        (entry1 >> 1) & 1,
-        reinterpret_cast<uint64_t>(physAddr)
-    );
+    BootstrapAllocator alloc(1 * MiB, 1 * MiB + availableAt1MiB);
+    buildLinearMemoryMap(alloc, physicalMemoryRange);
 }
 
-void mapPage(BootstrapAllocator& alloc, VirtualAddress virtAddr, PhysicalAddress physAddr) {
-    // Break down the virtual address into its components
+VirtualAddress MemoryManager::physicalToVirtual(PhysicalAddress physAddr) {
+    if (physAddr < _identityMapEnd) {
+        return VirtualAddress(physAddr.value);
+    }
+
+    ASSERT(physAddr < _linearMapEnd);
+    return _linearMapOffset + physAddr.value;
+}
+
+void MemoryManager::buildLinearMemoryMap(BootstrapAllocator& alloc, uint64_t physicalMemoryRange) {
+    // Attempt to map all of physical memory to high virtual memory
+    uint64_t current = 0;
+    while (current < physicalMemoryRange) {
+        int pageSize;
+        if (current % GiB == 0 && physicalMemoryRange - current >= GiB) {
+            pageSize = 2;
+        } else if (current % (2 * MiB) == 0 && physicalMemoryRange - current >= 2 * MiB) {
+            pageSize = 1;
+        } else {
+            pageSize = 0;
+        }
+
+        mapPage(alloc, _linearMapOffset + current, PhysicalAddress(current), pageSize);
+
+        current += PAGE_SIZE << (9 * pageSize);
+        _linearMapEnd = PhysicalAddress(current);
+    }
+}
+
+void MemoryManager::mapPage(BootstrapAllocator& alloc, VirtualAddress virtAddr, PhysicalAddress physAddr, int pageSize) {
+    // pageSize = 0: 4KiB pages
+    // pageSize = 1: 2MiB pages
+    // pageSize = 2: 1GiB pages
+    ASSERT(pageSize >= 0 && pageSize <= 2);
 
     // The top 18 bits must be all 1 or all zero (canonical form)
     ASSERT(virtAddr.isCanonical());
 
-    // The bottom 12 bits must be zero (page-aligned)
+    // The physical address must be aligned to the page size
+    ASSERT(physAddr.pageOffset(pageSize) == 0);
+
+    // The virtual address must be page-aligned
     ASSERT(virtAddr.pageOffset() == 0);
 
     // The pointer to the current page map level (PML4, PDP, PD, PT), starting with PML4
     uint64_t* pml = reinterpret_cast<uint64_t*>(0x7C000);
 
-    // Traverse the first 3 PMLs in order (PML4, PDP, PD)
-    for (int n = 4; n > 1; --n) {
+    // Traverse the PMLs in order (PML4, PDP, PD)
+    for (int n = 4; n > pageSize + 1; --n) {
         uint16_t index = virtAddr.pageMapIndex(n);
 
         uint64_t entry = pml[index];
@@ -162,32 +137,28 @@ void mapPage(BootstrapAllocator& alloc, VirtualAddress virtAddr, PhysicalAddress
             // No existing entry in the current PML
 
             // Create a new empty next PML in fresh physical memory
-            uint64_t* pmlNext = static_cast<uint64_t*>(alloc.allocatePhysicalPage());
+            PhysicalAddress pmlNextPhysAddr = alloc.allocatePhysicalPage();
+            uint64_t* pmlNext = physicalToVirtual(pmlNextPhysAddr).asPtr<uint64_t>();
             memset(pmlNext, 0, PAGE_SIZE);
 
             // Point the correct entry in the PML4 to the new PDP and mark it present
             // and writable
-            entry = reinterpret_cast<uint64_t>(pmlNext) | PAGE_PRESENT | PAGE_WRITABLE;
+            entry = pmlNextPhysAddr.value | PAGE_PRESENT | PAGE_WRITABLE;
             pml[index] = entry;
         }
 
         // Advance to the next level
-        pml = reinterpret_cast<uint64_t*>(clearLowBits(entry, 12));
+        ASSERT(clearLowBits(entry, 12) < 2 * MiB);
+        pml = physicalToVirtual(PhysicalAddress(clearLowBits(entry, 12))).asPtr<uint64_t>();
     }
 
-    // After reaching this point, pml is a pointer to the correct page table
-    uint16_t index = virtAddr.pageMapIndex(1);
-
-    // All of the page maps have to be in identity-mapped sub-2MiB memory at this point
-    ASSERT(pml < reinterpret_cast<uint64_t*>(2 * MiB));
-
-    // Level 1
-    uint64_t entry = pml[index];
+    // After reaching this point, pml is a pointer to the correct page table (or higher page map,
+    // if using large pages)
+    uint16_t index = virtAddr.pageMapIndex(pageSize + 1);
 
     // We can't remap existing pages yet
-    ASSERT(entry == 0);
-    pml[index] = physAddr.value | PAGE_PRESENT | PAGE_WRITABLE;
+    ASSERT(pml[index] == 0);
 
-    // We don't need to flush the TLB when mapping a previously-unmapped virtual page,
-    // because only "present" pages reside in the cache (AMD Vol 3A, 4.10.2.3)
+    uint64_t entry = physAddr.value | PAGE_PRESENT | PAGE_WRITABLE | (pageSize > 0 ? PAGE_SIZE_FLAG : 0);
+    pml[index] = entry;
 }

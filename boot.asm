@@ -16,7 +16,6 @@ PAGE_MAP       equ 0x7C000 ; right before the EBDA
 PML4           equ PAGE_MAP
 PDP            equ PML4 + PAGE_SIZE
 PD             equ PDP + PAGE_SIZE
-PT0            equ PD + PAGE_SIZE
 VIDEO_MEM_TEXT equ 0xB8000
 
 ; Check size of kernel image vs. available memory
@@ -39,8 +38,9 @@ main:
     out 0x92, al
 
     ; Probe the BIOS memory map, store at MEMORY_MAP (with first dword = # of entries)
-    xor ax, ax
+    xor eax, eax
     mov es, ax
+    mov dword [MEMORY_MAP], eax
     mov di, MEMORY_MAP + 4
     mov eax, 0xE820
     mov ebx, 0
@@ -93,11 +93,13 @@ main:
     jmp $
 
 .readSuccess:
+    ; Identity map the first 2MiB into virtual memory using a single large page
+
     ; Clear space for the entire page map
     mov ax, PAGE_MAP / 16
     mov es, ax
     xor di, di
-    mov ecx, 4 * PAGE_SIZE / 4 ; 4 levels of tables, each one page, in dwords
+    mov ecx, 3 * PAGE_SIZE / 4 ; 3 levels of tables, each one page, in dwords
     xor eax, eax
     cld
     rep stosd
@@ -108,14 +110,6 @@ main:
     or eax, 3 ; PAGE_PRESENT | PAGE_WRITEABLE
     mov [es:di], eax
 
-    ; Add a recursive entry to the PML4. This provides an easy way to compute the
-    ; virtual address of any page map entry at the expense of "wasting" 512GiB of
-    ; virtual address space at the top of memory
-    ;mov eax, PML4
-    ;or eax, 3 ; PAGE_PRESENT | PAGE_WRITEABLE
-    ;mov di, 511 * 8
-    ;mov [es:di], eax
-
     ; Page Directory Pointer Table
     mov di, PDP - PAGE_MAP
     mov eax, PD
@@ -124,26 +118,9 @@ main:
 
     ; Page Directory
     mov di, PD - PAGE_MAP
-    mov eax, PT0
-    or eax, 3 ; PAGE_PRESENT | PAGE_WRITEABLE
+    xor eax, eax ; Physical address 0
+    or eax, 0x83 ; PAGE_PRESENT | PAGE_WRITEABLE | PAGE_SIZE
     mov [es:di], eax
-
-    ; Page Table
-    mov di, PT0 - PAGE_MAP
-    xor eax, eax ; Start at address 0
-    or eax, 3 ; PAGE_PRESENT | PAGE_WRITEABLE
-
-.pageTableLoop:
-    ; Identity map
-    mov [es:di], eax
-
-    ; Move to the next page in memory and the next page table entry
-    add eax, PAGE_SIZE
-    add di, 8
-
-    ; Loop for the first 2MiB of memory
-    cmp eax, 2 * MiB
-    jb .pageTableLoop
 
     ; Set PAE (Physical Address Extension) and PGE (Page Global Enabled) flags
     mov eax, 10100000b

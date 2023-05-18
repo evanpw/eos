@@ -18,6 +18,7 @@ constexpr uint64_t PAGE_SIZE = 4 * KiB;
 // Page map flags
 constexpr uint64_t PAGE_PRESENT = 1 << 0;
 constexpr uint64_t PAGE_WRITABLE = 1 << 1;
+constexpr uint64_t PAGE_SIZE_FLAG = 1 << 7;
 
 void* memset(void* dest, uint8_t value, size_t n);
 
@@ -25,6 +26,25 @@ uint64_t lowBits(uint64_t value, int count);
 uint64_t highBits(uint64_t value, int count);
 uint64_t bitRange(uint64_t value, int start, int length);
 uint64_t clearLowBits(uint64_t value, int count);
+
+// TODO: move these elsewhere
+template <typename T>
+T min(const T& lhs, const T& rhs) {
+    return (rhs < lhs) ? rhs : lhs;
+}
+
+template <typename T>
+T max(const T& lhs, const T& rhs) {
+    return (lhs < rhs) ? rhs : lhs;
+}
+
+inline void flushTLB() {
+    asm volatile (
+        "movq  %%cr3, %%rax\n\t"
+        "movq  %%rax, %%cr3\n\t"
+        : : : "memory", "rax"
+    );
+}
 
 struct PhysicalAddress {
     PhysicalAddress(uint64_t value) : value(value) {}
@@ -41,6 +61,17 @@ struct PhysicalAddress {
 
     bool operator<(const PhysicalAddress& rhs) const { return value < rhs.value; }
 
+    uint64_t pageBase(int pageSize) const {
+        ASSERT(pageSize >= 0 && pageSize <= 2);
+        int bits = 12 + 9 * pageSize;
+        return clearLowBits(value, bits);
+    }
+
+    uint64_t pageOffset(int pageSize) const {
+        ASSERT(pageSize >= 0 && pageSize <= 2);
+        return lowBits(value, 12 + 9 * pageSize);
+    }
+
     uint64_t value;
 };
 
@@ -52,7 +83,7 @@ struct VirtualAddress {
     }
 
     uint64_t pageBase() const {
-        return (value >> 12) << 12;
+        return clearLowBits(value, 12);
     }
 
     uint64_t pageOffset() const {
@@ -69,6 +100,11 @@ struct VirtualAddress {
         return bitRange(value, 9 * (level - 1) + 12, 9);
     }
 
+    template <typename T>
+    T* asPtr() const {
+        return reinterpret_cast<T*>(value);
+    }
+
     uint64_t value;
 };
 
@@ -80,7 +116,7 @@ public:
     : _start(start), _end(end), _next(start)
     {}
 
-    void* allocatePhysicalPage();
+    PhysicalAddress allocatePhysicalPage();
 
 private:
     PhysicalAddress _start;
@@ -88,6 +124,17 @@ private:
     PhysicalAddress _next;
 };
 
-void explainVirtualAddress(VirtualAddress virtAddr);
+class MemoryManager {
+public:
+    MemoryManager(uint32_t numEntries, SMapEntry* smap);
 
-void mapPage(BootstrapAllocator& alloc, VirtualAddress virtAddr, PhysicalAddress physAddr);
+    void mapPage(BootstrapAllocator& alloc, VirtualAddress virtAddr, PhysicalAddress physAddr, int pageSize = 0);
+
+private:
+    VirtualAddress physicalToVirtual(PhysicalAddress physAddr);
+    void buildLinearMemoryMap(BootstrapAllocator& alloc, uint64_t physicalMemoryRange);
+
+    PhysicalAddress _linearMapEnd = 0;
+    const PhysicalAddress _identityMapEnd = 2 * MiB;
+    const VirtualAddress _linearMapOffset = 0xFFFF800000000000;
+};
