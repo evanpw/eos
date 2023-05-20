@@ -11,7 +11,7 @@ void printChar(char c) {
     asm volatile("outb %0, $0xE9" ::"a"(c));
 }
 
-void printInteger(const FormatSpec& spec, uint64_t value) {
+void FormatArg::print(const FormatSpec& spec) {
     ASSERT(spec.base >= 2 && spec.base <= 16);
 
     constexpr const char* uppercaseDigits = "0123456789ABCDEF";
@@ -104,7 +104,8 @@ void _printImpl(FormatStringParser& parser, FormatArgs& args) {
     while (parser) {
         if (parser.accept('{')) {
             FormatSpec spec = parser.parseFormatSpec();
-            printInteger(spec, args.next());
+            FormatArg arg = args.next();
+            arg.print(spec);
         } else {
             printChar(parser.next());
         }

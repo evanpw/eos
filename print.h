@@ -4,21 +4,32 @@
 
 // TODO: better error handling / checking
 
+struct FormatSpec;
+
+struct FormatArg {
+    FormatArg(uint64_t value) : value(value) {}
+    FormatArg(void* value) : value(reinterpret_cast<uint64_t>(value)) {}
+
+    void print(const FormatSpec& spec);
+
+    uint64_t value;
+};
+
 // To hide the template paramter of SizedFormatArgs, so that we can implement
 // more of this file in the source file rather than the header
 struct FormatArgs {
-    virtual uint64_t next() = 0;
+    virtual FormatArg next() = 0;
 };
 
 template <size_t N>
 struct SizedFormatArgs : public FormatArgs {
     template <typename... Args>
-    SizedFormatArgs(Args... args) : args{args...} {}
+    SizedFormatArgs(Args... args) : args{FormatArg(args)...} {}
 
-    uint64_t args[N];
+    FormatArg args[N];
     size_t index = 0;
 
-    uint64_t next() override {
+    FormatArg next() override {
         ASSERT(index < N);
         return args[index++];
     }
@@ -51,7 +62,7 @@ void _printImpl(FormatStringParser& parser, FormatArgs& args);
 template <typename... Args>
 void print(const char* fmtstr, Args... args) {
     FormatStringParser parser(fmtstr);
-    SizedFormatArgs formatArgs(static_cast<uint64_t>(args)...);
+    SizedFormatArgs formatArgs(args...);
 
     _printImpl(parser, formatArgs);
 }
