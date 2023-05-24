@@ -60,14 +60,18 @@ struct PhysicalAddress {
     }
 
     bool operator<(const PhysicalAddress& rhs) const { return value < rhs.value; }
+    bool operator<=(const PhysicalAddress& rhs) const { return value <= rhs.value; }
+    bool operator>(const PhysicalAddress& rhs) const { return value > rhs.value; }
+    bool operator>=(const PhysicalAddress& rhs) const { return value >= rhs.value; }
+    bool operator==(const PhysicalAddress& rhs) const { return value == rhs.value; }
 
-    uint64_t pageBase(int pageSize) const {
+    uint64_t pageBase(int pageSize = 0) const {
         ASSERT(pageSize >= 0 && pageSize <= 2);
         int bits = 12 + 9 * pageSize;
         return clearLowBits(value, bits);
     }
 
-    uint64_t pageOffset(int pageSize) const {
+    uint64_t pageOffset(int pageSize = 0) const {
         ASSERT(pageSize >= 0 && pageSize <= 2);
         return lowBits(value, 12 + 9 * pageSize);
     }
@@ -80,6 +84,12 @@ struct VirtualAddress {
 
     VirtualAddress operator+(const VirtualAddress& rhs) const {
         return VirtualAddress(value + rhs.value);
+    }
+
+    VirtualAddress& operator+=(uint64_t delta) {
+        // TODO: check for overflow
+        value += delta;
+        return *this;
     }
 
     uint64_t pageBase() const {
@@ -140,31 +150,33 @@ struct PageMapEntry {
 
 static_assert(sizeof(PageMapEntry) == 8);
 
-// Totally stupid bump-allocator for physical frames, used to allocate
-// memory for the initial page map before anything else is set up.
-struct BootstrapAllocator {
-public:
-    BootstrapAllocator(PhysicalAddress start, PhysicalAddress end)
-    : _start(start), _end(end), _next(start)
-    {}
+struct FreePageRange {
+    FreePageRange(PhysicalAddress start, PhysicalAddress end)
+    : start(start), end(end), next(NULL) {
+        ASSERT(start.pageOffset() == 0 && end.pageOffset() == 0 && end > start);
+    }
 
-    PhysicalAddress allocatePhysicalPage();
+    PhysicalAddress start;
+    PhysicalAddress end;
 
-private:
-    PhysicalAddress _start;
-    PhysicalAddress _end;
-    PhysicalAddress _next;
+    // Intrusive linked list of free page ranges
+    FreePageRange* next;
 };
 
+// Handles physical and virtual memory at the page level
 class MemoryManager {
 public:
     MemoryManager(uint32_t numEntries, SMapEntry* smap);
 
-    void mapPage(BootstrapAllocator& alloc, VirtualAddress virtAddr, PhysicalAddress physAddr, int pageSize = 0);
-
 private:
+    PhysicalAddress getFreePage();
+    void mapPage(VirtualAddress virtAddr, PhysicalAddress physAddr, int pageSize = 0);
+
     VirtualAddress physicalToVirtual(PhysicalAddress physAddr);
-    void buildLinearMemoryMap(BootstrapAllocator& alloc, uint64_t physicalMemoryRange);
+    void buildLinearMemoryMap(uint64_t physicalMemoryRange);
+    FreePageRange* buildFreePageList(uint32_t numEntries, SMapEntry* smap);
+
+    FreePageRange* _freePageList = 0;
 
     PhysicalAddress _linearMapEnd = 0;
     const PhysicalAddress _identityMapEnd = 2 * MiB;

@@ -1,6 +1,7 @@
 #include "mem.h"
 #include "assertions.h"
 #include "print.h"
+#include "new.h"
 
 // TODO: this is really slow
 void* memset(void* dest, uint8_t value, size_t n) {
@@ -33,25 +34,17 @@ uint64_t clearLowBits(uint64_t value, int count) {
     return value & ~((1 << count) - 1);
 }
 
-PhysicalAddress BootstrapAllocator::allocatePhysicalPage()
-{
-    ASSERT(_next < _end);
-
-    PhysicalAddress result = _next;
-    _next += PAGE_SIZE;
-    return result;
-}
 
 MemoryManager::MemoryManager(uint32_t numEntries, SMapEntry* smap) {
     uint64_t availableBytes = 0;
     uint64_t physicalMemoryRange = 0;
     uint64_t availableAt1MiB = 0;
 
-    // TODO: check for overlapping entries
     for (uint32_t i = 0; i < numEntries; ++i) {
+        // TODO: check for overlapping entries
         const auto& entry = smap[i];
-        uint64_t end = entry.base + entry.length - 1;
-        physicalMemoryRange = max(physicalMemoryRange, end + 1);
+        uint64_t end = entry.base + entry.length;
+        physicalMemoryRange = max(physicalMemoryRange, end);
 
         if (entry.type != 1) {
             continue;
@@ -59,16 +52,33 @@ MemoryManager::MemoryManager(uint32_t numEntries, SMapEntry* smap) {
 
         availableBytes += entry.length;
 
-        if (entry.base <= 1 * MiB && end >= 1 * MiB) {
-            availableAt1MiB = end - 1 * MiB + 1;
+        if (entry.base <= 1 * MiB && end > 1 * MiB) {
+            availableAt1MiB = end - 1 * MiB;
         }
-
     }
 
-    println("Available memory: {}MiB", availableBytes / MiB);
+    println("Available physical memory: {}MiB", availableBytes / MiB);
 
-    BootstrapAllocator alloc(1 * MiB, 1 * MiB + availableAt1MiB);
-    buildLinearMemoryMap(alloc, physicalMemoryRange);
+    FreePageRange initialPages(1 * MiB, 1 * MiB + availableAt1MiB);
+    _freePageList = &initialPages;
+
+    buildLinearMemoryMap(physicalMemoryRange);
+    _freePageList = buildFreePageList(numEntries, smap);
+}
+
+PhysicalAddress MemoryManager::getFreePage()
+{
+    ASSERT(_freePageList != 0);
+
+    PhysicalAddress next = _freePageList->start;
+    _freePageList->start += PAGE_SIZE;
+
+    if (_freePageList->start == _freePageList->end) {
+        // TODO: free memory
+        _freePageList = _freePageList->next;
+    }
+
+    return next;
 }
 
 VirtualAddress MemoryManager::physicalToVirtual(PhysicalAddress physAddr) {
@@ -80,7 +90,7 @@ VirtualAddress MemoryManager::physicalToVirtual(PhysicalAddress physAddr) {
     return VirtualAddress(physAddr.value);
 }
 
-void MemoryManager::buildLinearMemoryMap(BootstrapAllocator& alloc, uint64_t physicalMemoryRange) {
+void MemoryManager::buildLinearMemoryMap(uint64_t physicalMemoryRange) {
     // Attempt to map all of physical memory to high virtual memory
     uint64_t current = 0;
     while (current < physicalMemoryRange) {
@@ -93,14 +103,14 @@ void MemoryManager::buildLinearMemoryMap(BootstrapAllocator& alloc, uint64_t phy
             pageSize = 0;
         }
 
-        mapPage(alloc, _linearMapOffset + current, PhysicalAddress(current), pageSize);
+        mapPage(_linearMapOffset + current, PhysicalAddress(current), pageSize);
 
         current += PAGE_SIZE << (9 * pageSize);
         _linearMapEnd = PhysicalAddress(current);
     }
 }
 
-void MemoryManager::mapPage(BootstrapAllocator& alloc, VirtualAddress virtAddr, PhysicalAddress physAddr, int pageSize) {
+void MemoryManager::mapPage(VirtualAddress virtAddr, PhysicalAddress physAddr, int pageSize) {
     // pageSize = 0: 4KiB pages
     // pageSize = 1: 2MiB pages
     // pageSize = 2: 1GiB pages
@@ -127,7 +137,7 @@ void MemoryManager::mapPage(BootstrapAllocator& alloc, VirtualAddress virtAddr, 
             // No existing entry in the current PML
 
             // Create a new empty next PML in fresh physical memory
-            PhysicalAddress pmlNextPhysAddr = alloc.allocatePhysicalPage();
+            PhysicalAddress pmlNextPhysAddr = getFreePage();
             void* pmlNext = physicalToVirtual(pmlNextPhysAddr);
             memset(pmlNext, 0, PAGE_SIZE);
 
@@ -156,4 +166,73 @@ void MemoryManager::mapPage(BootstrapAllocator& alloc, VirtualAddress virtAddr, 
     }
 
     pml[index] = entry;
+}
+
+FreePageRange* MemoryManager::buildFreePageList(uint32_t numEntries, SMapEntry* smap) {
+    ASSERT(_freePageList && !_freePageList->next);
+
+    // Assume that previous steps didn't take up the entire contiguous chunk at 1MiB,
+    // and that we can store all of the initial free page ranges in one page
+    VirtualAddress slabStart = physicalToVirtual(getFreePage());
+    VirtualAddress slabEnd = slabStart + PAGE_SIZE;
+
+    FreePageRange* head = 0;
+    FreePageRange* tail = 0;
+    for (uint32_t i = 0; i < numEntries; ++i) {
+        // TODO: check for overlapping entries
+        const auto& entry = smap[i];
+
+        if (entry.type != 1) {
+            continue;
+        }
+
+        uint64_t base = entry.base;
+        uint64_t end = entry.base + entry.length;
+
+        // Reserve memory below 1MiB
+        if (base < 1 * MiB) {
+            if (end <= 1 * MiB) {
+                continue;
+            } else {
+                base = 1 * MiB;
+            }
+        }
+
+        // Align this range to page boundaries
+        base = PAGE_SIZE * ((base + PAGE_SIZE - 1) / PAGE_SIZE);
+        end = PAGE_SIZE * (end / PAGE_SIZE);
+        if (base >= end) {
+            continue;
+        }
+
+        // Allocate space for the new range
+        ASSERT(slabStart + sizeof(FreePageRange) <= slabEnd);
+        void* newAddr = slabStart.ptr<void>();
+        slabStart += sizeof(FreePageRange);
+
+        // Initialize the new range at the appropriate address
+        FreePageRange* newRange = new (newAddr) FreePageRange(base, end);
+
+        // Insert it into the list
+        if (head) {
+            tail->next = newRange;
+            tail = newRange;
+        } else {
+            head = tail = newRange;
+        }
+    }
+
+    // Mark the memory we've already used during MM initialization as not free
+    FreePageRange* current = head;
+    while (current) {
+        ASSERT(current->start >= PhysicalAddress(1 * MiB));
+        if (current->start <= _freePageList->start) {
+            current->start = _freePageList->start;
+            ASSERT(current->start < current->end);
+        }
+
+        current = current->next;
+    }
+
+    return head;
 }
