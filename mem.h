@@ -26,6 +26,9 @@ constexpr uint64_t PAGE_PRESENT = 1 << 0;
 constexpr uint64_t PAGE_WRITABLE = 1 << 1;
 constexpr uint64_t PAGE_SIZE_FLAG = 1 << 7;
 
+// Configuration
+constexpr size_t HEAP_SIZE = 2 * MiB;
+
 inline void flushTLB() {
     asm volatile(
         "movq  %%cr3, %%rax\n\t"
@@ -168,24 +171,49 @@ public:
 
     size_t freePageCount() const;
 
-    PhysicalAddress pageAlloc();
+    PhysicalAddress pageAlloc(size_t count = 1);
     void mapPage(VirtualAddress virtAddr, PhysicalAddress physAddr,
                  int pageSize = 0);
+    VirtualAddress physicalToVirtual(PhysicalAddress physAddr);
+
+    void* kmalloc(size_t size);
+    void kfree(void* ptr);
+    void showHeap() const;
 
 private:
     static MemoryManager* _instance;
 
     E820Table _e820Table;
 
-    VirtualAddress physicalToVirtual(PhysicalAddress physAddr);
-    void buildLinearMemoryMap(uint64_t physicalMemoryRange);
-    FreePageRange* buildFreePageList();
-
-    FreePageRange* _freePageList = nullptr;
-
-    PhysicalAddress _linearMapEnd = 0;
     const PhysicalAddress _identityMapEnd = 2 * MiB;
     const VirtualAddress _linearMapOffset = 0xFFFF800000000000;
+    PhysicalAddress _linearMapEnd = 0;
+    void buildLinearMemoryMap(uint64_t physicalMemoryRange);
+
+    FreePageRange* _freePageList = nullptr;
+    FreePageRange* buildFreePageList();
+
+    struct __attribute__((packed)) BlockHeader {
+        static BlockHeader freeBlock(uint32_t size) {
+            ASSERT(size % 2 == 0);
+            return BlockHeader{size};
+        }
+
+        static BlockHeader usedBlock(uint32_t size) {
+            ASSERT(size % 2 == 0);
+            return BlockHeader{size | 1};
+        }
+
+        uint32_t size() const { return clearLowBits(raw, 1); }
+        bool isFree() const { return lowBits(raw, 1) == 0; }
+
+        uint32_t raw = 0;
+    };
+
+    static_assert(sizeof(BlockHeader) == 4);
+
+    uint8_t* _heap = nullptr;
+    void initializeHeap();
 };
 
 #define MM MemoryManager::the()

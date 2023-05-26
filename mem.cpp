@@ -45,20 +45,37 @@ MemoryManager::MemoryManager() : _e820Table(E820_TABLE, *E820_NUM_ENTRIES_PTR) {
 
     buildLinearMemoryMap(physicalMemoryRange);
     _freePageList = buildFreePageList();
+
+    initializeHeap();
 }
 
-PhysicalAddress MemoryManager::pageAlloc() {
-    ASSERT(_freePageList);
+PhysicalAddress MemoryManager::pageAlloc(size_t count) {
+    // Linear scan, first-fit
+    FreePageRange* prev = nullptr;
+    FreePageRange* current = _freePageList;
+    while (current) {
+        uint64_t sizeInPages = (current->end - current->start) / PAGE_SIZE;
+        if (sizeInPages >= count) {
+            PhysicalAddress result = current->start;
+            current->start += count * PAGE_SIZE;
 
-    PhysicalAddress next = _freePageList->start;
-    _freePageList->start += PAGE_SIZE;
+            if (current->start == current->end) {
+                FreePageRange* next = current->next;
+                if (prev) {
+                    prev->next = next;
+                } else {
+                    _freePageList = next;
+                }
+            }
 
-    if (_freePageList->start == _freePageList->end) {
-        // TODO: free memory?
-        _freePageList = _freePageList->next;
+            return result;
+        }
+
+        prev = current;
+        current = current->next;
     }
 
-    return next;
+    panic("OOM in MemoryManager::pageAlloc");
 }
 
 VirtualAddress MemoryManager::physicalToVirtual(PhysicalAddress physAddr) {
@@ -232,4 +249,93 @@ size_t MemoryManager::freePageCount() const {
     }
 
     return freePages;
+}
+
+void MemoryManager::initializeHeap() {
+    // Allocate and zero out a contiguous region to use as a heap
+    PhysicalAddress physicalPages = MM.pageAlloc(HEAP_SIZE / PAGE_SIZE);
+    _heap = MM.physicalToVirtual(physicalPages).ptr<uint8_t>();
+    memset(_heap, 0, HEAP_SIZE);
+
+    // Initialize the entire space as a single free block
+    BlockHeader* firstBlock = new (_heap) BlockHeader;
+    *firstBlock = BlockHeader::freeBlock(HEAP_SIZE);
+}
+
+void* MemoryManager::kmalloc(size_t size) {
+    // Round up to the nearest multiple of 4 bytes
+    size = 4 * ((size + 3) / 4);
+
+    size_t requiredSize = size + sizeof(BlockHeader);
+
+    // Linear scan first-fit
+    uint8_t* ptr = _heap;
+    while (ptr < _heap + HEAP_SIZE) {
+        // TODO: use memcpy
+        BlockHeader* header = reinterpret_cast<BlockHeader*>(ptr);
+
+        // Skip used blocks
+        if (!header->isFree()) {
+            ptr += header->size();
+            continue;
+        }
+
+        // Coalesce free blocks
+        while (true) {
+            uint8_t* nextPtr = ptr + header->size();
+            BlockHeader* nextHeader = reinterpret_cast<BlockHeader*>(nextPtr);
+
+            if (nextPtr >= _heap + HEAP_SIZE || !nextHeader->isFree()) {
+                break;
+            }
+
+            // If the next block is also free, combine them
+            *header = BlockHeader::freeBlock(header->size() + nextHeader->size());
+
+            // Continue until we reach the end of the heap or a used block
+        }
+
+        if (header->size() >= requiredSize) {
+            int64_t extraSize = header->size() - requiredSize;
+
+            // Split block into two pieces if possible
+            if (extraSize >= 4 + sizeof(BlockHeader)) {
+                BlockHeader* nextHeader = reinterpret_cast<BlockHeader*>(ptr + requiredSize);
+                *nextHeader = BlockHeader::freeBlock(extraSize);
+                *header = BlockHeader::usedBlock(requiredSize);
+            } else {
+                *header = BlockHeader::usedBlock(header->size());
+            }
+
+            return ptr + sizeof(BlockHeader);
+        }
+
+        ptr += header->size();
+    }
+
+    panic("OOM in MemoryManager::kmalloc");
+}
+
+void MemoryManager::kfree(void* ptr) {
+    // Locate the header for this heap block and verify that it looks good
+    uint8_t* blockPtr = reinterpret_cast<uint8_t*>(ptr) - sizeof(BlockHeader);
+    BlockHeader* header = reinterpret_cast<BlockHeader*>(blockPtr);
+    ASSERT(blockPtr >= _heap && blockPtr + header->size() <= _heap + HEAP_SIZE);
+    ASSERT(header->size() % 4 == 0);
+    ASSERT(header->size() >= sizeof(BlockHeader) + 4);
+    ASSERT(!header->isFree());
+
+    // Mark it as free
+    *header = BlockHeader::freeBlock(header->size());
+}
+
+void MemoryManager::showHeap() const {
+    uint8_t* ptr = _heap;
+    while (ptr < _heap + HEAP_SIZE) {
+        // TODO: use memcpy
+        const BlockHeader* header = reinterpret_cast<const BlockHeader*>(ptr);
+        println("addr={:X}, size={}, free={}", ptr, header->size(), header->isFree());
+
+        ptr += header->size();
+    }
 }

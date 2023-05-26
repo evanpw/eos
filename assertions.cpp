@@ -2,18 +2,18 @@
 
 #include "print.h"
 
-void halt() {
+[[noreturn]] void halt() {
     while (true) {
         asm volatile("cli; hlt");
     }
 }
 
-void panic() {
+[[noreturn]] void panic() {
     println("\nKernel panic\n");
     halt();
 }
 
-void panic(const char* msg) {
+[[noreturn]] void panic(const char* msg) {
     print("\nKernel panic: ");
     println(msg);
     halt();

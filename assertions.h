@@ -1,9 +1,9 @@
 #pragma once
 #include <stddef.h>
 
-void halt();
-void panic();
-void panic(const char* msg);
+[[noreturn]] void halt();
+[[noreturn]] void panic();
+[[noreturn]] void panic(const char* msg);
 
 #define STRINGIZE_DETAIL(x) #x
 #define STRINGIZE(x) STRINGIZE_DETAIL(x)
