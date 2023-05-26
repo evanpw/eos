@@ -4,6 +4,7 @@
 
 #include "assertions.h"
 #include "bits.h"
+#include "boot.h"
 #include "span.h"
 
 struct __attribute__((packed)) E820Entry {
@@ -24,12 +25,6 @@ constexpr uint64_t PAGE_SIZE = 4 * KiB;
 constexpr uint64_t PAGE_PRESENT = 1 << 0;
 constexpr uint64_t PAGE_WRITABLE = 1 << 1;
 constexpr uint64_t PAGE_SIZE_FLAG = 1 << 7;
-
-class PageMapEntry;
-static PageMapEntry* const PML4 = reinterpret_cast<PageMapEntry*>(0x7C000);
-
-static uint32_t* E820_NUM_ENTRIES_PTR = reinterpret_cast<uint32_t*>(0x1000);
-static E820Entry* E820_TABLE = reinterpret_cast<E820Entry*>(0x1004);
 
 inline void flushTLB() {
     asm volatile(
