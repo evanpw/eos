@@ -1,5 +1,5 @@
-#include "mem.h"
 #include "assertions.h"
+#include "mem.h"
 #include "print.h"
 #include "span.h"
 #include "video.h"
@@ -14,4 +14,3 @@ extern "C" void kmain() {
 
     MemoryManager mm;
 }
-

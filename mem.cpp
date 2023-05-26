@@ -1,4 +1,5 @@
 #include "mem.h"
+
 #include "assertions.h"
 #include "new.h"
 #include "print.h"
@@ -9,9 +10,9 @@ MemoryManager::MemoryManager() : _e820Table(E820_TABLE, *E820_NUM_ENTRIES_PTR) {
     uint64_t physicalMemoryRange = 0;
     uint64_t availableAt1MiB = 0;
 
-    // Count available physical memory, and find the contiguous range of physical
-    // memory starting at 1MiB (we have to start there because only the first 2MiB
-    // is identity-mapped by the bootloader)
+    // Count available physical memory, and find the contiguous range of
+    // physical memory starting at 1MiB (we have to start there because only the
+    // first 2MiB is identity-mapped by the bootloader)
     for (const auto& entry : _e820Table) {
         // TODO: check for overlapping entries
         uint64_t end = entry.base + entry.length;
@@ -69,7 +70,8 @@ void MemoryManager::buildLinearMemoryMap(uint64_t physicalMemoryRange) {
         int pageSize;
         if (current % GiB == 0 && physicalMemoryRange - current >= GiB) {
             pageSize = 2;
-        } else if (current % (2 * MiB) == 0 && physicalMemoryRange - current >= 2 * MiB) {
+        } else if (current % (2 * MiB) == 0 &&
+                   physicalMemoryRange - current >= 2 * MiB) {
             pageSize = 1;
         } else {
             pageSize = 0;
@@ -82,7 +84,8 @@ void MemoryManager::buildLinearMemoryMap(uint64_t physicalMemoryRange) {
     }
 }
 
-void MemoryManager::mapPage(VirtualAddress virtAddr, PhysicalAddress physAddr, int pageSize) {
+void MemoryManager::mapPage(VirtualAddress virtAddr, PhysicalAddress physAddr,
+                            int pageSize) {
     // pageSize = 0: 4KiB pages
     // pageSize = 1: 2MiB pages
     // pageSize = 2: 1GiB pages
@@ -97,7 +100,8 @@ void MemoryManager::mapPage(VirtualAddress virtAddr, PhysicalAddress physAddr, i
     // The virtual address must be page-aligned
     ASSERT(virtAddr.pageOffset() == 0);
 
-    // The pointer to the current page map level (PML4, PDP, PD, PT), starting with PML4
+    // The pointer to the current page map level (PML4, PDP, PD, PT), starting
+    // with PML4
     PageMapEntry* pml = PML4;
 
     // Traverse the PMLs in order (PML4, PDP, PD)
@@ -113,8 +117,8 @@ void MemoryManager::mapPage(VirtualAddress virtAddr, PhysicalAddress physAddr, i
             void* pmlNext = physicalToVirtual(pmlNextPhysAddr);
             memset(pmlNext, 0, PAGE_SIZE);
 
-            // Point the correct entry in the PML4 to the new PDP and mark it present
-            // and writable
+            // Point the correct entry in the PML4 to the new PDP and mark it
+            // present and writable
             entry = PageMapEntry(pmlNextPhysAddr, PAGE_PRESENT | PAGE_WRITABLE);
             pml[index] = entry;
         } else {
@@ -125,8 +129,8 @@ void MemoryManager::mapPage(VirtualAddress virtAddr, PhysicalAddress physAddr, i
         pml = physicalToVirtual(entry.addr()).ptr<PageMapEntry>();
     }
 
-    // After reaching this point, pml is a pointer to the correct page table (or higher page map,
-    // if using large pages)
+    // After reaching this point, pml is a pointer to the correct page table (or
+    // higher page map, if using large pages)
     uint16_t index = virtAddr.pageMapIndex(pageSize + 1);
 
     // We can't remap existing pages yet
@@ -141,8 +145,9 @@ void MemoryManager::mapPage(VirtualAddress virtAddr, PhysicalAddress physAddr, i
 }
 
 FreePageRange* MemoryManager::buildFreePageList() {
-    // Assume that previous steps didn't take up the entire contiguous chunk at 1MiB,
-    // and that we can store all of the initial free page ranges in one page
+    // Assume that previous steps didn't take up the entire contiguous chunk at
+    // 1MiB, and that we can store all of the initial free page ranges in one
+    // page
     VirtualAddress slabStart = physicalToVirtual(pageAlloc());
     VirtualAddress slabEnd = slabStart + PAGE_SIZE;
 
@@ -213,7 +218,8 @@ size_t MemoryManager::freePageCount() const {
 
     FreePageRange* current = _freePageList;
     while (current) {
-        ASSERT(current->start.pageOffset() == 0 && current->end.pageOffset() == 0);
+        ASSERT(current->start.pageOffset() == 0 &&
+               current->end.pageOffset() == 0);
         freePages += (current->end - current->start) / PAGE_SIZE;
         current = current->next;
     }

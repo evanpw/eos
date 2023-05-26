@@ -1,11 +1,12 @@
 #pragma once
 #include <stddef.h>
 #include <stdint.h>
+
 #include "assertions.h"
 #include "bits.h"
 #include "span.h"
 
-struct __attribute__ ((packed)) E820Entry {
+struct __attribute__((packed)) E820Entry {
     uint64_t base;
     uint64_t length;
     uint32_t type;
@@ -31,11 +32,12 @@ static uint32_t* E820_NUM_ENTRIES_PTR = reinterpret_cast<uint32_t*>(0x1000);
 static E820Entry* E820_TABLE = reinterpret_cast<E820Entry*>(0x1004);
 
 inline void flushTLB() {
-    asm volatile (
+    asm volatile(
         "movq  %%cr3, %%rax\n\t"
         "movq  %%rax, %%cr3\n\t"
-        : : : "memory", "rax"
-    );
+        :
+        :
+        : "memory", "rax");
 }
 
 struct PhysicalAddress {
@@ -55,11 +57,21 @@ struct PhysicalAddress {
         return value - rhs.value;
     }
 
-    bool operator<(const PhysicalAddress& rhs) const { return value < rhs.value; }
-    bool operator<=(const PhysicalAddress& rhs) const { return value <= rhs.value; }
-    bool operator>(const PhysicalAddress& rhs) const { return value > rhs.value; }
-    bool operator>=(const PhysicalAddress& rhs) const { return value >= rhs.value; }
-    bool operator==(const PhysicalAddress& rhs) const { return value == rhs.value; }
+    bool operator<(const PhysicalAddress& rhs) const {
+        return value < rhs.value;
+    }
+    bool operator<=(const PhysicalAddress& rhs) const {
+        return value <= rhs.value;
+    }
+    bool operator>(const PhysicalAddress& rhs) const {
+        return value > rhs.value;
+    }
+    bool operator>=(const PhysicalAddress& rhs) const {
+        return value >= rhs.value;
+    }
+    bool operator==(const PhysicalAddress& rhs) const {
+        return value == rhs.value;
+    }
 
     uint64_t pageBase(int pageSize = 0) const {
         ASSERT(pageSize >= 0 && pageSize <= 2);
@@ -88,13 +100,9 @@ struct VirtualAddress {
         return *this;
     }
 
-    uint64_t pageBase() const {
-        return clearLowBits(value, 12);
-    }
+    uint64_t pageBase() const { return clearLowBits(value, 12); }
 
-    uint64_t pageOffset() const {
-        return lowBits(value, 12);
-    }
+    uint64_t pageOffset() const { return lowBits(value, 12); }
 
     bool isCanonical() const {
         // The top 17 bits must be all 1 or all zero
@@ -121,9 +129,7 @@ struct PageMapEntry {
     PageMapEntry(PhysicalAddress addr) : raw(addr.value) {}
     PageMapEntry(uint64_t value) : raw(value) {}
 
-    PageMapEntry(PhysicalAddress addr, uint64_t flags)
-    : raw(addr.value)
-    {
+    PageMapEntry(PhysicalAddress addr, uint64_t flags) : raw(addr.value) {
         setFlags(flags);
     }
 
@@ -166,7 +172,8 @@ public:
     size_t freePageCount() const;
 
     PhysicalAddress pageAlloc();
-    void mapPage(VirtualAddress virtAddr, PhysicalAddress physAddr, int pageSize = 0);
+    void mapPage(VirtualAddress virtAddr, PhysicalAddress physAddr,
+                 int pageSize = 0);
 
 private:
     E820Table _e820Table;

@@ -7,9 +7,7 @@ struct FormatSpec {
     bool uppercase = false;
 };
 
-void printChar(char c) {
-    asm volatile("outb %0, $0xE9" ::"a"(c));
-}
+void printChar(char c) { asm volatile("outb %0, $0xE9" ::"a"(c)); }
 
 void FormatArg::print(const FormatSpec& spec) {
     ASSERT(spec.base >= 2 && spec.base <= 16);
