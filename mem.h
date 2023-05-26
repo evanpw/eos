@@ -2,13 +2,17 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "assertions.h"
+#include "bits.h"
+#include "span.h"
 
-struct __attribute__ ((packed)) SMapEntry {
+struct __attribute__ ((packed)) E820Entry {
     uint64_t base;
     uint64_t length;
     uint32_t type;
     uint32_t extended;
 };
+
+using E820Table = Span<E820Entry>;
 
 constexpr uint64_t KiB = 1024;
 constexpr uint64_t MiB = 1024 * KiB;
@@ -20,23 +24,11 @@ constexpr uint64_t PAGE_PRESENT = 1 << 0;
 constexpr uint64_t PAGE_WRITABLE = 1 << 1;
 constexpr uint64_t PAGE_SIZE_FLAG = 1 << 7;
 
-void* memset(void* dest, uint8_t value, size_t n);
+class PageMapEntry;
+static PageMapEntry* const PML4 = reinterpret_cast<PageMapEntry*>(0x7C000);
 
-uint64_t lowBits(uint64_t value, int count);
-uint64_t highBits(uint64_t value, int count);
-uint64_t bitRange(uint64_t value, int start, int length);
-uint64_t clearLowBits(uint64_t value, int count);
-
-// TODO: move these elsewhere
-template <typename T>
-T min(const T& lhs, const T& rhs) {
-    return (rhs < lhs) ? rhs : lhs;
-}
-
-template <typename T>
-T max(const T& lhs, const T& rhs) {
-    return (lhs < rhs) ? rhs : lhs;
-}
+static uint32_t* E820_NUM_ENTRIES_PTR = reinterpret_cast<uint32_t*>(0x1000);
+static E820Entry* E820_TABLE = reinterpret_cast<E820Entry*>(0x1004);
 
 inline void flushTLB() {
     asm volatile (
@@ -49,14 +41,18 @@ inline void flushTLB() {
 struct PhysicalAddress {
     PhysicalAddress(uint64_t value) : value(value) {}
 
-    PhysicalAddress operator+(const PhysicalAddress& rhs) const {
-        return PhysicalAddress(value + rhs.value);
+    PhysicalAddress operator+(size_t delta) const {
+        return PhysicalAddress(value + delta);
     }
 
-    PhysicalAddress& operator+=(uint64_t delta) {
+    PhysicalAddress& operator+=(size_t delta) {
         // TODO: check for overflow
         value += delta;
         return *this;
+    }
+
+    int64_t operator-(const PhysicalAddress& rhs) const {
+        return value - rhs.value;
     }
 
     bool operator<(const PhysicalAddress& rhs) const { return value < rhs.value; }
@@ -82,11 +78,11 @@ struct PhysicalAddress {
 struct VirtualAddress {
     VirtualAddress(uint64_t value) : value(value) {}
 
-    VirtualAddress operator+(const VirtualAddress& rhs) const {
-        return VirtualAddress(value + rhs.value);
+    VirtualAddress operator+(size_t delta) const {
+        return VirtualAddress(value + delta);
     }
 
-    VirtualAddress& operator+=(uint64_t delta) {
+    VirtualAddress& operator+=(size_t delta) {
         // TODO: check for overflow
         value += delta;
         return *this;
@@ -166,17 +162,20 @@ struct FreePageRange {
 // Handles physical and virtual memory at the page level
 class MemoryManager {
 public:
-    MemoryManager(uint32_t numEntries, SMapEntry* smap);
+    MemoryManager();
+    size_t freePageCount() const;
+
+    PhysicalAddress pageAlloc();
+    void mapPage(VirtualAddress virtAddr, PhysicalAddress physAddr, int pageSize = 0);
 
 private:
-    PhysicalAddress getFreePage();
-    void mapPage(VirtualAddress virtAddr, PhysicalAddress physAddr, int pageSize = 0);
+    E820Table _e820Table;
 
     VirtualAddress physicalToVirtual(PhysicalAddress physAddr);
     void buildLinearMemoryMap(uint64_t physicalMemoryRange);
-    FreePageRange* buildFreePageList(uint32_t numEntries, SMapEntry* smap);
+    FreePageRange* buildFreePageList();
 
-    FreePageRange* _freePageList = 0;
+    FreePageRange* _freePageList = nullptr;
 
     PhysicalAddress _linearMapEnd = 0;
     const PhysicalAddress _identityMapEnd = 2 * MiB;

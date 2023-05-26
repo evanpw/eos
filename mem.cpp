@@ -1,48 +1,19 @@
 #include "mem.h"
 #include "assertions.h"
-#include "print.h"
 #include "new.h"
+#include "print.h"
+#include "stdlib.h"
 
-// TODO: this is really slow
-void* memset(void* dest, uint8_t value, size_t n) {
-    uint8_t* ptr = static_cast<uint8_t*>(dest);
-
-    for (size_t i = 0; i < n; ++i) {
-        *ptr++ = value;
-    }
-
-    return dest;
-}
-
-uint64_t lowBits(uint64_t value, int count) {
-    ASSERT(count >= 0 && count <= 64);
-    return value & ((1 << count) - 1);
-}
-
-uint64_t highBits(uint64_t value, int count) {
-    ASSERT(count >= 0 && count <= 64);
-    return value >> (64 - count);
-}
-
-uint64_t bitRange(uint64_t value, int start, int length) {
-    ASSERT(start >= 0 && start <= 64 && length >= 0 && start + length <= 64);
-    return lowBits(highBits(value, 64 - start), length);
-}
-
-uint64_t clearLowBits(uint64_t value, int count) {
-    ASSERT(count >= 0 && count <= 64);
-    return value & ~((1 << count) - 1);
-}
-
-
-MemoryManager::MemoryManager(uint32_t numEntries, SMapEntry* smap) {
+MemoryManager::MemoryManager() : _e820Table(E820_TABLE, *E820_NUM_ENTRIES_PTR) {
     uint64_t availableBytes = 0;
     uint64_t physicalMemoryRange = 0;
     uint64_t availableAt1MiB = 0;
 
-    for (uint32_t i = 0; i < numEntries; ++i) {
+    // Count available physical memory, and find the contiguous range of physical
+    // memory starting at 1MiB (we have to start there because only the first 2MiB
+    // is identity-mapped by the bootloader)
+    for (const auto& entry : _e820Table) {
         // TODO: check for overlapping entries
-        const auto& entry = smap[i];
         uint64_t end = entry.base + entry.length;
         physicalMemoryRange = max(physicalMemoryRange, end);
 
@@ -53,28 +24,29 @@ MemoryManager::MemoryManager(uint32_t numEntries, SMapEntry* smap) {
         availableBytes += entry.length;
 
         if (entry.base <= 1 * MiB && end > 1 * MiB) {
+            // Round down to page-multiple size
+            end = (end / PAGE_SIZE) * PAGE_SIZE;
             availableAt1MiB = end - 1 * MiB;
         }
     }
 
-    println("Available physical memory: {}MiB", availableBytes / MiB);
+    println("Available physical memory: {} MiB", availableBytes / MiB);
 
     FreePageRange initialPages(1 * MiB, 1 * MiB + availableAt1MiB);
     _freePageList = &initialPages;
 
     buildLinearMemoryMap(physicalMemoryRange);
-    _freePageList = buildFreePageList(numEntries, smap);
+    _freePageList = buildFreePageList();
 }
 
-PhysicalAddress MemoryManager::getFreePage()
-{
-    ASSERT(_freePageList != 0);
+PhysicalAddress MemoryManager::pageAlloc() {
+    ASSERT(_freePageList);
 
     PhysicalAddress next = _freePageList->start;
     _freePageList->start += PAGE_SIZE;
 
     if (_freePageList->start == _freePageList->end) {
-        // TODO: free memory
+        // TODO: free memory?
         _freePageList = _freePageList->next;
     }
 
@@ -91,7 +63,7 @@ VirtualAddress MemoryManager::physicalToVirtual(PhysicalAddress physAddr) {
 }
 
 void MemoryManager::buildLinearMemoryMap(uint64_t physicalMemoryRange) {
-    // Attempt to map all of physical memory to high virtual memory
+    // Linearly map all physical memory to high virtual memory
     uint64_t current = 0;
     while (current < physicalMemoryRange) {
         int pageSize;
@@ -126,7 +98,7 @@ void MemoryManager::mapPage(VirtualAddress virtAddr, PhysicalAddress physAddr, i
     ASSERT(virtAddr.pageOffset() == 0);
 
     // The pointer to the current page map level (PML4, PDP, PD, PT), starting with PML4
-    PageMapEntry* pml = reinterpret_cast<PageMapEntry*>(0x7C000);
+    PageMapEntry* pml = PML4;
 
     // Traverse the PMLs in order (PML4, PDP, PD)
     for (int n = 4; n > pageSize + 1; --n) {
@@ -137,7 +109,7 @@ void MemoryManager::mapPage(VirtualAddress virtAddr, PhysicalAddress physAddr, i
             // No existing entry in the current PML
 
             // Create a new empty next PML in fresh physical memory
-            PhysicalAddress pmlNextPhysAddr = getFreePage();
+            PhysicalAddress pmlNextPhysAddr = pageAlloc();
             void* pmlNext = physicalToVirtual(pmlNextPhysAddr);
             memset(pmlNext, 0, PAGE_SIZE);
 
@@ -168,20 +140,16 @@ void MemoryManager::mapPage(VirtualAddress virtAddr, PhysicalAddress physAddr, i
     pml[index] = entry;
 }
 
-FreePageRange* MemoryManager::buildFreePageList(uint32_t numEntries, SMapEntry* smap) {
-    ASSERT(_freePageList && !_freePageList->next);
-
+FreePageRange* MemoryManager::buildFreePageList() {
     // Assume that previous steps didn't take up the entire contiguous chunk at 1MiB,
     // and that we can store all of the initial free page ranges in one page
-    VirtualAddress slabStart = physicalToVirtual(getFreePage());
+    VirtualAddress slabStart = physicalToVirtual(pageAlloc());
     VirtualAddress slabEnd = slabStart + PAGE_SIZE;
 
-    FreePageRange* head = 0;
-    FreePageRange* tail = 0;
-    for (uint32_t i = 0; i < numEntries; ++i) {
+    FreePageRange* head = nullptr;
+    FreePageRange* tail = nullptr;
+    for (const auto& entry : _e820Table) {
         // TODO: check for overlapping entries
-        const auto& entry = smap[i];
-
         if (entry.type != 1) {
             continue;
         }
@@ -223,9 +191,12 @@ FreePageRange* MemoryManager::buildFreePageList(uint32_t numEntries, SMapEntry* 
     }
 
     // Mark the memory we've already used during MM initialization as not free
+    ASSERT(_freePageList && !_freePageList->next);
+
     FreePageRange* current = head;
     while (current) {
         ASSERT(current->start >= PhysicalAddress(1 * MiB));
+
         if (current->start <= _freePageList->start) {
             current->start = _freePageList->start;
             ASSERT(current->start < current->end);
@@ -235,4 +206,17 @@ FreePageRange* MemoryManager::buildFreePageList(uint32_t numEntries, SMapEntry* 
     }
 
     return head;
+}
+
+size_t MemoryManager::freePageCount() const {
+    size_t freePages = 0;
+
+    FreePageRange* current = _freePageList;
+    while (current) {
+        ASSERT(current->start.pageOffset() == 0 && current->end.pageOffset() == 0);
+        freePages += (current->end - current->start) / PAGE_SIZE;
+        current = current->next;
+    }
+
+    return freePages;
 }
