@@ -13,4 +13,5 @@ extern "C" void kmain() {
     clearScreen(0xA0);
 
     MemoryManager mm;
+    println("Free pages: {}", MM.freePageCount());
 }

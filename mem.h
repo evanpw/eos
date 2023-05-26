@@ -164,6 +164,8 @@ struct FreePageRange {
 class MemoryManager {
 public:
     MemoryManager();
+    static MemoryManager& the();
+
     size_t freePageCount() const;
 
     PhysicalAddress pageAlloc();
@@ -171,6 +173,8 @@ public:
                  int pageSize = 0);
 
 private:
+    static MemoryManager* _instance;
+
     E820Table _e820Table;
 
     VirtualAddress physicalToVirtual(PhysicalAddress physAddr);
@@ -183,3 +187,5 @@ private:
     const PhysicalAddress _identityMapEnd = 2 * MiB;
     const VirtualAddress _linearMapOffset = 0xFFFF800000000000;
 };
+
+#define MM MemoryManager::the()

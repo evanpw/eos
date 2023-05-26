@@ -5,7 +5,14 @@
 #include "print.h"
 #include "stdlib.h"
 
+MemoryManager* MemoryManager::_instance = nullptr;
+
+MemoryManager& MemoryManager::the() { return *_instance; }
+
 MemoryManager::MemoryManager() : _e820Table(E820_TABLE, *E820_NUM_ENTRIES_PTR) {
+    ASSERT(!_instance);
+    _instance = this;
+
     uint64_t availableBytes = 0;
     uint64_t physicalMemoryRange = 0;
     uint64_t availableAt1MiB = 0;
