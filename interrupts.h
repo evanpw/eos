@@ -23,7 +23,7 @@ struct __attribute__((packed)) IDTRegister {
     uint64_t addr;
 };
 
-extern InterruptDescriptor g_idt[256];
+extern InterruptDescriptor* g_idt;
 extern IDTRegister g_idtr;
 
 struct __attribute__((packed)) InterruptFrame {

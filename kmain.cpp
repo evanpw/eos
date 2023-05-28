@@ -20,6 +20,7 @@ extern "C" void kmain() {
 
     installInterrupts();
 
+    /*
     // Model-Specific Registers (MSRs)
     static constexpr uint64_t IA32_EFER = 0xC0000080;
     static constexpr uint64_t IA32_STAR = 0xC0000081;
@@ -42,4 +43,5 @@ extern "C" void kmain() {
         :
         : "i"(userTask)
         : "rcx", "r11", "memory");
+    */
 }

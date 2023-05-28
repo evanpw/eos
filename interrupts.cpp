@@ -2,10 +2,12 @@
 
 #include "assertions.h"
 #include "bits.h"
+#include "mem.h"
 #include "boot.h"
 #include "io.h"
 #include "print.h"
 #include "stdlib.h"
+#include "new.h"
 
 InterruptDescriptor::InterruptDescriptor(uint64_t addr, uint8_t flags)
 : addr0(lowBits(addr, 16)),
@@ -49,7 +51,7 @@ enum ICW4 : uint8_t {
 // Offset from IRQ# to interrupt vector
 static constexpr uint8_t IRQ_OFFSET = 0x20;
 
-InterruptDescriptor g_idt[256];
+InterruptDescriptor* g_idt = nullptr;
 IDTRegister g_idtr;
 
 void handleIRQ(uint8_t irq, InterruptFrame* frame) {
@@ -212,7 +214,7 @@ void configurePIC() {
                                      ISR_PRESENT | ISR_TRAP_GATE)
 
 void installInterrupts() {
-    memset(g_idt, 0, 256 * sizeof(InterruptDescriptor));
+    g_idt = new InterruptDescriptor[256];
 
     REGISTER_EXCEPTION(0);
     REGISTER_EXCEPTION(1);
@@ -253,11 +255,11 @@ void installInterrupts() {
     g_idtr.limit = 256 * sizeof(InterruptDescriptor) - 1;
 
     asm volatile("lidt %0" : : "m"(g_idtr));
-    // asm volatile("sti");
+    asm volatile("sti");
 
     // Unmask all IRQs
-    // outb(PIC1_DATA, 0x00);
-    // outb(PIC2_DATA, 0x00);
+    outb(PIC1_DATA, 0x00);
+    outb(PIC2_DATA, 0x00);
 
     println("Interrupts initialized");
 }
