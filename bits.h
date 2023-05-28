@@ -22,3 +22,7 @@ inline uint64_t clearLowBits(uint64_t value, int count) {
     ASSERT(count >= 0 && count <= 64);
     return value & ~((1 << count) - 1);
 }
+
+inline uint64_t concatBits(uint32_t high, uint32_t low) {
+    return ((uint64_t)high << 32) | low;
+}

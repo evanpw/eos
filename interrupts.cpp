@@ -2,13 +2,14 @@
 
 #include "assertions.h"
 #include "bits.h"
+#include "boot.h"
 #include "io.h"
 #include "print.h"
 #include "stdlib.h"
 
 InterruptDescriptor::InterruptDescriptor(uint64_t addr, uint8_t flags)
 : addr0(lowBits(addr, 16)),
-  cs(0x08),
+  cs(SELECTOR_CODE0),
   flags(flags),
   addr1(bitRange(addr, 16, 16)),
   addr2(bitRange(addr, 32, 32)) {}
@@ -69,7 +70,7 @@ void handleIRQ(uint8_t irq, InterruptFrame* frame) {
     outb(PIC1_COMMAND, 0x20);
 }
 
-#define IRQ_HANDLER(idx)                                                               \
+#define IRQ_HANDLER(idx)                                                     \
     void __attribute__((interrupt)) irqHandler##idx(InterruptFrame* frame) { \
         handleIRQ(idx, frame);                                               \
     }
@@ -158,7 +159,7 @@ EXCEPTION_HANDLER_WITH_CODE(29, "VMM Communication Exception")
 EXCEPTION_HANDLER_WITH_CODE(30, "Security Exception")
 EXCEPTION_HANDLER(31, "Reserved")
 
-#define REGISTER_IRQ(idx)                                     \
+#define REGISTER_IRQ(idx)                          \
     g_idt[IRQ_OFFSET + idx] = InterruptDescriptor( \
         (uint64_t)irqHandler##idx, ISR_PRESENT | ISR_TRAP_GATE);
 
@@ -252,11 +253,11 @@ void installInterrupts() {
     g_idtr.limit = 256 * sizeof(InterruptDescriptor) - 1;
 
     asm volatile("lidt %0" : : "m"(g_idtr));
-    asm volatile("sti");
+    // asm volatile("sti");
 
     // Unmask all IRQs
-    outb(PIC1_DATA, 0x00);
-    outb(PIC2_DATA, 0x00);
+    // outb(PIC1_DATA, 0x00);
+    // outb(PIC2_DATA, 0x00);
 
     println("Interrupts initialized");
 }

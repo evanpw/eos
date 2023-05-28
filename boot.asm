@@ -107,19 +107,19 @@ main:
     ; Page Map Level 4
     mov di, PML4 - PAGE_MAP
     mov eax, PDP
-    or eax, 3 ; PAGE_PRESENT | PAGE_WRITEABLE
+    or eax, 7 ; PAGE_PRESENT | PAGE_WRITEABLE (TODO: should be 3)
     mov [es:di], eax
 
     ; Page Directory Pointer Table
     mov di, PDP - PAGE_MAP
     mov eax, PD
-    or eax, 3 ; PAGE_PRESENT | PAGE_WRITEABLE
+    or eax, 7 ; PAGE_PRESENT | PAGE_WRITEABLE (TODO: should be 3)
     mov [es:di], eax
 
     ; Page Directory
     mov di, PD - PAGE_MAP
     xor eax, eax ; Physical address 0
-    or eax, 0x83 ; PAGE_PRESENT | PAGE_WRITEABLE | PAGE_SIZE
+    or eax, 0x87 ; PAGE_PRESENT | PAGE_WRITEABLE | PAGE_SIZE (TODO: should be 0x83)
     mov [es:di], eax
 
     ; Set PAE (Physical Address Extension) and PGE (Page Global Enabled) flags
@@ -147,7 +147,7 @@ main:
     mov cr0, ebx
 
     ; Far jump to clear the instruction pipeline and load cs with the correct selector
-    jmp GDT.code:.longMode
+    jmp GDT.code0:.longMode
 
 BITS 64
 .longMode:
@@ -159,7 +159,7 @@ BITS 64
     mov gs, ax
 
     ; Set up a stack right below the boot sector
-    mov ax, GDT.data
+    mov ax, GDT.data0
     mov ss, ax
     mov rsp, STACK_TOP
     mov rbp, rsp
@@ -177,16 +177,31 @@ GDT:
     .null: equ $ - GDT
         dq 0
 
-    .code: equ $ - GDT
+    .code0: equ $ - GDT
         times 5 db 0
         db 10011000b        ; present, ring 0, non-system, executable, non-conforming
         db 00100000b        ; long mode
         db 0
 
-    .data: equ $ - GDT
+    .data0: equ $ - GDT
         times 5 db 0
         db 10010010b        ; present, ring 0, non-system, data, writeable
         times 2 db 0
+
+    ; Padding, to make sysret work correctly. Would be used for 32-bit syscalls
+    .empty: equ $ - GDT
+        dq 0
+
+    .data3: equ $ - GDT
+        times 5 db 0
+        db 11110010b        ; present, ring 3, non-system, data, writeable
+        times 2 db 0
+
+    .code3: equ $ - GDT
+        times 5 db 0
+        db 11111000b        ; present, ring 3, non-system, executable, non-conforming
+        db 00100000b        ; long mode
+        db 0
 
     .pointer:
         dw $ - GDT - 1
