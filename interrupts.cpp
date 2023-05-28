@@ -2,12 +2,12 @@
 
 #include "assertions.h"
 #include "bits.h"
-#include "mem.h"
 #include "boot.h"
 #include "io.h"
+#include "mem.h"
+#include "new.h"
 #include "print.h"
 #include "stdlib.h"
-#include "new.h"
 
 InterruptDescriptor::InterruptDescriptor(uint64_t addr, uint8_t flags)
 : addr0(lowBits(addr, 16)),
