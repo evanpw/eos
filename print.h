@@ -10,10 +10,16 @@ struct FormatSpec;
 struct FormatArg {
     FormatArg(uint64_t value) : value(value) {}
     FormatArg(void* value) : value(reinterpret_cast<uint64_t>(value)) {}
+    FormatArg(const char* value) : value((uint64_t)value), isString(true) {}
 
     void print(const FormatSpec& spec);
 
+private:
+    void printInt(const FormatSpec& spec);
+    void printString(const FormatSpec& spec);
+
     uint64_t value;
+    bool isString = false;
 };
 
 // To hide the template paramter of SizedFormatArgs, so that we can implement

@@ -1,6 +1,8 @@
 #pragma once
 #include <stdint.h>
 
+#include "assertions.h"
+
 inline uint64_t lowBits(uint64_t value, int count) {
     ASSERT(count >= 0 && count <= 64);
     return value & ((1 << count) - 1);

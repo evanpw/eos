@@ -1,14 +1,19 @@
 #pragma once
 #include <stdint.h>
 
+#include "bits.h"
+
 struct __attribute__((packed)) InterruptDescriptor {
-    uint16_t addr0;
-    uint16_t cs;
-    uint8_t ist;
-    uint8_t flags;
-    uint16_t addr1;
-    uint32_t addr2;
-    uint32_t zero;
+    InterruptDescriptor() = default;
+    InterruptDescriptor(uint64_t addr, uint8_t flags);
+
+    uint16_t addr0 = 0;
+    uint16_t cs = 0;
+    uint8_t ist = 0;
+    uint8_t flags = 0;
+    uint16_t addr1 = 0;
+    uint32_t addr2 = 0;
+    uint32_t zero = 0;
 };
 
 static_assert(sizeof(InterruptDescriptor) == 16);
@@ -21,15 +26,12 @@ struct __attribute__((packed)) IDTRegister {
 extern InterruptDescriptor g_idt[256];
 extern IDTRegister g_idtr;
 
-struct __attribute__((packed)) InterruptFrame
-{
+struct __attribute__((packed)) InterruptFrame {
     uint64_t rip;
     uint64_t cs;
     uint64_t rflags;
     uint64_t rsp;
     uint64_t ss;
 };
-
-__attribute__((interrupt)) void defaultInterruptHandler(InterruptFrame* frame);
 
 void installInterrupts();

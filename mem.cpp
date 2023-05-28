@@ -47,6 +47,8 @@ MemoryManager::MemoryManager() : _e820Table(E820_TABLE, *E820_NUM_ENTRIES_PTR) {
     _freePageList = buildFreePageList();
 
     initializeHeap();
+
+    println("Memory manager initialized");
 }
 
 PhysicalAddress MemoryManager::pageAlloc(size_t count) {
@@ -290,7 +292,8 @@ void* MemoryManager::kmalloc(size_t size) {
             }
 
             // If the next block is also free, combine them
-            *header = BlockHeader::freeBlock(header->size() + nextHeader->size());
+            *header =
+                BlockHeader::freeBlock(header->size() + nextHeader->size());
 
             // Continue until we reach the end of the heap or a used block
         }
@@ -300,7 +303,8 @@ void* MemoryManager::kmalloc(size_t size) {
 
             // Split block into two pieces if possible
             if (extraSize >= 4 + sizeof(BlockHeader)) {
-                BlockHeader* nextHeader = reinterpret_cast<BlockHeader*>(ptr + requiredSize);
+                BlockHeader* nextHeader =
+                    reinterpret_cast<BlockHeader*>(ptr + requiredSize);
                 *nextHeader = BlockHeader::freeBlock(extraSize);
                 *header = BlockHeader::usedBlock(requiredSize);
             } else {
@@ -334,7 +338,8 @@ void MemoryManager::showHeap() const {
     while (ptr < _heap + HEAP_SIZE) {
         // TODO: use memcpy
         const BlockHeader* header = reinterpret_cast<const BlockHeader*>(ptr);
-        println("addr={:X}, size={}, free={}", ptr, header->size(), header->isFree());
+        println("addr={:X}, size={}, free={}", ptr, header->size(),
+                header->isFree());
 
         ptr += header->size();
     }

@@ -1,4 +1,5 @@
 #include "print.h"
+#include "stdlib.h"
 
 struct FormatSpec {
     int base = 10;
@@ -10,6 +11,14 @@ struct FormatSpec {
 void printChar(char c) { asm volatile("outb %0, $0xE9" ::"a"(c)); }
 
 void FormatArg::print(const FormatSpec& spec) {
+    if (!isString) {
+        printInt(spec);
+    } else {
+        printString(spec);
+    }
+}
+
+void FormatArg::printInt(const FormatSpec& spec) {
     ASSERT(spec.base >= 2 && spec.base <= 16);
 
     constexpr const char* uppercaseDigits = "0123456789ABCDEF";
@@ -34,6 +43,21 @@ void FormatArg::print(const FormatSpec& spec) {
     // Append the digits in reversed (correct) order
     for (size_t i = 0; i < digitLength; ++i) {
         printChar(digits[digitLength - 1 - i]);
+    }
+}
+
+void FormatArg::printString(const FormatSpec& spec) {
+    const char* str = (const char*)value;
+    size_t length = strlen(str);
+
+    // Add padding if necessary
+    for (size_t i = length; i < spec.padTo; ++i) {
+        printChar(spec.padChar);
+    }
+
+    // Print the string char-by-char
+    while (*str) {
+        printChar(*str++);
     }
 }
 
