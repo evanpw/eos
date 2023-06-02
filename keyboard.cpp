@@ -43,6 +43,8 @@ void initializeKeyboard() {
         inb(PS2_DATA);
         iowait(100);
     }
+
+    println("Keyboard initialized");
 }
 
 enum class KeyCode : uint8_t {
@@ -153,208 +155,208 @@ enum class KeyCode : uint8_t {
 };
 
 const char* keyCodeToString(KeyCode keyCode) {
-    switch ((uint8_t)keyCode) {
-        case 0x00:
+    switch (keyCode) {
+        case KeyCode::Unknown:
             return "Unknown";
-        case 0x01:
+        case KeyCode::Escape:
             return "Escape";
-        case 0x02:
+        case KeyCode::One:
             return "One";
-        case 0x03:
+        case KeyCode::Two:
             return "Two";
-        case 0x04:
+        case KeyCode::Three:
             return "Three";
-        case 0x05:
+        case KeyCode::Four:
             return "Four";
-        case 0x06:
+        case KeyCode::Five:
             return "Five";
-        case 0x07:
+        case KeyCode::Six:
             return "Six";
-        case 0x08:
+        case KeyCode::Seven:
             return "Seven";
-        case 0x09:
+        case KeyCode::Eight:
             return "Eight";
-        case 0x0A:
+        case KeyCode::Nine:
             return "Nine";
-        case 0x0B:
+        case KeyCode::Zero:
             return "Zero";
-        case 0x0C:
+        case KeyCode::Minus:
             return "Minus";
-        case 0x0D:
+        case KeyCode::Equals:
             return "Equals";
-        case 0x0E:
+        case KeyCode::Backspace:
             return "Backspace";
-        case 0x0F:
+        case KeyCode::Tab:
             return "Tab";
-        case 0x10:
+        case KeyCode::Q:
             return "Q";
-        case 0x11:
+        case KeyCode::W:
             return "W";
-        case 0x12:
+        case KeyCode::E:
             return "E";
-        case 0x13:
+        case KeyCode::R:
             return "R";
-        case 0x14:
+        case KeyCode::T:
             return "T";
-        case 0x15:
+        case KeyCode::Y:
             return "Y";
-        case 0x16:
+        case KeyCode::U:
             return "U";
-        case 0x17:
+        case KeyCode::I:
             return "I";
-        case 0x18:
+        case KeyCode::O:
             return "O";
-        case 0x19:
+        case KeyCode::P:
             return "P";
-        case 0x1A:
+        case KeyCode::LBracket:
             return "LBracket";
-        case 0x1B:
+        case KeyCode::RBracket:
             return "RBracket";
-        case 0x1C:
+        case KeyCode::Enter:
             return "Enter";
-        case 0x1D:
+        case KeyCode::LCtrl:
             return "LCtrl";
-        case 0x1E:
+        case KeyCode::A:
             return "A";
-        case 0x1F:
+        case KeyCode::S:
             return "S";
-        case 0x20:
+        case KeyCode::D:
             return "D";
-        case 0x21:
+        case KeyCode::F:
             return "F";
-        case 0x22:
+        case KeyCode::G:
             return "G";
-        case 0x23:
+        case KeyCode::H:
             return "H";
-        case 0x24:
+        case KeyCode::J:
             return "J";
-        case 0x25:
+        case KeyCode::K:
             return "K";
-        case 0x26:
+        case KeyCode::L:
             return "L";
-        case 0x27:
+        case KeyCode::Semicolon:
             return "Semicolon";
-        case 0x28:
+        case KeyCode::Apostrophe:
             return "Apostrophe";
-        case 0x29:
+        case KeyCode::Backtick:
             return "Backtick";
-        case 0x2A:
+        case KeyCode::LShift:
             return "LShift";
-        case 0x2B:
+        case KeyCode::Backslash:
             return "Backslash";
-        case 0x2C:
+        case KeyCode::Z:
             return "Z";
-        case 0x2D:
+        case KeyCode::X:
             return "X";
-        case 0x2E:
+        case KeyCode::C:
             return "C";
-        case 0x2F:
+        case KeyCode::V:
             return "V";
-        case 0x30:
+        case KeyCode::B:
             return "B";
-        case 0x31:
+        case KeyCode::N:
             return "N";
-        case 0x32:
+        case KeyCode::M:
             return "M";
-        case 0x33:
+        case KeyCode::Comma:
             return "Comma";
-        case 0x34:
+        case KeyCode::Period:
             return "Period";
-        case 0x35:
+        case KeyCode::Slash:
             return "Slash";
-        case 0x36:
+        case KeyCode::RShift:
             return "RShift";
-        case 0x37:
+        case KeyCode::KeypadAsterisk:
             return "KeypadAsterisk";
-        case 0x38:
+        case KeyCode::LAlt:
             return "LAlt";
-        case 0x39:
+        case KeyCode::Space:
             return "Space";
-        case 0x3A:
+        case KeyCode::CapsLock:
             return "CapsLock";
-        case 0x3B:
+        case KeyCode::F1:
             return "F1";
-        case 0x3C:
+        case KeyCode::F2:
             return "F2";
-        case 0x3D:
+        case KeyCode::F3:
             return "F3";
-        case 0x3E:
+        case KeyCode::F4:
             return "F4";
-        case 0x3F:
+        case KeyCode::F5:
             return "F5";
-        case 0x40:
+        case KeyCode::F6:
             return "F6";
-        case 0x41:
+        case KeyCode::F7:
             return "F7";
-        case 0x42:
+        case KeyCode::F8:
             return "F8";
-        case 0x43:
+        case KeyCode::F9:
             return "F9";
-        case 0x44:
+        case KeyCode::F10:
             return "F10";
-        case 0x45:
+        case KeyCode::NumLock:
             return "NumLock";
-        case 0x46:
+        case KeyCode::ScrollLock:
             return "ScrollLock";
-        case 0x47:
+        case KeyCode::Keypad7:
             return "Keypad7";
-        case 0x48:
+        case KeyCode::Keypad8:
             return "Keypad8";
-        case 0x49:
+        case KeyCode::Keypad9:
             return "Keypad9";
-        case 0x4A:
+        case KeyCode::KeypadMinus:
             return "KeypadMinus";
-        case 0x4B:
+        case KeyCode::Keypad4:
             return "Keypad4";
-        case 0x4C:
+        case KeyCode::Keypad5:
             return "Keypad5";
-        case 0x4D:
+        case KeyCode::Keypad6:
             return "Keypad6";
-        case 0x4E:
+        case KeyCode::KeypadPlus:
             return "KeypadPlus";
-        case 0x4F:
+        case KeyCode::Keypad1:
             return "Keypad1";
-        case 0x50:
+        case KeyCode::Keypad2:
             return "Keypad2";
-        case 0x51:
+        case KeyCode::Keypad3:
             return "Keypad3";
-        case 0x52:
+        case KeyCode::Keypad0:
             return "Keypad0";
-        case 0x53:
+        case KeyCode::KeypadDot:
             return "KeypadDot";
-        case 0x57:
+        case KeyCode::F11:
             return "F11";
-        case 0x58:
+        case KeyCode::F12:
             return "F12";
-        case 0x60:
+        case KeyCode::KeypadEnter:
             return "KeypadEnter";
-        case 0x61:
+        case KeyCode::RCtrl:
             return "RCtrl";
-        case 0x62:
+        case KeyCode::KeypadSlash:
             return "KeypadSlash";
-        case 0x63:
+        case KeyCode::RAlt:
             return "RAlt";
-        case 0x64:
+        case KeyCode::Home:
             return "Home";
-        case 0x65:
+        case KeyCode::Up:
             return "Up";
-        case 0x66:
+        case KeyCode::PageUp:
             return "PageUp";
-        case 0x67:
+        case KeyCode::Left:
             return "Left";
-        case 0x68:
+        case KeyCode::Right:
             return "Right";
-        case 0x69:
+        case KeyCode::End:
             return "End";
-        case 0x6A:
+        case KeyCode::Down:
             return "Down";
-        case 0x6B:
+        case KeyCode::PageDown:
             return "PageDown";
-        case 0x6C:
+        case KeyCode::Insert:
             return "Insert";
-        case 0x6D:
+        case KeyCode::Delete:
             return "Delete";
-        case 0x6E:
+        case KeyCode::Menu:
             return "Menu";
         default:
             return "<unknown>";
