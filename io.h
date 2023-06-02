@@ -13,9 +13,11 @@ inline void outb(uint16_t port, uint8_t value) {
     asm volatile("outb %0, %1" : : "a"(value), "Nd"(port) : "memory");
 }
 
-inline void iowait() {
-    // This doesn't do anything, but takes a microsecond or so to do it
-    outb(0x80, 0);
+inline void iowait(int rounds = 1) {
+    for (int i = 0; i < rounds; ++i) {
+        // This doesn't do anything, but takes a microsecond or so to do it
+        outb(0x80, 0);
+    }
 }
 
 inline uint64_t rdmsr(uint64_t msr) {

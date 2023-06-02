@@ -4,6 +4,7 @@
 #include "bits.h"
 #include "boot.h"
 #include "io.h"
+#include "keyboard.h"
 #include "mem.h"
 #include "new.h"
 #include "print.h"
@@ -15,15 +16,6 @@ InterruptDescriptor::InterruptDescriptor(uint64_t addr, uint8_t flags)
   flags(flags),
   addr1(bitRange(addr, 16, 16)),
   addr2(bitRange(addr, 32, 32)) {}
-
-// I/O ports for communicating with the PIC
-static constexpr uint16_t PIC1_COMMAND = 0x20;
-static constexpr uint16_t PIC1_DATA = 0x21;
-static constexpr uint16_t PIC2_COMMAND = 0xA0;
-static constexpr uint16_t PIC2_DATA = 0xA1;
-
-// End-of-interrupt signal
-static constexpr uint8_t EOI = 0x20;
 
 // Interrupt descriptor flags
 static constexpr uint8_t ISR_PRESENT = 0x80;
@@ -78,7 +70,7 @@ void handleIRQ(uint8_t irq, InterruptFrame* frame) {
     }
 
 IRQ_HANDLER(0)
-IRQ_HANDLER(1)
+// IRQ_HANDLER(1)
 IRQ_HANDLER(2)
 IRQ_HANDLER(3)
 IRQ_HANDLER(4)
@@ -250,6 +242,7 @@ void installInterrupts() {
     REGISTER_EXCEPTION(31);
 
     configurePIC();
+    initializeKeyboard();
 
     g_idtr.addr = (uint64_t)&g_idt[0];
     g_idtr.limit = 256 * sizeof(InterruptDescriptor) - 1;
