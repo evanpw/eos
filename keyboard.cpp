@@ -2,9 +2,9 @@
 
 #include <stdint.h>
 
-#include "ring_buffer.h"
 #include "io.h"
 #include "print.h"
+#include "ring_buffer.h"
 
 enum : uint8_t {
     PS2_DATA = 0x60,
@@ -461,7 +461,8 @@ void handleKey(uint8_t scanCode) {
     KeyboardEvent event{key, pressed};
     g_keyQueue.push(event);
     g_lastE0 = false;
-    println("Keyboard event: scancode={:X}, key={}, pressed={}", scanCode, keyCodeToString(event.key), pressed);
+    println("Keyboard event: scancode={:X}, key={}, pressed={}", scanCode,
+            keyCodeToString(event.key), pressed);
 }
 
 // PS/2 Keyboard IRQ

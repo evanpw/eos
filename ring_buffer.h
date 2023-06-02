@@ -2,8 +2,7 @@
 #include "print.h"
 
 template <typename T, size_t N>
-class RingBuffer
-{
+class RingBuffer {
 public:
     RingBuffer() : _head(&_data[0]), _tail(&_data[0]) {}
 
