@@ -4,15 +4,146 @@
 
 #include "io.h"
 #include "print.h"
-#include "ring_buffer.h"
+#include "new.h"
 
+// PS/2 controller I/O ports
 enum : uint8_t {
     PS2_DATA = 0x60,
     PS2_STATUS = 0x64,
     PS2_COMMAND = 0x64,
 };
 
-void sendCommand(uint8_t value) {
+// PS/2 Keyboard IRQ
+void __attribute__((interrupt)) irqHandler1(InterruptFrame* frame) {
+    if (inb(PS2_STATUS) & 1) {
+        uint8_t byte = inb(PS2_DATA);
+        KeyboardDevice::the().handleKey(byte);
+    }
+
+    // EOI signal
+    outb(PIC1_COMMAND, EOI);
+}
+
+KeyboardDevice* KeyboardDevice::_instance = nullptr;
+
+KeyboardDevice& KeyboardDevice::the() { return *_instance; }
+
+void KeyboardDevice::initialize() {
+    ASSERT(_instance == nullptr);
+    _instance = new KeyboardDevice;
+}
+
+KeyboardDevice::KeyboardDevice() {
+    // Flush the output buffer
+    while (inb(PS2_STATUS) & 1) {
+        inb(PS2_DATA);
+        iowait(100);
+    }
+
+    for (size_t i = 0; i < (size_t)KeyCode::Max; ++i) {
+        _keyState[i] = false;
+    }
+
+    println("Keyboard initialized");
+}
+
+void KeyboardDevice::handleKey(uint8_t scanCode) {
+    if (scanCode == 0xE0) {
+        _lastE0 = true;
+        return;
+    }
+
+    bool pressed = true;
+    if (scanCode & 0x80) {
+        pressed = false;
+        scanCode = scanCode & (~0x80);
+    }
+
+    KeyCode key;
+    if (!_lastE0) {
+        if (scanCode <= 0x53 || scanCode == 0x57 || scanCode == 0x58) {
+            key = (KeyCode)scanCode;
+        } else {
+            key = KeyCode::Unknown;
+        }
+    } else {
+        switch (scanCode) {
+            case 0x1C:
+                key = KeyCode::KeypadEnter;
+                break;
+
+            case 0x1D:
+                key = KeyCode::RCtrl;
+                break;
+
+            case 0x35:
+                key = KeyCode::KeypadSlash;
+                break;
+
+            case 0x38:
+                key = KeyCode::RAlt;
+                break;
+
+            case 0x47:
+                key = KeyCode::Home;
+                break;
+
+            case 0x48:
+                key = KeyCode::Up;
+                break;
+
+            case 0x49:
+                key = KeyCode::PageUp;
+                break;
+
+            case 0x4B:
+                key = KeyCode::Left;
+                break;
+
+            case 0x4D:
+                key = KeyCode::Right;
+                break;
+
+            case 0x4F:
+                key = KeyCode::End;
+                break;
+
+            case 0x50:
+                key = KeyCode::Down;
+                break;
+
+            case 0x51:
+                key = KeyCode::PageDown;
+                break;
+
+            case 0x52:
+                key = KeyCode::Insert;
+                break;
+
+            case 0x53:
+                key = KeyCode::Delete;
+                break;
+
+            case 0x5D:
+                key = KeyCode::Menu;
+                break;
+
+            default:
+                key = KeyCode::Unknown;
+                break;
+        }
+    }
+
+    _lastE0 = false;
+    _keyState[(uint8_t)key] = pressed;
+    println("Keyboard event: scancode={:X}, keycode={:X}, key={}, pressed={}", scanCode, (uint8_t)key,
+            keyCodeToString(key), pressed);
+
+    // TODO: dispatch the event
+    KeyboardEvent event{key, pressed};
+}
+
+void KeyboardDevice::sendCommand(uint8_t value) {
     while (inb(PS2_STATUS) & 2) {
         iowait(1000);
     }
@@ -20,7 +151,7 @@ void sendCommand(uint8_t value) {
     outb(PS2_COMMAND, value);
 }
 
-void writeData(uint8_t value) {
+void KeyboardDevice::writeData(uint8_t value) {
     while (inb(PS2_STATUS) & 2) {
         iowait(1000);
     }
@@ -28,7 +159,7 @@ void writeData(uint8_t value) {
     outb(PS2_DATA, value);
 }
 
-uint8_t readData() {
+uint8_t KeyboardDevice::readData() {
     while (!(inb(PS2_STATUS) & 1)) {
         println("output not ready");
         iowait(1000);
@@ -36,115 +167,6 @@ uint8_t readData() {
 
     return inb(PS2_DATA);
 }
-
-enum class KeyCode : uint8_t {
-    // Identity-mapped keycodes
-    Unknown = 0x00,
-    Escape = 0x01,
-    One = 0x02,
-    Two = 0x03,
-    Three = 0x04,
-    Four = 0x05,
-    Five = 0x06,
-    Six = 0x07,
-    Seven = 0x08,
-    Eight = 0x09,
-    Nine = 0x0A,
-    Zero = 0x0B,
-    Minus = 0x0C,
-    Equals = 0x0D,
-    Backspace = 0x0E,
-    Tab = 0x0F,
-    Q = 0x10,
-    W = 0x11,
-    E = 0x12,
-    R = 0x13,
-    T = 0x14,
-    Y = 0x15,
-    U = 0x16,
-    I = 0x17,
-    O = 0x18,
-    P = 0x19,
-    LBracket = 0x1A,
-    RBracket = 0x1B,
-    Enter = 0x1C,
-    LCtrl = 0x1D,
-    A = 0x1E,
-    S = 0x1F,
-    D = 0x20,
-    F = 0x21,
-    G = 0x22,
-    H = 0x23,
-    J = 0x24,
-    K = 0x25,
-    L = 0x26,
-    Semicolon = 0x27,
-    Apostrophe = 0x28,
-    Backtick = 0x29,
-    LShift = 0x2A,
-    Backslash = 0x2B,
-    Z = 0x2C,
-    X = 0x2D,
-    C = 0x2E,
-    V = 0x2F,
-    B = 0x30,
-    N = 0x31,
-    M = 0x32,
-    Comma = 0x33,
-    Period = 0x34,
-    Slash = 0x35,
-    RShift = 0x36,
-    KeypadAsterisk = 0x37,
-    LAlt = 0x38,
-    Space = 0x39,
-    CapsLock = 0x3A,
-    F1 = 0x3B,
-    F2 = 0x3C,
-    F3 = 0x3D,
-    F4 = 0x3E,
-    F5 = 0x3F,
-    F6 = 0x40,
-    F7 = 0x41,
-    F8 = 0x42,
-    F9 = 0x43,
-    F10 = 0x44,
-    NumLock = 0x45,
-    ScrollLock = 0x46,
-    Keypad7 = 0x47,
-    Keypad8 = 0x48,
-    Keypad9 = 0x49,
-    KeypadMinus = 0x4A,
-    Keypad4 = 0x4B,
-    Keypad5 = 0x4C,
-    Keypad6 = 0x4D,
-    KeypadPlus = 0x4E,
-    Keypad1 = 0x4F,
-    Keypad2 = 0x50,
-    Keypad3 = 0x51,
-    Keypad0 = 0x52,
-    KeypadDot = 0x53,
-    F11 = 0x57,
-    F12 = 0x58,
-
-    // Non-identity-mapped keycodes
-    KeypadEnter = 0x60,
-    RCtrl = 0x61,
-    KeypadSlash = 0x62,
-    RAlt = 0x63,
-    Home = 0x64,
-    Up = 0x65,
-    PageUp = 0x66,
-    Left = 0x67,
-    Right = 0x68,
-    End = 0x69,
-    Down = 0x6A,
-    PageDown = 0x6B,
-    Insert = 0x6C,
-    Delete = 0x6D,
-    Menu = 0x6E,
-
-    Max = 0x6E,
-};
 
 const char* keyCodeToString(KeyCode keyCode) {
     switch (keyCode) {
@@ -353,133 +375,4 @@ const char* keyCodeToString(KeyCode keyCode) {
         default:
             return "<unknown>";
     }
-}
-
-struct KeyboardEvent {
-    KeyCode key;
-    bool pressed;
-};
-
-static bool g_lastE0 = false;
-static RingBuffer<KeyboardEvent, 32> g_keyQueue;
-static bool g_keyState[(size_t)KeyCode::Max];
-
-void initializeKeyboard() {
-    // Flush the output buffer
-    while (inb(PS2_STATUS) & 1) {
-        inb(PS2_DATA);
-        iowait(100);
-    }
-
-    for (size_t i = 0; i < (size_t)KeyCode::Max; ++i) {
-        g_keyState[i] = false;
-    }
-
-    println("Keyboard initialized");
-}
-
-void handleKey(uint8_t scanCode) {
-    if (scanCode == 0xE0) {
-        g_lastE0 = true;
-        return;
-    }
-
-    bool pressed = true;
-    if (scanCode & 0x80) {
-        pressed = false;
-        scanCode = scanCode & (~0x80);
-    }
-
-    KeyCode key;
-    if (!g_lastE0) {
-        if (scanCode <= 0x53 || scanCode == 0x57 || scanCode == 0x58) {
-            key = (KeyCode)scanCode;
-        } else {
-            key = KeyCode::Unknown;
-        }
-    } else {
-        switch (scanCode) {
-            case 0x1C:
-                key = KeyCode::KeypadEnter;
-                break;
-
-            case 0x1D:
-                key = KeyCode::RCtrl;
-                break;
-
-            case 0x35:
-                key = KeyCode::KeypadSlash;
-                break;
-
-            case 0x38:
-                key = KeyCode::RAlt;
-                break;
-
-            case 0x47:
-                key = KeyCode::Home;
-                break;
-
-            case 0x48:
-                key = KeyCode::Up;
-                break;
-
-            case 0x49:
-                key = KeyCode::PageUp;
-                break;
-
-            case 0x4B:
-                key = KeyCode::Left;
-                break;
-
-            case 0x4D:
-                key = KeyCode::Right;
-                break;
-
-            case 0x4F:
-                key = KeyCode::End;
-                break;
-
-            case 0x50:
-                key = KeyCode::Down;
-                break;
-
-            case 0x51:
-                key = KeyCode::PageDown;
-                break;
-
-            case 0x52:
-                key = KeyCode::Insert;
-                break;
-
-            case 0x53:
-                key = KeyCode::Delete;
-                break;
-
-            case 0x5D:
-                key = KeyCode::Menu;
-                break;
-
-            default:
-                key = KeyCode::Unknown;
-                break;
-        }
-    }
-
-    KeyboardEvent event{key, pressed};
-    g_keyQueue.push(event);
-    g_lastE0 = false;
-    g_keyState[(uint8_t)key] = pressed;
-    println("Keyboard event: scancode={:X}, keycode={:X}, key={}, pressed={}", scanCode, (uint8_t)key,
-            keyCodeToString(event.key), pressed);
-}
-
-// PS/2 Keyboard IRQ
-void __attribute__((interrupt)) irqHandler1(InterruptFrame* frame) {
-    if (inb(PS2_STATUS) & 1) {
-        uint8_t byte = inb(PS2_DATA);
-        handleKey(byte);
-    }
-
-    // EOI signal
-    outb(PIC1_COMMAND, EOI);
 }

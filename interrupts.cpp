@@ -242,7 +242,7 @@ void installInterrupts() {
     REGISTER_EXCEPTION(31);
 
     configurePIC();
-    initializeKeyboard();
+    KeyboardDevice::initialize();
 
     g_idtr.addr = (uint64_t)&g_idt[0];
     g_idtr.limit = 256 * sizeof(InterruptDescriptor) - 1;
