@@ -6,7 +6,7 @@
 #include "print.h"
 
 // PS/2 controller I/O ports
-enum : uint8_t {
+enum : uint16_t {
     PS2_DATA = 0x60,
     PS2_STATUS = 0x64,
     PS2_COMMAND = 0x64,

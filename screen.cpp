@@ -4,6 +4,23 @@
 #include "bits.h"
 #include "io.h"
 
+// VGA I/O ports
+enum : uint16_t {
+    VGA_INDEX = 0x3D4,
+    VGA_DATA = 0x3D5,
+};
+
+// VGA registers
+enum : uint8_t {
+    CURSOR_ADDRESS_MSB = 0x0E,
+    CURSOR_ADDRESS_LSB = 0x0F,
+};
+
+static void writeVGARegister(uint8_t reg, uint8_t value) {
+    outb(VGA_INDEX, reg);
+    outb(VGA_DATA, value);
+}
+
 Screen::Screen(size_t width, size_t height) : _width(width), _height(height) {
     clear();
     setCursor(0, 0);
@@ -29,8 +46,6 @@ void Screen::setCursor(size_t x, size_t y) {
     ASSERT(x < _width && y < _height);
 
     uint16_t position = y * _width + x;
-    outb(0x3D4, 0x0F);
-    outb(0x3D5, lowBits(position, 8));
-    outb(0x3D4, 0x0E);
-    outb(0x3D5, highBits(position, 8));
+    writeVGARegister(CURSOR_ADDRESS_MSB, lowBits(position, 8));
+    writeVGARegister(CURSOR_ADDRESS_LSB, highBits(position, 8));
 }
