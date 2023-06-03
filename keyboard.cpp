@@ -37,16 +37,6 @@ uint8_t readData() {
     return inb(PS2_DATA);
 }
 
-void initializeKeyboard() {
-    // Flush the output buffer
-    while (inb(PS2_STATUS) & 1) {
-        inb(PS2_DATA);
-        iowait(100);
-    }
-
-    println("Keyboard initialized");
-}
-
 enum class KeyCode : uint8_t {
     // Identity-mapped keycodes
     Unknown = 0x00,
@@ -152,6 +142,8 @@ enum class KeyCode : uint8_t {
     Insert = 0x6C,
     Delete = 0x6D,
     Menu = 0x6E,
+
+    Max = 0x6E,
 };
 
 const char* keyCodeToString(KeyCode keyCode) {
@@ -370,6 +362,21 @@ struct KeyboardEvent {
 
 static bool g_lastE0 = false;
 static RingBuffer<KeyboardEvent, 32> g_keyQueue;
+static bool g_keyState[(size_t)KeyCode::Max];
+
+void initializeKeyboard() {
+    // Flush the output buffer
+    while (inb(PS2_STATUS) & 1) {
+        inb(PS2_DATA);
+        iowait(100);
+    }
+
+    for (size_t i = 0; i < (size_t)KeyCode::Max; ++i) {
+        g_keyState[i] = false;
+    }
+
+    println("Keyboard initialized");
+}
 
 void handleKey(uint8_t scanCode) {
     if (scanCode == 0xE0) {
@@ -461,7 +468,8 @@ void handleKey(uint8_t scanCode) {
     KeyboardEvent event{key, pressed};
     g_keyQueue.push(event);
     g_lastE0 = false;
-    println("Keyboard event: scancode={:X}, key={}, pressed={}", scanCode,
+    g_keyState[(uint8_t)key] = pressed;
+    println("Keyboard event: scancode={:X}, keycode={:X}, key={}, pressed={}", scanCode, (uint8_t)key,
             keyCodeToString(event.key), pressed);
 }
 
