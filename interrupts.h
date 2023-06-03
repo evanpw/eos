@@ -4,10 +4,12 @@
 #include "bits.h"
 
 // I/O ports for communicating with the PIC
-static constexpr uint16_t PIC1_COMMAND = 0x20;
-static constexpr uint16_t PIC1_DATA = 0x21;
-static constexpr uint16_t PIC2_COMMAND = 0xA0;
-static constexpr uint16_t PIC2_DATA = 0xA1;
+enum : uint16_t {
+    PIC1_COMMAND = 0x20,
+    PIC1_DATA = 0x21,
+    PIC2_COMMAND = 0xA0,
+    PIC2_DATA = 0xA1,
+};
 
 // End-of-interrupt signal
 static constexpr uint8_t EOI = 0x20;
