@@ -118,19 +118,15 @@ struct KeyboardEvent {
 };
 
 class KeyboardDevice {
-public:
-    static void initialize();
-    static KeyboardDevice& the();
-
 private:
+    friend class System;
+    KeyboardDevice();
+
     friend void __attribute__((interrupt)) irqHandler1(InterruptFrame* frame);
     void handleKey(uint8_t scanCode);
 
     bool _lastE0 = false;
     bool _keyState[(size_t)KeyCode::Max];  // TODO: use a bitmap
-
-    KeyboardDevice();
-    static KeyboardDevice* _instance;
 
 private:
     // PS/2 device communication

@@ -3,6 +3,7 @@
 #include "assertions.h"
 #include "bits.h"
 #include "io.h"
+#include "print.h"
 
 // VGA I/O ports
 enum : uint16_t {
@@ -24,6 +25,8 @@ static void writeVGARegister(uint8_t reg, uint8_t value) {
 Screen::Screen() {
     clear();
     setCursor(0, 0);
+
+    println("Screen initialized");
 }
 
 void Screen::clear(Color bg) {

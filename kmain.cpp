@@ -1,22 +1,10 @@
-#include "assertions.h"
-#include "interrupts.h"
-#include "io.h"
-#include "mem.h"
 #include "print.h"
-#include "screen.h"
-#include "span.h"
-#include "stdlib.h"
-#include "user.h"
+#include "system.h"
 
 // Should be the only function in this file
 extern "C" void kmain() {
     println("Kernel started");
-
-    Screen screen;
-    screen.clear(Screen::LightGreen);
-
-    MemoryManager mm;
-    installInterrupts();
+    System system;
 
     /*
     // Model-Specific Registers (MSRs)

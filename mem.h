@@ -166,9 +166,6 @@ struct FreePageRange {
 // Handles physical and virtual memory at the page level
 class MemoryManager {
 public:
-    MemoryManager();
-    static MemoryManager& the();
-
     size_t freePageCount() const;
 
     PhysicalAddress pageAlloc(size_t count = 1);
@@ -181,7 +178,8 @@ public:
     void showHeap() const;
 
 private:
-    static MemoryManager* _instance;
+    friend class System;
+    MemoryManager();
 
     E820Table _e820Table;
 
@@ -215,5 +213,3 @@ private:
     uint8_t* _heap = nullptr;
     void initializeHeap();
 };
-
-#define MM MemoryManager::the()

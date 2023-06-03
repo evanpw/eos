@@ -4,6 +4,7 @@
 
 #include "io.h"
 #include "print.h"
+#include "system.h"
 
 // PS/2 controller I/O ports
 enum : uint16_t {
@@ -16,20 +17,11 @@ enum : uint16_t {
 void __attribute__((interrupt)) irqHandler1(InterruptFrame* frame) {
     if (inb(PS2_STATUS) & 1) {
         uint8_t byte = inb(PS2_DATA);
-        KeyboardDevice::the().handleKey(byte);
+        System::keyboard().handleKey(byte);
     }
 
     // EOI signal
     outb(PIC1_COMMAND, EOI);
-}
-
-KeyboardDevice* KeyboardDevice::_instance = nullptr;
-
-KeyboardDevice& KeyboardDevice::the() { return *_instance; }
-
-void KeyboardDevice::initialize() {
-    ASSERT(_instance == nullptr);
-    _instance = new KeyboardDevice;
 }
 
 KeyboardDevice::KeyboardDevice() {
@@ -160,7 +152,6 @@ void KeyboardDevice::writeData(uint8_t value) {
 
 uint8_t KeyboardDevice::readData() {
     while (!(inb(PS2_STATUS) & 1)) {
-        println("output not ready");
         iowait(1000);
     }
 

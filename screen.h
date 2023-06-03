@@ -24,13 +24,14 @@ public:
     };
 
 public:
-    Screen();
-
     void clear(Color bg = Black);
     void putChar(size_t x, size_t y, char c, Color bg, Color fg);
     void setCursor(size_t x, size_t y);
 
 private:
+    friend class System;
+    Screen();
+
     size_t _width = 80;
     size_t _height = 25;
     uint16_t* _vram = (uint16_t*)0xB8000;

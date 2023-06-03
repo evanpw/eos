@@ -5,14 +5,7 @@
 #include "print.h"
 #include "stdlib.h"
 
-MemoryManager* MemoryManager::_instance = nullptr;
-
-MemoryManager& MemoryManager::the() { return *_instance; }
-
 MemoryManager::MemoryManager() : _e820Table(E820_TABLE, *E820_NUM_ENTRIES_PTR) {
-    ASSERT(!_instance);
-    _instance = this;
-
     uint64_t availableBytes = 0;
     uint64_t physicalMemoryRange = 0;
     uint64_t availableAt1MiB = 0;
@@ -38,8 +31,6 @@ MemoryManager::MemoryManager() : _e820Table(E820_TABLE, *E820_NUM_ENTRIES_PTR) {
         }
     }
 
-    println("Available physical memory: {} MiB", availableBytes / MiB);
-
     FreePageRange initialPages(1 * MiB, 1 * MiB + availableAt1MiB);
     _freePageList = &initialPages;
 
@@ -49,6 +40,7 @@ MemoryManager::MemoryManager() : _e820Table(E820_TABLE, *E820_NUM_ENTRIES_PTR) {
     initializeHeap();
 
     println("Memory manager initialized");
+    println("Available physical memory: {} MiB", availableBytes / MiB);
 }
 
 PhysicalAddress MemoryManager::pageAlloc(size_t count) {
@@ -255,8 +247,8 @@ size_t MemoryManager::freePageCount() const {
 
 void MemoryManager::initializeHeap() {
     // Allocate and zero out a contiguous region to use as a heap
-    PhysicalAddress physicalPages = MM.pageAlloc(HEAP_SIZE / PAGE_SIZE);
-    _heap = MM.physicalToVirtual(physicalPages).ptr<uint8_t>();
+    PhysicalAddress physicalPages = pageAlloc(HEAP_SIZE / PAGE_SIZE);
+    _heap = physicalToVirtual(physicalPages).ptr<uint8_t>();
     memset(_heap, 0, HEAP_SIZE);
 
     // Initialize the entire space as a single free block
