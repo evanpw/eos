@@ -3,12 +3,13 @@
 
 class Screen;
 class KeyboardDevice;
-extern "C" void kmain();
 
 // Holder class for initializing and accessing various components
 // of the kernel
 class System {
 public:
+    static void run();
+
     static MemoryManager& mm() { return instance()._mm; }
 
     static Screen& screen() {
@@ -22,15 +23,14 @@ public:
     }
 
 private:
-    friend void kmain();
     System();
-
-    static System* _instance;
 
     static System& instance() {
         ASSERT(_instance);
         return *_instance;
     }
+
+    static System* _instance;
 
     // This can't be a pointer because we need it to implement new()
     MemoryManager _mm;

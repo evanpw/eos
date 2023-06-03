@@ -117,7 +117,23 @@ struct KeyboardEvent {
     bool pressed;
 };
 
+struct KeyboardListener {
+    virtual void onKeyEvent(const KeyboardEvent& event) = 0;
+};
+
 class KeyboardDevice {
+public:
+    void addListener(KeyboardListener* listener) {
+        // TODO: needs locking
+        ASSERT(!_listener);
+        _listener = listener;
+    }
+
+    bool isPressed(KeyCode keycode) {
+        // TODO: needs locking
+        return _keyState[(size_t)keycode];
+    }
+
 private:
     friend class System;
     KeyboardDevice();
@@ -127,6 +143,7 @@ private:
 
     bool _lastE0 = false;
     bool _keyState[(size_t)KeyCode::Max];  // TODO: use a bitmap
+    KeyboardListener* _listener = nullptr;
 
 private:
     // PS/2 device communication

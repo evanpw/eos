@@ -6,6 +6,11 @@
 #include "print.h"
 #include "screen.h"
 
+void System::run() {
+    System system;
+    while (true);
+}
+
 System* System::_instance = nullptr;
 
 System::System() {

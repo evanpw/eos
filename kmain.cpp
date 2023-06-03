@@ -4,7 +4,7 @@
 // Should be the only function in this file
 extern "C" void kmain() {
     println("Kernel started");
-    System system;
+    System::run();
 
     /*
     // Model-Specific Registers (MSRs)
