@@ -49,6 +49,6 @@ void Screen::setCursor(size_t x, size_t y) {
     ASSERT(x < _width && y < _height);
 
     uint16_t position = y * _width + x;
-    writeVGARegister(CURSOR_ADDRESS_MSB, lowBits(position, 8));
-    writeVGARegister(CURSOR_ADDRESS_LSB, highBits(position, 8));
+    writeVGARegister(CURSOR_ADDRESS_LSB, lowBits(position, 8));
+    writeVGARegister(CURSOR_ADDRESS_MSB, highBits(position, 8));
 }

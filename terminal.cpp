@@ -510,4 +510,6 @@ void Terminal::echo(char c) {
             _y = 0;
         }
     }
+
+    _screen.setCursor(_x, _y);
 }
