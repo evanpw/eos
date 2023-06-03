@@ -12,7 +12,7 @@
 extern "C" void kmain() {
     println("Kernel started");
 
-    Screen screen(80, 25);
+    Screen screen;
     screen.clear(Screen::LightGreen);
 
     MemoryManager mm;

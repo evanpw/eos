@@ -21,7 +21,7 @@ static void writeVGARegister(uint8_t reg, uint8_t value) {
     outb(VGA_DATA, value);
 }
 
-Screen::Screen(size_t width, size_t height) : _width(width), _height(height) {
+Screen::Screen() {
     clear();
     setCursor(0, 0);
 }
