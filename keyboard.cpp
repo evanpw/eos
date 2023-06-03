@@ -135,8 +135,8 @@ void KeyboardDevice::handleKey(uint8_t scanCode) {
 
     _lastE0 = false;
     _keyState[(uint8_t)key] = pressed;
-    println("Keyboard event: scancode={:X}, keycode={:X}, key={}, pressed={}", scanCode, (uint8_t)key,
-            keyCodeToString(key), pressed);
+    println("Keyboard event: scancode={:X}, keycode={:X}, key={}, pressed={}",
+            scanCode, (uint8_t)key, keyCodeToString(key), pressed);
 
     // TODO: dispatch the event
     KeyboardEvent event{key, pressed};

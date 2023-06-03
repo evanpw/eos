@@ -17,7 +17,8 @@ inline T highBits(T value, int count) {
 
 template <typename T>
 inline T bitRange(T value, int start, int length) {
-    ASSERT(start >= 0 && start <= sizeof(T) * 8 && length >= 0 && start + length <= sizeof(T) * 8);
+    ASSERT(start >= 0 && start <= sizeof(T) * 8 && length >= 0 &&
+           start + length <= sizeof(T) * 8);
     return lowBits(highBits(value, sizeof(T) * 8 - start), length);
 }
 

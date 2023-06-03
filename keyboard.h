@@ -127,7 +127,7 @@ private:
     void handleKey(uint8_t scanCode);
 
     bool _lastE0 = false;
-    bool _keyState[(size_t)KeyCode::Max]; // TODO: use a bitmap
+    bool _keyState[(size_t)KeyCode::Max];  // TODO: use a bitmap
 
     KeyboardDevice();
     static KeyboardDevice* _instance;

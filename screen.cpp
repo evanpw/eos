@@ -1,11 +1,10 @@
 #include "screen.h"
 
 #include "assertions.h"
-#include "io.h"
 #include "bits.h"
+#include "io.h"
 
-Screen::Screen(size_t width, size_t height) : _width(width), _height(height)
-{
+Screen::Screen(size_t width, size_t height) : _width(width), _height(height) {
     clear();
     setCursor(0, 0);
 }
