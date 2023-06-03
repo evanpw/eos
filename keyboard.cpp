@@ -4,7 +4,6 @@
 
 #include "io.h"
 #include "print.h"
-#include "new.h"
 
 // PS/2 controller I/O ports
 enum : uint8_t {
