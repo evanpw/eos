@@ -5,10 +5,12 @@
 #include "mem.h"
 #include "print.h"
 #include "screen.h"
+#include "terminal.h"
 
 void System::run() {
     System system;
-    while (true);
+    while (true)
+        ;
 }
 
 System* System::_instance = nullptr;
@@ -19,7 +21,6 @@ System::System() {
 
     _screen = new Screen;
     _keyboard = new KeyboardDevice;
+    _terminal = new Terminal(*_keyboard, *_screen);
     installInterrupts();
-
-    screen().clear(Screen::LightGreen);
 }

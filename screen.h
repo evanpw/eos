@@ -24,6 +24,9 @@ public:
     };
 
 public:
+    size_t width() const { return _width; }
+    size_t height() const { return _height; }
+
     void clear(Color bg = Black);
     void putChar(size_t x, size_t y, char c, Color bg, Color fg);
     void setCursor(size_t x, size_t y);

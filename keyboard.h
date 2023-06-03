@@ -151,5 +151,3 @@ private:
     void writeData(uint8_t value);
     uint8_t readData();
 };
-
-const char* keyCodeToString(KeyCode keyCode);

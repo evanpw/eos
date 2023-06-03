@@ -3,6 +3,7 @@
 
 class Screen;
 class KeyboardDevice;
+class Terminal;
 
 // Holder class for initializing and accessing various components
 // of the kernel
@@ -22,6 +23,11 @@ public:
         return *(instance()._keyboard);
     }
 
+    static Terminal& terminal() {
+        ASSERT(instance()._terminal);
+        return *(instance()._terminal);
+    }
+
 private:
     System();
 
@@ -37,4 +43,5 @@ private:
 
     Screen* _screen = nullptr;
     KeyboardDevice* _keyboard = nullptr;
+    Terminal* _terminal = nullptr;
 };
