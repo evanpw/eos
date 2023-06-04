@@ -11,6 +11,7 @@ private:
     Terminal(KeyboardDevice& keyboard, Screen& screen);
 
     void echo(char c);
+    void newline();
 
     KeyboardDevice& _keyboard;
     Screen& _screen;

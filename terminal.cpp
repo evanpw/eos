@@ -489,6 +489,11 @@ void Terminal::onKeyEvent(const KeyboardEvent& event) {
     //        (uint8_t)event.key, keyCodeToString(event.key), event.pressed);
 
     if (event.pressed) {
+        if (event.key == KeyCode::Enter || event.key == KeyCode::KeypadEnter) {
+            newline();
+            return;
+        }
+
         bool shifted = _keyboard.isPressed(KeyCode::LShift) |
                        _keyboard.isPressed(KeyCode::RShift);
         char c = shifted ? keyCodeToAsciiShifted(event.key)
@@ -511,6 +516,17 @@ void Terminal::echo(char c) {
             // TODO: scroll
             _y = 0;
         }
+    }
+
+    _screen.setCursor(_x, _y);
+}
+
+void Terminal::newline() {
+    _x = 0;
+    ++_y;
+    if (_y == _screen.height()) {
+        // TODO: scroll
+        _y = 0;
     }
 
     _screen.setCursor(_x, _y);
