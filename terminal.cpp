@@ -5,6 +5,8 @@
 Terminal::Terminal(KeyboardDevice& keyboard, Screen& screen)
 : _keyboard(keyboard), _screen(screen) {
     _keyboard.addListener(this);
+    echo('$');
+    echo(' ');
 }
 
 const char* keyCodeToString(KeyCode keyCode) {
