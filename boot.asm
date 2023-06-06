@@ -10,7 +10,8 @@ MiB            equ 1024 * 1024
 ; Fixed memory locations
 MEMORY_MAP     equ 0x01000
 BOOT_LOADER    equ 0x07C00
-STACK_TOP      equ BOOT_LOADER
+STACK_TOP      equ BOOT_LOADER - 0x70 ; grows downward
+TSS            equ STACK_TOP
 KERNEL_START   equ 0x07E00
 PAGE_MAP       equ 0x7C000 ; right before the EBDA
 PML4           equ PAGE_MAP
@@ -122,6 +123,19 @@ main:
     or eax, 0x87 ; PAGE_PRESENT | PAGE_WRITEABLE | PAGE_SIZE (TODO: should be 0x83)
     mov [es:di], eax
 
+    ; Set up the TSS
+
+    ; Clear 0x70 bytes at address TSS
+    mov ax, TSS / 16
+    mov es, ax
+    xor di, di
+    mov ecx, 0x70
+    xor ax, ax
+    rep stosb
+
+    ; Set the TSS's IOPB base address to the end of the TSS (disabled)
+    mov word [TSS + 0x66], TSS + 0x68
+
     ; Set PAE (Physical Address Extension) and PGE (Page Global Enabled) flags
     mov eax, 10100000b
     mov cr4, eax
@@ -151,6 +165,10 @@ main:
 
 BITS 64
 .longMode:
+    ; Load the TSS (task-state segment)
+    mov ax, GDT.tss
+    ltr ax
+
     ; Zero out data-segment registers (not used in 64-bit mode)
     xor ax, ax
     mov ds, ax
@@ -202,6 +220,16 @@ GDT:
         db 11111000b        ; present, ring 3, non-system, executable, non-conforming
         db 00100000b        ; long mode
         db 0
+
+    .tss: equ $ - GDT
+        dw 0x67                 ; limit[0:15]=len(TSS)-1
+        dw TSS & 0xFFFF         ; base[0:15]
+        db (TSS >> 16) & 0xFF   ; base[16:23]
+        db 10001001b            ; present, ring 0, system, available 64-bit TSS
+        db 0                    ; limit[16:19]=0, byte granularity
+        db (TSS >> 24) & 0xFF   ; base[24:31]
+        dd (TSS >> 32)          ; base[32:63]
+        dd 0                    ; reserved
 
     .pointer:
         dw $ - GDT - 1
