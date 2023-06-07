@@ -9,6 +9,7 @@
 #include "new.h"
 #include "print.h"
 #include "stdlib.h"
+#include "system.h"
 
 InterruptDescriptor::InterruptDescriptor(uint64_t addr, uint8_t flags)
 : addr0(lowBits(addr, 16)),
@@ -108,16 +109,16 @@ void handleException(uint8_t vector, const char* name, InterruptFrame* frame) {
     halt();
 }
 
-#define EXCEPTION_HANDLER_WITH_CODE(idx, name)                             \
-    void __attribute__((interrupt))                                        \
-        exceptionHandler##idx(InterruptFrame* frame, uint64_t errorCode) { \
-        handleException(idx, name, frame, errorCode);                      \
+#define EXCEPTION_HANDLER_WITH_CODE(idx, name)                         \
+    void __attribute__((interrupt))                                    \
+    exceptionHandler##idx(InterruptFrame* frame, uint64_t errorCode) { \
+        handleException(idx, name, frame, errorCode);                  \
     }
 
-#define EXCEPTION_HANDLER(idx, name)                   \
-    void __attribute__((interrupt))                    \
-        exceptionHandler##idx(InterruptFrame* frame) { \
-        handleException(idx, name, frame);             \
+#define EXCEPTION_HANDLER(idx, name)               \
+    void __attribute__((interrupt))                \
+    exceptionHandler##idx(InterruptFrame* frame) { \
+        handleException(idx, name, frame);         \
     }
 
 EXCEPTION_HANDLER(0, "Division Error")
@@ -244,6 +245,15 @@ void installInterrupts() {
     configurePIC();
     g_idtr.addr = (uint64_t)&g_idt[0];
     g_idtr.limit = 256 * sizeof(InterruptDescriptor) - 1;
+
+    // Set up the TSS to allow interrupts from ring3 -> ring0 by pointing
+    // rsp0 to the top of a 16KiB kernel stack
+    uint8_t* kernelStackBottom =
+        System::mm()
+            .physicalToVirtual(System::mm().pageAlloc(4))
+            .ptr<uint8_t>();
+    uint8_t* kernelStackTop = kernelStackBottom + 4 * PAGE_SIZE;
+    TSS->rsp0 = (uint64_t)kernelStackTop;
 
     asm volatile("lidt %0" : : "m"(g_idtr));
     asm volatile("sti");

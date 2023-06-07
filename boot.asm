@@ -134,7 +134,7 @@ main:
     rep stosb
 
     ; Set the TSS's IOPB base address to the end of the TSS (disabled)
-    mov word [TSS + 0x66], TSS + 0x68
+    mov word [TSS + 0x66], 0x68
 
     ; Set PAE (Physical Address Extension) and PGE (Page Global Enabled) flags
     mov eax, 10100000b
