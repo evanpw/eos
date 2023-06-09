@@ -14,6 +14,7 @@ $HOME/opt/cross/bin/x86_64-elf-g++ -g -ffreestanding -mno-red-zone -fno-rtti -fn
 $HOME/opt/cross/bin/x86_64-elf-g++ -g -ffreestanding -mno-red-zone -fno-rtti -fno-exceptions -mgeneral-regs-only -O -c user.cpp -o build/user.o
 $HOME/opt/cross/bin/x86_64-elf-g++ -g -ffreestanding -mno-red-zone -fno-rtti -fno-exceptions -mgeneral-regs-only -O -c keyboard.cpp -o build/keyboard.o
 $HOME/opt/cross/bin/x86_64-elf-g++ -g -ffreestanding -mno-red-zone -fno-rtti -fno-exceptions -mgeneral-regs-only -O -c terminal.cpp -o build/terminal.o
+$HOME/opt/cross/bin/x86_64-elf-g++ -g -ffreestanding -mno-red-zone -fno-rtti -fno-exceptions -mgeneral-regs-only -O -c page_map.cpp -o build/page_map.o
 $HOME/opt/cross/bin/x86_64-elf-g++ -Ttext=0x7E00 -ekmain -nostdlib -lgcc -o build/kernel.elf \
     build/kmain.o \
     build/screen.o \
@@ -26,7 +27,8 @@ $HOME/opt/cross/bin/x86_64-elf-g++ -Ttext=0x7E00 -ekmain -nostdlib -lgcc -o buil
     build/user.o \
     build/keyboard.o \
     build/system.o \
-    build/terminal.o
+    build/terminal.o \
+    build/page_map.o
 $HOME/opt/cross/bin/x86_64-elf-objcopy -O binary build/kernel.elf build/kernel.bin --set-section-flags .bss=alloc,load,contents
 
 # Boot loader

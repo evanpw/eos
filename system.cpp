@@ -9,6 +9,24 @@
 #include "terminal.h"
 #include "user.h"
 
+static void switchAddressSpace(PhysicalAddress pml4) {
+    asm volatile("movq %0, %%cr3" : : "r"(pml4.value) : "memory");
+}
+
+[[noreturn]] static void jumpToUser(uint64_t rip, uint64_t rsp) {
+    asm volatile(
+        "movq %0, %%rsp\n"
+        "movq %1, %%rcx\n"
+        // Turn off everything except reserved bit 1 and interrupts
+        "movq $0x202, %%r11\n"
+        "sysretq\n"
+        :
+        : "r"(rsp), "r"(rip)
+        : "rcx", "r11", "memory");
+
+    __builtin_unreachable();
+}
+
 void System::run() {
     System system;
 
@@ -28,17 +46,22 @@ void System::run() {
 
     println("Entering ring3");
 
-    asm volatile(
-        "mov %0, %%ecx\n"
-        // Turn off everything except reserved bit 1 and interrupts
-        "mov $0x202, %%r11\n"
-        "sysretq\n"
-        :
-        : "i"(userTask)
-        : "rcx", "r11", "memory");
+    UserAddressSpace userAddressSpace =
+        mm().kaddressSpace().makeUserAddressSpace();
+    println("pml4={:X}", userAddressSpace.pml4().value);
 
-    while (true)
-        ;
+    // Map the kernel image at the user base
+    // TODO: we only need to map the usermode function's code
+    userAddressSpace.mapPage(userAddressSpace.userMapBase(), PhysicalAddress(0),
+                             1);
+
+    // Allocate virtual memory area for the usermode stack
+    VirtualAddress userStackBottom = userAddressSpace.vmalloc(4);
+    VirtualAddress userStackTop = userStackBottom + 4 * PAGE_SIZE;
+
+    switchAddressSpace(userAddressSpace.pml4().value);
+    jumpToUser(userAddressSpace.userMapBase().value + (uint64_t)userTask,
+               userStackTop.value);
 }
 
 System* System::_instance = nullptr;

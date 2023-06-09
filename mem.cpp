@@ -2,10 +2,12 @@
 
 #include "assertions.h"
 #include "new.h"
+#include "page_map.h"
 #include "print.h"
 #include "stdlib.h"
 
-MemoryManager::MemoryManager() : _e820Table(E820_TABLE, *E820_NUM_ENTRIES_PTR) {
+MemoryManager::MemoryManager()
+: _e820Table(E820_TABLE, *E820_NUM_ENTRIES_PTR), _kaddressSpace(*this) {
     uint64_t availableBytes = 0;
     uint64_t physicalMemoryRange = 0;
     uint64_t availableAt1MiB = 0;
@@ -34,7 +36,7 @@ MemoryManager::MemoryManager() : _e820Table(E820_TABLE, *E820_NUM_ENTRIES_PTR) {
     FreePageRange initialPages(1 * MiB, 1 * MiB + availableAt1MiB);
     _freePageList = &initialPages;
 
-    buildLinearMemoryMap(physicalMemoryRange);
+    _kaddressSpace.buildLinearMemoryMap(physicalMemoryRange);
     _freePageList = buildFreePageList();
 
     initializeHeap();
@@ -62,6 +64,10 @@ PhysicalAddress MemoryManager::pageAlloc(size_t count) {
                 }
             }
 
+            // Zero out the page
+            void* ptr = physicalToVirtual(result);
+            memset(ptr, 0, count * PAGE_SIZE);
+
             return result;
         }
 
@@ -70,96 +76,6 @@ PhysicalAddress MemoryManager::pageAlloc(size_t count) {
     }
 
     panic("OOM in MemoryManager::pageAlloc");
-}
-
-VirtualAddress MemoryManager::physicalToVirtual(PhysicalAddress physAddr) {
-    if (physAddr < _linearMapEnd) {
-        return _linearMapOffset + physAddr.value;
-    }
-
-    ASSERT(physAddr < _identityMapEnd);
-    return VirtualAddress(physAddr.value);
-}
-
-void MemoryManager::buildLinearMemoryMap(uint64_t physicalMemoryRange) {
-    // Linearly map all physical memory to high virtual memory
-    uint64_t current = 0;
-    while (current < physicalMemoryRange) {
-        int pageSize;
-        if (current % GiB == 0 && physicalMemoryRange - current >= GiB) {
-            pageSize = 2;
-        } else if (current % (2 * MiB) == 0 &&
-                   physicalMemoryRange - current >= 2 * MiB) {
-            pageSize = 1;
-        } else {
-            pageSize = 0;
-        }
-
-        mapPage(_linearMapOffset + current, PhysicalAddress(current), pageSize);
-
-        current += PAGE_SIZE << (9 * pageSize);
-        _linearMapEnd = PhysicalAddress(current);
-    }
-}
-
-void MemoryManager::mapPage(VirtualAddress virtAddr, PhysicalAddress physAddr,
-                            int pageSize) {
-    // pageSize = 0: 4KiB pages
-    // pageSize = 1: 2MiB pages
-    // pageSize = 2: 1GiB pages
-    ASSERT(pageSize >= 0 && pageSize <= 2);
-
-    // The top 18 bits must be all 1 or all zero (canonical form)
-    ASSERT(virtAddr.isCanonical());
-
-    // The physical address must be aligned to the page size
-    ASSERT(physAddr.pageOffset(pageSize) == 0);
-
-    // The virtual address must be page-aligned
-    ASSERT(virtAddr.pageOffset() == 0);
-
-    // The pointer to the current page map level (PML4, PDP, PD, PT), starting
-    // with PML4
-    PageMapEntry* pml = PML4;
-
-    // Traverse the PMLs in order (PML4, PDP, PD)
-    for (int n = 4; n > pageSize + 1; --n) {
-        uint16_t index = virtAddr.pageMapIndex(n);
-
-        PageMapEntry entry = pml[index];
-        if (!entry) {
-            // No existing entry in the current PML
-
-            // Create a new empty next PML in fresh physical memory
-            PhysicalAddress pmlNextPhysAddr = pageAlloc();
-            void* pmlNext = physicalToVirtual(pmlNextPhysAddr);
-            memset(pmlNext, 0, PAGE_SIZE);
-
-            // Point the correct entry in the PML4 to the new PDP and mark it
-            // present and writable
-            entry = PageMapEntry(pmlNextPhysAddr, PAGE_PRESENT | PAGE_WRITABLE);
-            pml[index] = entry;
-        } else {
-            ASSERT(entry.hasFlags(PAGE_PRESENT | PAGE_WRITABLE));
-        }
-
-        // Advance to the next level
-        pml = physicalToVirtual(entry.addr()).ptr<PageMapEntry>();
-    }
-
-    // After reaching this point, pml is a pointer to the correct page table (or
-    // higher page map, if using large pages)
-    uint16_t index = virtAddr.pageMapIndex(pageSize + 1);
-
-    // We can't remap existing pages yet
-    ASSERT(!pml[index]);
-
-    PageMapEntry entry(physAddr, PAGE_PRESENT | PAGE_WRITABLE);
-    if (pageSize > 0) {
-        entry.setFlags(PAGE_SIZE_FLAG);
-    }
-
-    pml[index] = entry;
 }
 
 FreePageRange* MemoryManager::buildFreePageList() {
@@ -249,7 +165,6 @@ void MemoryManager::initializeHeap() {
     // Allocate and zero out a contiguous region to use as a heap
     PhysicalAddress physicalPages = pageAlloc(HEAP_SIZE / PAGE_SIZE);
     _heap = physicalToVirtual(physicalPages).ptr<uint8_t>();
-    memset(_heap, 0, HEAP_SIZE);
 
     // Initialize the entire space as a single free block
     BlockHeader* firstBlock = new (_heap) BlockHeader;
