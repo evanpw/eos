@@ -27,8 +27,11 @@ static void switchAddressSpace(PhysicalAddress pml4) {
     __builtin_unreachable();
 }
 
-extern "C" int64_t syscallHandler(uint64_t function, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5) {
-    println("syscall: function={}, arg1={}, arg2={}, arg3={}, arg4={}, arg5={}", function, arg1, arg2, arg3, arg4, arg5);
+extern "C" int64_t syscallHandler(uint64_t function, uint64_t arg1,
+                                  uint64_t arg2, uint64_t arg3, uint64_t arg4,
+                                  uint64_t arg5) {
+    println("syscall: function={}, arg1={}, arg2={}, arg3={}, arg4={}, arg5={}",
+            function, arg1, arg2, arg3, arg4, arg5);
     return arg1 + arg2 + arg3 + arg4 + arg5;
 }
 
@@ -36,8 +39,8 @@ extern "C" [[gnu::naked]] void syscallEntry() {
     // TODO: switch to kernel stack
     // TODO: be careful about interrupts
     asm volatile(
-        "push %%rcx\n"          // caller rip
-        "push %%r11\n"          // caller rflags
+        "push %%rcx\n"  // caller rip
+        "push %%r11\n"  // caller rflags
         // Convert calling convention
         // standard: rdi, rsi, rdx, rcx, r8, r9
         // syscall: rax (syscall #), rdi, rsi, rdx, r10, r8
