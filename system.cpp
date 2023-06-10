@@ -27,7 +27,7 @@ static void switchAddressSpace(PhysicalAddress pml4) {
     __builtin_unreachable();
 }
 
-using Handler = int64_t (*)(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t);
+using SyscallHandler = int64_t (*)(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t);
 
 int64_t sys_add(int64_t a, int64_t b) {
     return a + b;
@@ -38,43 +38,34 @@ int64_t sys_print(int64_t arg) {
     return 0;
 }
 
-extern "C" int64_t syscallHandler(uint64_t function, uint64_t arg1,
-                                  uint64_t arg2, uint64_t arg3, uint64_t arg4,
-                                  uint64_t arg5) {
+static constexpr uint64_t MAX_SYSCALL_NO = 1;
 
-    Handler handler;
-    if (function == 0) {
-        handler = reinterpret_cast<Handler>(sys_add);
-    } else if (function == 1) {
-        handler = reinterpret_cast<Handler>(sys_print);
-    } else {
-        return -1;
-    }
+extern "C" SyscallHandler syscallTable[];
 
-    return handler(arg1, arg2, arg3, arg4, arg5);
-}
+// We don't have static initialization, so this is initialized at startup
+SyscallHandler syscallTable[MAX_SYSCALL_NO + 1];
 
 extern "C" [[gnu::naked]] void syscallEntry() {
     // TODO: switch to kernel stack
     // TODO: be careful about interrupts
     asm volatile(
-        "push %%rcx\n"  // caller rip
-        "push %%r11\n"  // caller rflags
-        // Convert calling convention
-        // standard: rdi, rsi, rdx, rcx, r8, r9
-        // syscall: rax (syscall #), rdi, rsi, rdx, r10, r8
-        "mov %%r8, %%r9\n"
-        "mov %%r10, %%r8\n"
-        "mov %%rdx, %%rcx\n"
-        "mov %%rsi, %%rdx\n"
-        "mov %%rdi, %%rsi\n"
-        "mov %%rax, %%rdi\n"
-        "call syscallHandler\n"
-        "pop %%r11\n"
-        "pop %%rcx\n"
+        "push %%rcx\n"  // save caller rip
+        "push %%r11\n"  // save caller rflags
+        // Check for out-of-range syscall #
+        "cmp %[MAX_SYSCALL_NO], %%rax\n"
+        "jna 1f\n"
+        "mov $-1, %%rax\n"
+        "jmp 2f\n"
+        "1:\n"
+        // syscall uses r10 for arg4 while C uses rcx
+        "mov %%r10, %%rcx\n"
+        "call *syscallTable(, %%rax, 8)\n"
+        "2:\n"
+        "pop %%r11\n"  // caller rflags
+        "pop %%rcx\n"  // caller rip
         "sysretq\n"
         :
-        :
+        : [MAX_SYSCALL_NO]"i"(MAX_SYSCALL_NO)
         : "memory");
 
     __builtin_unreachable();
@@ -99,6 +90,10 @@ void System::run() {
 
     // Set up syscall to jump to syscallEntry
     wrmsr(IA32_LSTAR, (uint64_t)&syscallEntry);
+
+    // Create table of syscall handlers
+    syscallTable[0] = reinterpret_cast<SyscallHandler>(sys_add);
+    syscallTable[1] = reinterpret_cast<SyscallHandler>(sys_print);
 
     println("Entering ring3");
 
