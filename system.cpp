@@ -27,11 +27,10 @@ static void switchAddressSpace(PhysicalAddress pml4) {
     __builtin_unreachable();
 }
 
-using SyscallHandler = int64_t (*)(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t);
+using SyscallHandler = int64_t (*)(uint64_t, uint64_t, uint64_t, uint64_t,
+                                   uint64_t);
 
-int64_t sys_add(int64_t a, int64_t b) {
-    return a + b;
-}
+int64_t sys_add(int64_t a, int64_t b) { return a + b; }
 
 int64_t sys_print(int64_t arg) {
     println("sys_print: {}", arg);
@@ -65,7 +64,7 @@ extern "C" [[gnu::naked]] void syscallEntry() {
         "pop %%rcx\n"  // caller rip
         "sysretq\n"
         :
-        : [MAX_SYSCALL_NO]"i"(MAX_SYSCALL_NO)
+        : [MAX_SYSCALL_NO] "i"(MAX_SYSCALL_NO)
         : "memory");
 
     __builtin_unreachable();
