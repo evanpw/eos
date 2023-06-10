@@ -27,12 +27,31 @@ static void switchAddressSpace(PhysicalAddress pml4) {
     __builtin_unreachable();
 }
 
+using Handler = int64_t (*)(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t);
+
+int64_t sys_add(int64_t a, int64_t b) {
+    return a + b;
+}
+
+int64_t sys_print(int64_t arg) {
+    println("sys_print: {}", arg);
+    return 0;
+}
+
 extern "C" int64_t syscallHandler(uint64_t function, uint64_t arg1,
                                   uint64_t arg2, uint64_t arg3, uint64_t arg4,
                                   uint64_t arg5) {
-    println("syscall: function={}, arg1={}, arg2={}, arg3={}, arg4={}, arg5={}",
-            function, arg1, arg2, arg3, arg4, arg5);
-    return arg1 + arg2 + arg3 + arg4 + arg5;
+
+    Handler handler;
+    if (function == 0) {
+        handler = reinterpret_cast<Handler>(sys_add);
+    } else if (function == 1) {
+        handler = reinterpret_cast<Handler>(sys_print);
+    } else {
+        return -1;
+    }
+
+    return handler(arg1, arg2, arg3, arg4, arg5);
 }
 
 extern "C" [[gnu::naked]] void syscallEntry() {
