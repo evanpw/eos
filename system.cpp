@@ -27,6 +27,37 @@ static void switchAddressSpace(PhysicalAddress pml4) {
     __builtin_unreachable();
 }
 
+extern "C" int64_t syscallHandler(uint64_t function, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5) {
+    println("syscall: function={}, arg1={}, arg2={}, arg3={}, arg4={}, arg5={}", function, arg1, arg2, arg3, arg4, arg5);
+    return arg1 + arg2 + arg3 + arg4 + arg5;
+}
+
+extern "C" [[gnu::naked]] void syscallEntry() {
+    // TODO: switch to kernel stack
+    // TODO: be careful about interrupts
+    asm volatile(
+        "push %%rcx\n"          // caller rip
+        "push %%r11\n"          // caller rflags
+        // Convert calling convention
+        // standard: rdi, rsi, rdx, rcx, r8, r9
+        // syscall: rax (syscall #), rdi, rsi, rdx, r10, r8
+        "mov %%r8, %%r9\n"
+        "mov %%r10, %%r8\n"
+        "mov %%rdx, %%rcx\n"
+        "mov %%rsi, %%rdx\n"
+        "mov %%rdi, %%rsi\n"
+        "mov %%rax, %%rdi\n"
+        "call syscallHandler\n"
+        "pop %%r11\n"
+        "pop %%rcx\n"
+        "sysretq\n"
+        :
+        :
+        : "memory");
+
+    __builtin_unreachable();
+}
+
 void System::run() {
     System system;
 
@@ -44,11 +75,13 @@ void System::run() {
     uint32_t lowStar = lowBits(rdmsr(IA32_STAR), 32);
     wrmsr(IA32_STAR, concatBits((uint32_t)0x00180008, lowStar));
 
+    // Set up syscall to jump to syscallEntry
+    wrmsr(IA32_LSTAR, (uint64_t)&syscallEntry);
+
     println("Entering ring3");
 
     UserAddressSpace userAddressSpace =
         mm().kaddressSpace().makeUserAddressSpace();
-    println("pml4={:X}", userAddressSpace.pml4().value);
 
     // Map the kernel image at the user base
     // TODO: we only need to map the usermode function's code
