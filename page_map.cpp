@@ -118,10 +118,7 @@ UserAddressSpace KernelAddressSpace::makeUserAddressSpace() {
     // Every user process shares the kernel page mappings
     PageMapEntry* kptr = physicalToVirtual(_pml4).ptr<PageMapEntry>();
     PageMapEntry* uptr = physicalToVirtual(upml4).ptr<PageMapEntry>();
-    // TODO: use memcpy
-    for (size_t i = 0; i < 512; ++i) {
-        uptr[i] = kptr[i];
-    }
+    memcpy(uptr, kptr, 512 * sizeof(PageMapEntry));
 
     // Make sure that the kernel didn't map any user addresses
     for (size_t i = 1; i < _linearMapOffset.pageMapIndex(4); ++i) {

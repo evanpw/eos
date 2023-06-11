@@ -2,6 +2,7 @@
 
 #include "boot.h"
 #include "interrupts.h"
+#include "stdlib.h"
 #include "io.h"
 #include "keyboard.h"
 #include "mem.h"
@@ -45,12 +46,7 @@ void System::run() {
     // be page-aligned
     uint64_t pagesNeeded = (length + PAGE_SIZE - 1) / PAGE_SIZE;
     PhysicalAddress userDest = mm().pageAlloc(pagesNeeded);
-    uint8_t* src = userStart;
-    uint8_t* dest = mm().physicalToVirtual(userDest).ptr<uint8_t>();
-    // TODO: use memcpy
-    for (size_t i = 0; i < length; ++i) {
-        *dest++ = *src++;
-    }
+    memcpy(mm().physicalToVirtual(userDest), userStart, length);
 
     UserAddressSpace userAddressSpace =
         mm().kaddressSpace().makeUserAddressSpace();
