@@ -21,7 +21,7 @@ int64_t syscall(uint64_t function, uint64_t arg1 = 0, uint64_t arg2 = 0,
     return result;
 }
 
-void umain() {
+extern "C" void umain() {
     int64_t result = syscall(2, 1, 2, 3, 4, 5, 6);
     syscall(1, result);
 

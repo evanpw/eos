@@ -3,7 +3,7 @@ SECTIONS
     ENTRY(kmain)
 
     . = 0x7E00;
-    .text : { *(.text*) }
+    .text : { *(.entry) *(.text*) }
     .rodata : { *(.rodata*) }
     .bss : { *(.bss) }
     /DISCARD/ : { *(.eh_frame) }

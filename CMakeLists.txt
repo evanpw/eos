@@ -14,10 +14,10 @@ project(eos LANGUAGES CXX ASM_NASM)
 ## Kernel binary ##
 
 set(KERNEL_SOURCES
-    kmain.cpp
     assertions.cpp
     interrupts.cpp
     keyboard.cpp
+    kmain.cpp
     mem.cpp
     new.cpp
     page_map.cpp
