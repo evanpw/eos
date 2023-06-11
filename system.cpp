@@ -29,7 +29,7 @@ static void switchAddressSpace(PhysicalAddress pml4) {
 }
 
 using SyscallHandler = int64_t (*)(uint64_t, uint64_t, uint64_t, uint64_t,
-                                   uint64_t);
+                                   uint64_t, uint64_t);
 
 int64_t sys_add(int64_t a, int64_t b) { return a + b; }
 
@@ -38,7 +38,11 @@ int64_t sys_print(int64_t arg) {
     return 0;
 }
 
-static constexpr uint64_t MAX_SYSCALL_NO = 1;
+int64_t sys_add6(int64_t arg1, int64_t arg2, int64_t arg3, int64_t arg4, int64_t arg5, int64_t arg6) {
+    return arg1 + arg2 + arg3 + arg4 + arg5 + arg6;
+}
+
+static constexpr uint64_t MAX_SYSCALL_NO = 2;
 
 extern "C" SyscallHandler syscallTable[];
 
@@ -113,6 +117,7 @@ void System::run() {
     // Create table of syscall handlers
     syscallTable[0] = reinterpret_cast<SyscallHandler>(sys_add);
     syscallTable[1] = reinterpret_cast<SyscallHandler>(sys_print);
+    syscallTable[2] = reinterpret_cast<SyscallHandler>(sys_add6);
 
     println("Entering ring3");
 
