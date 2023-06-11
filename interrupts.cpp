@@ -12,11 +12,11 @@
 #include "system.h"
 
 InterruptDescriptor::InterruptDescriptor(uint64_t addr, uint8_t flags)
-: addr0(lowBits(addr, 16)),
+: addr0(bitSlice(addr, 0, 16)),
   cs(SELECTOR_CODE0),
   flags(flags),
-  addr1(bitRange(addr, 16, 16)),
-  addr2(bitRange(addr, 32, 32)) {}
+  addr1(bitSlice(addr, 16, 32)),
+  addr2(bitSlice(addr, 32, 64)) {}
 
 // Interrupt descriptor flags
 static constexpr uint8_t ISR_PRESENT = 0x80;

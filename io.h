@@ -29,8 +29,8 @@ inline uint64_t rdmsr(uint64_t msr) {
 }
 
 inline void wrmsr(uint64_t msr, uint64_t value) {
-    uint32_t low = lowBits(value, 32);
-    uint32_t high = highBits(value, 32);
+    uint32_t low = bitSlice(value, 0, 32);
+    uint32_t high = bitSlice(value, 32, 64);
 
     asm volatile("wrmsr" : : "c"(msr), "a"(low), "d"(high));
 }

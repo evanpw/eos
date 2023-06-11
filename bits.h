@@ -23,6 +23,13 @@ inline T bitRange(T value, int start, int length) {
 }
 
 template <typename T>
+inline T bitSlice(T value, int start, int end = sizeof(T) * 8) {
+    ASSERT(start >= 0 && end <= sizeof(T) * 8 && start <= end);
+    int length = end - start;
+    return (value >> start) & ((T(1) << length) - 1);
+}
+
+template <typename T>
 inline T clearLowBits(T value, int count) {
     ASSERT(count >= 0 && count <= sizeof(T) * 8);
     return value & ~((T(1) << count) - 1);

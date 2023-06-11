@@ -16,6 +16,7 @@ static void switchAddressSpace(PhysicalAddress pml4) {
 }
 
 [[noreturn]] static void jumpToUser(uint64_t rip, uint64_t rsp) {
+    // TODO: be more careful about interrupts
     asm volatile(
         "movq %0, %%rsp\n"
         "movq %1, %%rcx\n"

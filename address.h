@@ -69,7 +69,7 @@ struct VirtualAddress {
 
     bool isCanonical() const {
         // The top 17 bits must be all 1 or all zero
-        return highBits(value, 17) == 0 || highBits(~value, 17) == 0;
+        return bitSlice(value, 47) == 0 || bitSlice(~value, 47) == 0;
     }
 
     uint16_t pageMapIndex(int level) const {
