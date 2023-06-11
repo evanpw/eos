@@ -20,7 +20,15 @@ int64_t syscall(uint64_t function, uint64_t arg1 = 0, uint64_t arg2 = 0,
 }
 
 void userTask() {
-    int64_t result = syscall(0, 14, 23);
+    int64_t r1 = syscall(0, 1, 2);
+    syscall(1, r1);
+    int64_t r2 = syscall(0, 3, 4);
+    syscall(1, r2);
+    int64_t r3 = syscall(0, 5, 6);
+    syscall(1, r3);
+    int64_t r4 = syscall(0, r1, r2);
+    syscall(1, r4);
+    int64_t result = syscall(0, r4, r3);
     syscall(1, result);
 
     while (true)
