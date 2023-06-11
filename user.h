@@ -1,3 +1,3 @@
 #pragma once
 
-void userTask();
+extern "C" void umain() __attribute__((section(".entry")));

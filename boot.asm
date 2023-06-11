@@ -8,7 +8,8 @@ PAGE_SIZE      equ 4096
 MiB            equ 1024 * 1024
 
 ; Fixed memory locations
-MEMORY_MAP     equ 0x01000
+IMAGE_SIZE     equ 0x01000
+MEMORY_MAP     equ 0x01004
 BOOT_LOADER    equ 0x07C00
 STACK_TOP      equ BOOT_LOADER - 0x70 ; grows downward
 TSS            equ STACK_TOP
@@ -96,6 +97,11 @@ main:
     jmp $
 
 .readSuccess:
+    ; Store the size of the image loaded from disk in memory for the kernel to read
+    mov eax, KERNEL_SIZE_IN_SECTORS
+    shl eax, 9
+    mov dword [IMAGE_SIZE], eax
+
     ; Identity map the first 2MiB into virtual memory using a single large page
 
     ; Clear space for the entire page map
@@ -110,19 +116,19 @@ main:
     ; Page Map Level 4
     mov di, PML4 - PAGE_MAP
     mov eax, PDP
-    or eax, 7 ; PAGE_PRESENT | PAGE_WRITEABLE (TODO: should be 3)
+    or eax, 3 ; PAGE_PRESENT | PAGE_WRITEABLE
     mov [es:di], eax
 
     ; Page Directory Pointer Table
     mov di, PDP - PAGE_MAP
     mov eax, PD
-    or eax, 7 ; PAGE_PRESENT | PAGE_WRITEABLE (TODO: should be 3)
+    or eax, 3 ; PAGE_PRESENT | PAGE_WRITEABLE
     mov [es:di], eax
 
     ; Page Directory
     mov di, PD - PAGE_MAP
     xor eax, eax ; Physical address 0
-    or eax, 0x87 ; PAGE_PRESENT | PAGE_WRITEABLE | PAGE_SIZE (TODO: should be 0x83)
+    or eax, 0x83 ; PAGE_PRESENT | PAGE_WRITEABLE | PAGE_SIZE
     mov [es:di], eax
 
     ; Set up the TSS

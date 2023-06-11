@@ -17,7 +17,6 @@ set(KERNEL_SOURCES
     new.cpp
     system.cpp
     interrupts.cpp
-    user.cpp
     keyboard.cpp
     terminal.cpp
     page_map.cpp
@@ -35,7 +34,7 @@ target_compile_options(
     -mgeneral-regs-only
 )
 
-target_link_options(kernel.elf PRIVATE -Ttext=0x7E00 -ekmain -nostdlib -lgcc)
+target_link_options(kernel.elf PRIVATE -T ${CMAKE_SOURCE_DIR}/kernel.ld -nostdlib -lgcc LINKER:--no-warn-rwx-segments)
 
 # Convert kernel.elf to flat binary
 add_custom_command(
@@ -48,6 +47,37 @@ add_custom_command(
 )
 
 
+## Userland ##
+
+set(USER_SOURCES
+    user.cpp
+)
+
+add_executable(user.elf ${USER_SOURCES})
+
+target_compile_options(
+    user.elf
+    PRIVATE
+    -ffreestanding
+    -mno-red-zone
+    -fno-rtti
+    -fno-exceptions
+    -mgeneral-regs-only
+)
+
+target_link_options(user.elf PRIVATE -T ${CMAKE_SOURCE_DIR}/user.ld -nostdlib -lgcc)
+
+# Convert user.elf to flat binary
+add_custom_command(
+    OUTPUT ${CMAKE_BINARY_DIR}/user.bin
+    DEPENDS user.elf
+    COMMAND ${CMAKE_OBJCOPY}
+        -O binary ${CMAKE_BINARY_DIR}/user.elf
+        ${CMAKE_BINARY_DIR}/user.bin
+        --set-section-flags .bss=alloc,load,contents
+)
+
+
 ## Boot Sector ##
 
 set(CMAKE_ASM_NASM_FLAGS_DEBUG "-g -F dwarf")
@@ -56,10 +86,11 @@ set(CMAKE_ASM_NASM_LINK_EXECUTABLE "${CMAKE_LINKER} <CMAKE_ASM_NASM_LINK_FLAGS> 
 
 add_custom_command(
     OUTPUT ${CMAKE_BINARY_DIR}/boot.inc
-    MAIN_DEPENDENCY ${CMAKE_BINARY_DIR}/kernel.bin
+    DEPENDS ${CMAKE_BINARY_DIR}/kernel.bin ${CMAKE_BINARY_DIR}/user.bin
     COMMAND python
         ${CMAKE_SOURCE_DIR}/get_kernel_size.py
         ${CMAKE_BINARY_DIR}/kernel.bin
+        ${CMAKE_BINARY_DIR}/user.bin
         ${CMAKE_BINARY_DIR}/boot.inc
 )
 
@@ -100,10 +131,14 @@ add_custom_target(build-disk-image ALL DEPENDS ${CMAKE_BINARY_DIR}/diskimg)
 
 add_custom_command(
     OUTPUT ${CMAKE_BINARY_DIR}/diskimg
-    DEPENDS ${CMAKE_BINARY_DIR}/boot.bin ${CMAKE_BINARY_DIR}/kernel.bin
+    DEPENDS
+        ${CMAKE_BINARY_DIR}/boot.bin
+        ${CMAKE_BINARY_DIR}/kernel.bin
+        ${CMAKE_BINARY_DIR}/user.bin
     COMMAND
         cat
         ${CMAKE_BINARY_DIR}/boot.bin
         ${CMAKE_BINARY_DIR}/kernel.bin
+        ${CMAKE_BINARY_DIR}/user.bin
         > ${CMAKE_BINARY_DIR}/diskimg
 )

@@ -3,6 +3,7 @@
 #include "interrupts.h"
 #include "io.h"
 #include "keyboard.h"
+#include "boot.h"
 #include "mem.h"
 #include "print.h"
 #include "screen.h"
@@ -115,21 +116,35 @@ void System::run() {
 
     println("Entering ring3");
 
+    // Compute the location and size of the userland image loaded by the bootloader
+    uint8_t* userStart = &_kernelEnd;
+    uint8_t* userEnd = _kernelStartPtr + *_imageSizePtr;
+    size_t length = userEnd - userStart;
+
+    // Copy the userland code and data to a fresh piece of memory so that it'll be page-aligned
+    uint64_t pagesNeeded = (length + PAGE_SIZE - 1) / PAGE_SIZE;
+    PhysicalAddress userDest = mm().pageAlloc(pagesNeeded);
+    uint8_t* src = userStart;
+    uint8_t* dest = mm().physicalToVirtual(userDest).ptr<uint8_t>();
+    // TODO: use memcpy
+    for (size_t i = 0; i < length; ++i) {
+        *dest++ = *src++;
+    }
+
     UserAddressSpace userAddressSpace =
         mm().kaddressSpace().makeUserAddressSpace();
 
-    // Map the kernel image at the user base
-    // TODO: we only need to map the usermode function's code
-    userAddressSpace.mapPage(userAddressSpace.userMapBase(), PhysicalAddress(0),
-                             1);
+    // Map the userland image at the user base
+    for (size_t i = 0; i < length; i += PAGE_SIZE) {
+        userAddressSpace.mapPage(userAddressSpace.userMapBase() + i * PAGE_SIZE, userDest + i * PAGE_SIZE);
+    }
 
-    // Allocate virtual memory area for the usermode stack
+    // Allocate a virtual memory area for the usermode stack
     VirtualAddress userStackBottom = userAddressSpace.vmalloc(4);
     VirtualAddress userStackTop = userStackBottom + 4 * PAGE_SIZE;
 
     switchAddressSpace(userAddressSpace.pml4().value);
-    jumpToUser(userAddressSpace.userMapBase().value + (uint64_t)userTask,
-               userStackTop.value);
+    jumpToUser(userAddressSpace.userMapBase().value, userStackTop.value);
 }
 
 System* System::_instance = nullptr;

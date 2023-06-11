@@ -1,6 +1,6 @@
 #include "user.h"
 
-#include "screen.h"
+#include <stdint.h>
 
 // syscall calling convention: rax (syscall #), rdi, rsi, rdx, r10, r8
 
@@ -19,7 +19,7 @@ int64_t syscall(uint64_t function, uint64_t arg1 = 0, uint64_t arg2 = 0,
     return result;
 }
 
-void userTask() {
+void umain() {
     int64_t r1 = syscall(0, 1, 2);
     syscall(1, r1);
     int64_t r2 = syscall(0, 3, 4);
