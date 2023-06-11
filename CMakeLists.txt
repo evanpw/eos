@@ -15,17 +15,18 @@ project(eos LANGUAGES CXX ASM_NASM)
 
 set(KERNEL_SOURCES
     kmain.cpp
-    screen.cpp
     assertions.cpp
-    print.cpp
-    mem.cpp
-    stdlib.cpp
-    new.cpp
-    system.cpp
     interrupts.cpp
     keyboard.cpp
-    terminal.cpp
+    mem.cpp
+    new.cpp
     page_map.cpp
+    print.cpp
+    screen.cpp
+    stdlib.cpp
+    syscalls.cpp
+    system.cpp
+    terminal.cpp
 )
 
 add_executable(kernel.elf ${KERNEL_SOURCES})

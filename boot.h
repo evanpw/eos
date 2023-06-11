@@ -20,5 +20,6 @@ enum SegmentSelector : uint16_t {
 };
 
 static uint8_t* const _kernelStartPtr = reinterpret_cast<uint8_t*>(0x7E00);
-extern uint8_t _kernelEnd; // set during linking
-static uint32_t* const _imageSizePtr = reinterpret_cast<uint32_t*>(0x1000); // set in the bootloader
+extern uint8_t _kernelEnd;  // set during linking
+static uint32_t* const _imageSizePtr =
+    reinterpret_cast<uint32_t*>(0x1000);  // set in the bootloader
