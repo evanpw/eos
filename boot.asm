@@ -19,6 +19,8 @@ PDP            equ PML4 + PAGE_SIZE
 PD             equ PDP + PAGE_SIZE
 VIDEO_MEM_TEXT equ 0xB8000
 
+%include "boot.inc"
+
 ; Check size of kernel image vs. available memory
 MAX_KERNEL_SIZE equ PAGE_MAP - KERNEL_START
 %if KERNEL_SIZE_IN_SECTORS * SECTOR_SIZE > MAX_KERNEL_SIZE

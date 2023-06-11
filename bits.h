@@ -6,7 +6,7 @@
 template <typename T>
 inline T lowBits(T value, int count) {
     ASSERT(count >= 0 && count <= sizeof(T) * 8);
-    return value & ((1 << count) - 1);
+    return value & ((T(1) << count) - 1);
 }
 
 template <typename T>
@@ -25,7 +25,7 @@ inline T bitRange(T value, int start, int length) {
 template <typename T>
 inline T clearLowBits(T value, int count) {
     ASSERT(count >= 0 && count <= sizeof(T) * 8);
-    return value & ~((1 << count) - 1);
+    return value & ~((T(1) << count) - 1);
 }
 
 inline uint64_t concatBits(uint32_t high, uint32_t low) {
