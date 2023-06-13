@@ -38,3 +38,35 @@ public:
 private:
     AtomicBool _locked;
 };
+
+// Locks a spinlock when created, unlocks when destroyed
+class SpinlockLocker {
+public:
+    SpinlockLocker(Spinlock& lock) : _lock(lock) {
+        _flag = _lock.lock();
+        _haveLock = true;
+    }
+
+    ~SpinlockLocker() {
+        if (_haveLock) {
+            _lock.unlock(_flag);
+        }
+    }
+
+    void unlock() {
+        ASSERT(_haveLock);
+        _haveLock = false;
+        _lock.unlock(_flag);
+    }
+
+    // No copy / move
+    SpinlockLocker(const SpinlockLocker&) = delete;
+    SpinlockLocker& operator=(const SpinlockLocker&) = delete;
+    SpinlockLocker(SpinlockLocker&&) = delete;
+    SpinlockLocker& operator=(SpinlockLocker&&) = delete;
+
+private:
+    Spinlock& _lock;
+    InterruptsFlag _flag;
+    bool _haveLock = false;
+};

@@ -76,7 +76,7 @@ void print(const char* fmtstr, Args... args) {
 
 template <typename... Args>
 void println(const char* fmtstr, Args... args) {
-    // TODO: should use std::forward here
+    // TODO: should use std::forward equivalent
     print(fmtstr, args...);
     printChar('\n');
 }

@@ -498,13 +498,13 @@ void Terminal::onKeyEvent(const KeyboardEvent& event) {
     //        (uint8_t)event.key, keyCodeToString(event.key), event.pressed);
 
     if (event.pressed) {
+        SpinlockLocker locker(_lock);
+
         if (event.key == KeyCode::Backspace) {
-            InterruptsFlag flag = _lock.lock();
             if (_inputBuffer) {
                 _inputBuffer.popBack();
                 echo('\b');
             }
-            _lock.unlock(flag);
         }
 
         bool shifted = _keyboard.isPressed(KeyCode::LShift) |
@@ -512,9 +512,7 @@ void Terminal::onKeyEvent(const KeyboardEvent& event) {
         char c = shifted ? keyCodeToAsciiShifted(event.key)
                          : keyCodeToAsciiUnshifted(event.key);
         if (c != '\0') {
-            InterruptsFlag flag = _lock.lock();
             _inputBuffer.push(c);
-            _lock.unlock(flag);
             echo(c);
         }
     }
@@ -577,12 +575,11 @@ ssize_t Terminal::read(OpenFileDescription& fd, void* buffer, size_t count) {
     size_t bytesRead = 0;
     char* dest = (char*)buffer;
 
-    InterruptsFlag flag = _lock.lock();
+    SpinlockLocker locker(_lock);
     while (_inputBuffer && bytesRead < count) {
         *dest++ = _inputBuffer.pop();
         ++bytesRead;
     }
-    _lock.unlock(flag);
 
     return bytesRead;
 }
