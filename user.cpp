@@ -2,6 +2,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <unistd.h>
 
 // syscall calling convention: rax (syscall #), rdi, rsi, rdx, r10, r8, r9
 
@@ -22,23 +23,29 @@ int64_t syscall(uint64_t function, uint64_t arg1 = 0, uint64_t arg2 = 0,
     return result;
 }
 
+ssize_t write(int fd, const void* buffer, size_t count) {
+    return syscall(4, fd, (uint64_t)buffer, count);
+}
+
+ssize_t read(int fd, void* buffer, size_t count) {
+    return syscall(3, fd, (uint64_t)buffer, count);
+}
+
 extern "C" void umain() {
     const char* msg = "Hello World!\n";
-    syscall(4, 1, (uint64_t)msg, 13);
+    write(1, msg, 13);
 
     char buffer[64];
     while (true) {
-        while (syscall(3, 0, (uint64_t)buffer, 64) == 0)
-            ;
+        while (read(0, buffer, 64) == 0) {
+        }
+
         if (buffer[0] == 'y') {
-            syscall(4, 1, (uint64_t) "yes", 3);
+            write(1, "\byes\n", 5);
         } else {
-            syscall(4, 1, (uint64_t) "no", 2);
+            write(1, "\bno\n", 4);
         }
     }
-
-    // int64_t result = syscall(2, 1, 2, 3, 4, 5, 6);
-    // syscall(1, result);
 
     while (true)
         ;
