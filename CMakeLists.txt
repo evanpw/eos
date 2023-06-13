@@ -15,6 +15,7 @@ project(eos LANGUAGES CXX ASM_NASM)
 
 set(KERNEL_SOURCES
     assertions.cpp
+    file.cpp
     interrupts.cpp
     keyboard.cpp
     kmain.cpp
@@ -22,6 +23,7 @@ set(KERNEL_SOURCES
     new.cpp
     page_map.cpp
     print.cpp
+    process.cpp
     screen.cpp
     stdlib.cpp
     syscalls.cpp
@@ -42,6 +44,7 @@ target_compile_options(
 )
 
 target_link_options(kernel.elf PRIVATE -T ${CMAKE_SOURCE_DIR}/kernel.ld -nostdlib -lgcc LINKER:--no-warn-rwx-segments)
+target_include_directories(kernel.elf PRIVATE ${CMAKE_SOURCE_DIR}/posix)
 
 # Convert kernel.elf to flat binary
 add_custom_command(
@@ -70,6 +73,7 @@ target_compile_options(
     -fno-rtti
     -fno-exceptions
     -mgeneral-regs-only
+    -mcmodel=large
 )
 
 target_link_options(user.elf PRIVATE -T ${CMAKE_SOURCE_DIR}/user.ld -nostdlib -lgcc)
@@ -148,4 +152,8 @@ add_custom_command(
         ${CMAKE_BINARY_DIR}/kernel.bin
         ${CMAKE_BINARY_DIR}/user.bin
         > ${CMAKE_BINARY_DIR}/diskimg
+    COMMAND
+        python
+        ${CMAKE_SOURCE_DIR}/pad_file.py
+        ${CMAKE_BINARY_DIR}/diskimg
 )

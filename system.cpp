@@ -2,12 +2,13 @@
 
 #include "boot.h"
 #include "interrupts.h"
-#include "stdlib.h"
 #include "io.h"
 #include "keyboard.h"
 #include "mem.h"
 #include "print.h"
+#include "process.h"
 #include "screen.h"
+#include "stdlib.h"
 #include "syscalls.h"
 #include "terminal.h"
 #include "user.h"
@@ -35,6 +36,12 @@ void System::run() {
     System system;
 
     println("Entering ring3");
+
+    Process process0{0};
+    process0.open(*system._terminal);  // stdin
+    process0.open(*system._terminal);  // stdout
+    process0.open(*system._terminal);  // stderr
+    Process::s_current = &process0;
 
     // Compute the location and size of the userland image loaded by the
     // bootloader

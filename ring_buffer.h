@@ -1,4 +1,5 @@
 #pragma once
+#include "io.h"
 #include "print.h"
 
 template <typename T, size_t N>
@@ -23,6 +24,12 @@ public:
         return result;
     }
 
+    T popBack() {
+        ASSERT(size() != 0);
+        _tail = decrement(_tail);
+        return *_tail;
+    }
+
     const T& peek() const {
         ASSERT(size() != 0);
         return *_head;
@@ -36,12 +43,24 @@ public:
         }
     }
 
+    operator bool() const { return size() != 0; }
+
 private:
     T* increment(T* ptr) {
         ++ptr;
 
         if (ptr == &_data[N + 1]) {
             ptr = &_data[0];
+        }
+
+        return ptr;
+    }
+
+    T* decrement(T* ptr) {
+        if (ptr == &_data[0]) {
+            ptr = &_data[N];
+        } else {
+            --ptr;
         }
 
         return ptr;

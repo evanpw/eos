@@ -1,5 +1,6 @@
 #include "user.h"
 
+#include <stddef.h>
 #include <stdint.h>
 
 // syscall calling convention: rax (syscall #), rdi, rsi, rdx, r10, r8, r9
@@ -22,8 +23,22 @@ int64_t syscall(uint64_t function, uint64_t arg1 = 0, uint64_t arg2 = 0,
 }
 
 extern "C" void umain() {
-    int64_t result = syscall(2, 1, 2, 3, 4, 5, 6);
-    syscall(1, result);
+    const char* msg = "Hello World!\n";
+    syscall(4, 1, (uint64_t)msg, 13);
+
+    char buffer[64];
+    while (true) {
+        while (syscall(3, 0, (uint64_t)buffer, 64) == 0)
+            ;
+        if (buffer[0] == 'y') {
+            syscall(4, 1, (uint64_t) "yes", 3);
+        } else {
+            syscall(4, 1, (uint64_t) "no", 2);
+        }
+    }
+
+    // int64_t result = syscall(2, 1, 2, 3, 4, 5, 6);
+    // syscall(1, result);
 
     while (true)
         ;

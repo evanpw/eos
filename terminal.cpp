@@ -1,5 +1,6 @@
 #include "terminal.h"
 
+#include "io.h"
 #include "print.h"
 
 Terminal::Terminal(KeyboardDevice& keyboard, Screen& screen)
@@ -346,6 +347,10 @@ char keyCodeToAsciiUnshifted(KeyCode keyCode) {
             return '.';
         case KeyCode::KeypadSlash:
             return '/';
+        case KeyCode::Enter:
+            return '\n';
+        case KeyCode::KeypadEnter:
+            return '\n';
         default:
             return '\0';
     }
@@ -479,6 +484,10 @@ char keyCodeToAsciiShifted(KeyCode keyCode) {
             return '.';
         case KeyCode::KeypadSlash:
             return '/';
+        case KeyCode::Enter:
+            return '\n';
+        case KeyCode::KeypadEnter:
+            return '\n';
         default:
             return '\0';
     }
@@ -489,9 +498,13 @@ void Terminal::onKeyEvent(const KeyboardEvent& event) {
     //        (uint8_t)event.key, keyCodeToString(event.key), event.pressed);
 
     if (event.pressed) {
-        if (event.key == KeyCode::Enter || event.key == KeyCode::KeypadEnter) {
-            newline();
-            return;
+        if (event.key == KeyCode::Backspace) {
+            InterruptsFlag flag = _lock.lock();
+            if (_inputBuffer) {
+                _inputBuffer.popBack();
+                echo('\b');
+            }
+            _lock.unlock(flag);
         }
 
         bool shifted = _keyboard.isPressed(KeyCode::LShift) |
@@ -499,12 +512,23 @@ void Terminal::onKeyEvent(const KeyboardEvent& event) {
         char c = shifted ? keyCodeToAsciiShifted(event.key)
                          : keyCodeToAsciiUnshifted(event.key);
         if (c != '\0') {
+            InterruptsFlag flag = _lock.lock();
+            _inputBuffer.push(c);
+            _lock.unlock(flag);
             echo(c);
         }
     }
 }
 
 void Terminal::echo(char c) {
+    if (c == '\n') {
+        newline();
+        return;
+    } else if (c == '\b') {
+        backspace();
+        return;
+    }
+
     _screen.putChar(_x, _y, c, Screen::Black, Screen::LightGrey);
 
     // Advance cursor
@@ -530,4 +554,48 @@ void Terminal::newline() {
     }
 
     _screen.setCursor(_x, _y);
+}
+
+void Terminal::backspace() {
+    --_x;
+    if (_x < 0) {
+        _x = _screen.width() - 1;
+        --_y;
+        if (_y < 0) {
+            // TODO: scroll
+            _y = _screen.height() - 1;
+        }
+    }
+
+    _screen.putChar(_x, _y, ' ', Screen::Black, Screen::LightGrey);
+    _screen.setCursor(_x, _y);
+}
+
+ssize_t Terminal::read(OpenFileDescription& fd, void* buffer, size_t count) {
+    // TODO: check fd mode
+    // TODO: blocking, canonical mode
+    size_t bytesRead = 0;
+    char* dest = (char*)buffer;
+
+    InterruptsFlag flag = _lock.lock();
+    while (_inputBuffer && bytesRead < count) {
+        *dest++ = _inputBuffer.pop();
+        ++bytesRead;
+    }
+    _lock.unlock(flag);
+
+    return bytesRead;
+}
+
+ssize_t Terminal::write(OpenFileDescription& fd, const void* buffer,
+                        size_t count) {
+    // TODO: check fd mode
+    // TODO: output processing (NL/CR)
+    char* src = (char*)buffer;
+
+    for (size_t i = 0; i < count; ++i) {
+        echo(*src++);
+    }
+
+    return count;
 }

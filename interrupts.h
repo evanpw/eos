@@ -66,3 +66,38 @@ struct __attribute__((packed)) TaskStateSegment {
 static_assert(sizeof(TaskStateSegment) == 0x68);
 
 void installInterrupts();
+
+enum class InterruptsFlag {
+    Enabled = 0,
+    Disabled = 1,
+};
+
+struct Interrupts {
+    static void enable() { asm volatile("sti"); }
+
+    static void disable() { asm volatile("cli"); }
+
+    // Disables interrupts and returns the previous interrupt state
+    static InterruptsFlag saveAndDisable() {
+        uint64_t rflags;
+        asm volatile(
+            "pushf\n"
+            "pop %0\n"
+            : "=rm"(rflags)
+            :
+            : "memory");
+
+        disable();
+
+        bool ifFlag = rflags & (1 << 9);
+        return ifFlag ? InterruptsFlag::Enabled : InterruptsFlag::Disabled;
+    }
+
+    // Enables interrupts if they were enabled at the corresponding call to
+    // save()
+    static void restore(InterruptsFlag state) {
+        if (state == InterruptsFlag::Enabled) {
+            enable();
+        }
+    }
+};

@@ -2,8 +2,11 @@
 
 #include <stdint.h>
 
+#include "errno.h"
+#include "file.h"
 #include "io.h"
 #include "print.h"
+#include "process.h"
 
 int64_t sys_add(int64_t a, int64_t b) { return a + b; }
 
@@ -15,6 +18,30 @@ int64_t sys_print(int64_t arg) {
 int64_t sys_add6(int64_t arg1, int64_t arg2, int64_t arg3, int64_t arg4,
                  int64_t arg5, int64_t arg6) {
     return arg1 + arg2 + arg3 + arg4 + arg5 + arg6;
+}
+
+ssize_t sys_read(int fd, void* buffer, size_t count) {
+    Process& process = Process::current();
+
+    if (fd < 0 || fd >= RLIMIT_NOFILE || process.openFiles[fd] == nullptr) {
+        return -EBADF;
+    }
+
+    OpenFileDescription& description = *process.openFiles[fd];
+    File& file = description.file;
+    return file.read(description, buffer, count);
+}
+
+ssize_t sys_write(int fd, const void* buffer, size_t count) {
+    Process& process = Process::current();
+
+    if (fd < 0 || fd >= RLIMIT_NOFILE || process.openFiles[fd] == nullptr) {
+        return -EBADF;
+    }
+
+    OpenFileDescription& description = *process.openFiles[fd];
+    File& file = description.file;
+    return file.write(description, buffer, count);
 }
 
 // We don't have static initialization, so this is initialized at runtime
@@ -87,4 +114,6 @@ void initSyscalls() {
     syscallTable[0] = reinterpret_cast<SyscallHandler>(sys_add);
     syscallTable[1] = reinterpret_cast<SyscallHandler>(sys_print);
     syscallTable[2] = reinterpret_cast<SyscallHandler>(sys_add6);
+    syscallTable[3] = reinterpret_cast<SyscallHandler>(sys_read);
+    syscallTable[4] = reinterpret_cast<SyscallHandler>(sys_write);
 }
