@@ -99,7 +99,7 @@ add_custom_command(
     OUTPUT ${CMAKE_BINARY_DIR}/boot.inc
     DEPENDS ${CMAKE_BINARY_DIR}/kernel.bin ${CMAKE_BINARY_DIR}/user.bin
     COMMAND python
-        ${CMAKE_SOURCE_DIR}/get_kernel_size.py
+        ${CMAKE_SOURCE_DIR}/scripts/get_kernel_size.py
         ${CMAKE_BINARY_DIR}/kernel.bin
         ${CMAKE_BINARY_DIR}/user.bin
         ${CMAKE_BINARY_DIR}/boot.inc
@@ -154,6 +154,6 @@ add_custom_command(
         > ${CMAKE_BINARY_DIR}/diskimg
     COMMAND
         python
-        ${CMAKE_SOURCE_DIR}/pad_file.py
+        ${CMAKE_SOURCE_DIR}/scripts/pad_file.py
         ${CMAKE_BINARY_DIR}/diskimg
 )
