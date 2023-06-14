@@ -1,4 +1,5 @@
 #include "unistd.h"
+#include "api/syscalls.h"
 #include <stdint.h>
 #include <sys/types.h>
 
@@ -21,14 +22,14 @@ int64_t __syscall(uint64_t function, uint64_t arg1 = 0, uint64_t arg2 = 0,
     return result;
 }
 
-ssize_t write(int fd, const void* buffer, size_t count) {
-    return __syscall(4, fd, (uint64_t)buffer, count);
+ssize_t read(int fd, void* buffer, size_t count) {
+    return __syscall(SYS_read, fd, (uint64_t)buffer, count);
 }
 
-ssize_t read(int fd, void* buffer, size_t count) {
-    return __syscall(3, fd, (uint64_t)buffer, count);
+ssize_t write(int fd, const void* buffer, size_t count) {
+    return __syscall(SYS_write, fd, (uint64_t)buffer, count);
 }
 
 pid_t getpid() {
-    return __syscall(4);
+    return __syscall(SYS_getpid);
 }

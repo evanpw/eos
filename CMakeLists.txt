@@ -78,7 +78,7 @@ target_compile_options(
 )
 
 target_link_options(user.elf PRIVATE -T ${CMAKE_SOURCE_DIR}/user.ld -nostdlib -lgcc)
-target_include_directories(user.elf PRIVATE ${CMAKE_SOURCE_DIR}/libc/include)
+target_include_directories(user.elf PRIVATE ${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/libc/include)
 
 # Convert user.elf to flat binary
 add_custom_command(
