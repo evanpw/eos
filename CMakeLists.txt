@@ -44,7 +44,7 @@ target_compile_options(
 )
 
 target_link_options(kernel.elf PRIVATE -T ${CMAKE_SOURCE_DIR}/kernel.ld -nostdlib -lgcc LINKER:--no-warn-rwx-segments)
-target_include_directories(kernel.elf PRIVATE ${CMAKE_SOURCE_DIR}/posix)
+target_include_directories(kernel.elf PRIVATE ${CMAKE_SOURCE_DIR}/libc)
 
 # Convert kernel.elf to flat binary
 add_custom_command(
@@ -77,7 +77,7 @@ target_compile_options(
 )
 
 target_link_options(user.elf PRIVATE -T ${CMAKE_SOURCE_DIR}/user.ld -nostdlib -lgcc)
-target_include_directories(user.elf PRIVATE ${CMAKE_SOURCE_DIR}/posix)
+target_include_directories(user.elf PRIVATE ${CMAKE_SOURCE_DIR}/libc)
 
 # Convert user.elf to flat binary
 add_custom_command(
