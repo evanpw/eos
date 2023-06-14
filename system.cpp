@@ -8,6 +8,7 @@
 #include "print.h"
 #include "process.h"
 #include "screen.h"
+#include "thread.h"
 #include "stdlib.h"
 #include "syscalls.h"
 #include "terminal.h"
@@ -40,7 +41,9 @@ void System::run() {
     process0.open(*system._terminal);  // stdin
     process0.open(*system._terminal);  // stdout
     process0.open(*system._terminal);  // stderr
-    Process::s_current = &process0;
+
+    Thread thread{process0};
+    Thread::s_current = &thread;
 
     // Compute the location and size of the userland image loaded by the
     // bootloader

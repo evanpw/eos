@@ -29,6 +29,7 @@ set(KERNEL_SOURCES
     syscalls.cpp
     system.cpp
     terminal.cpp
+    thread.cpp
 )
 
 add_executable(kernel.elf ${KERNEL_SOURCES})

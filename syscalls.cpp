@@ -5,6 +5,7 @@
 #include "api/syscalls.h"
 #include "errno.h"
 #include "file.h"
+#include "thread.h"
 #include "io.h"
 #include "print.h"
 #include "process.h"
@@ -13,7 +14,7 @@ using SyscallHandler = int64_t (*)(uint64_t, uint64_t, uint64_t, uint64_t,
                                    uint64_t, uint64_t);
 
 ssize_t sys_read(int fd, void* buffer, size_t count) {
-    Process& process = Process::current();
+    Process& process = Thread::current().process;
 
     if (fd < 0 || fd >= RLIMIT_NOFILE || process.openFiles[fd] == nullptr) {
         return -EBADF;
@@ -25,7 +26,7 @@ ssize_t sys_read(int fd, void* buffer, size_t count) {
 }
 
 ssize_t sys_write(int fd, const void* buffer, size_t count) {
-    Process& process = Process::current();
+    Process& process = Thread::current().process;
 
     if (fd < 0 || fd >= RLIMIT_NOFILE || process.openFiles[fd] == nullptr) {
         return -EBADF;
@@ -37,7 +38,8 @@ ssize_t sys_write(int fd, const void* buffer, size_t count) {
 }
 
 pid_t sys_getpid() {
-    return Process::current().pid;
+    Process& process = Thread::current().process;
+    return process.pid;
 }
 
 // We don't have static initialization, so this is initialized at runtime

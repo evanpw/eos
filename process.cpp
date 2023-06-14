@@ -3,8 +3,6 @@
 #include "errno.h"
 #include "file.h"
 
-Process* Process::s_current;
-
 int Process::open(File& file) {
     // Find next available fd
     for (size_t i = 0; i < RLIMIT_NOFILE; ++i) {

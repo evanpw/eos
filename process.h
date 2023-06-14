@@ -15,7 +15,4 @@ struct Process {
 
     int open(File& file);
     int close(int fd);
-
-    static Process* s_current;
-    static Process& current() { return *s_current; }
 };
