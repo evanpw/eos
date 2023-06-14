@@ -5,10 +5,10 @@
 #include "api/syscalls.h"
 #include "errno.h"
 #include "file.h"
-#include "thread.h"
 #include "io.h"
 #include "print.h"
 #include "process.h"
+#include "thread.h"
 
 using SyscallHandler = int64_t (*)(uint64_t, uint64_t, uint64_t, uint64_t,
                                    uint64_t, uint64_t);

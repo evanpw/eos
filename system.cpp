@@ -8,10 +8,10 @@
 #include "print.h"
 #include "process.h"
 #include "screen.h"
-#include "thread.h"
 #include "stdlib.h"
 #include "syscalls.h"
 #include "terminal.h"
+#include "thread.h"
 
 static void switchAddressSpace(PhysicalAddress pml4) {
     asm volatile("movq %0, %%cr3" : : "r"(pml4.value) : "memory");

@@ -22,7 +22,7 @@ private:
     bool isString = false;
 };
 
-// To hide the template paramter of SizedFormatArgs, so that we can implement
+// To hide the template parameter of SizedFormatArgs, so that we can implement
 // more of this file in the source file rather than the header
 struct FormatArgs {
     virtual FormatArg next() = 0;
