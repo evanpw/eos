@@ -31,9 +31,18 @@ ssize_t read(int fd, void* buffer, size_t count) {
     return syscall(3, fd, (uint64_t)buffer, count);
 }
 
+pid_t getpid() {
+    return syscall(4);
+}
+
 extern "C" void umain() {
     const char* msg = "Hello World!\n";
     write(1, msg, 13);
+
+    if (getpid() == 0) {
+        const char* msg2 = "pid=0\n";
+        write(1, msg2, 6);
+    }
 
     char buffer[64];
     while (true) {

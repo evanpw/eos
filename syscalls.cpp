@@ -44,6 +44,10 @@ ssize_t sys_write(int fd, const void* buffer, size_t count) {
     return file.write(description, buffer, count);
 }
 
+pid_t sys_getpid() {
+    return Process::s_current->pid;
+}
+
 // We don't have static initialization, so this is initialized at runtime
 SyscallHandler syscallTable[MAX_SYSCALL_NO + 1];
 
@@ -116,4 +120,5 @@ void initSyscalls() {
     syscallTable[2] = reinterpret_cast<SyscallHandler>(sys_add6);
     syscallTable[3] = reinterpret_cast<SyscallHandler>(sys_read);
     syscallTable[4] = reinterpret_cast<SyscallHandler>(sys_write);
+    syscallTable[5] = reinterpret_cast<SyscallHandler>(sys_getpid);
 }
