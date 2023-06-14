@@ -11,7 +11,6 @@
 #include "stdlib.h"
 #include "syscalls.h"
 #include "terminal.h"
-#include "user.h"
 
 static void switchAddressSpace(PhysicalAddress pml4) {
     asm volatile("movq %0, %%cr3" : : "r"(pml4.value) : "memory");
