@@ -22,6 +22,7 @@ set(KERNEL_SOURCES
     mem.cpp
     new.cpp
     page_map.cpp
+    pci.cpp
     print.cpp
     process.cpp
     screen.cpp

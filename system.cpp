@@ -5,6 +5,7 @@
 #include "io.h"
 #include "keyboard.h"
 #include "mem.h"
+#include "pci.h"
 #include "print.h"
 #include "process.h"
 #include "screen.h"
@@ -85,4 +86,5 @@ System::System() {
     _terminal = new Terminal(*_keyboard, *_screen);
     installInterrupts();
     initSyscalls();
+    initPCI();
 }
