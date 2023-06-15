@@ -38,12 +38,12 @@ void System::run() {
 
     println("Entering ring3");
 
-    Process process0{0};
-    process0.open(*system._terminal);  // stdin
-    process0.open(*system._terminal);  // stdout
-    process0.open(*system._terminal);  // stderr
+    Process process1{1};
+    process1.open(*system._terminal);  // stdin
+    process1.open(*system._terminal);  // stdout
+    process1.open(*system._terminal);  // stderr
 
-    Thread thread{process0};
+    Thread thread{process1};
     Thread::s_current = &thread;
 
     // Compute the location and size of the userland image loaded by the

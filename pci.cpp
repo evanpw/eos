@@ -39,22 +39,42 @@ struct __attribute__((packed)) PCIConfigAddress {
 
 static_assert(sizeof(PCIConfigAddress) == sizeof(uint32_t));
 
+static uint32_t readConfigDword(uint8_t bus, uint8_t device, uint8_t function,
+                                uint8_t offset) {
+    // Must be dword-aligned
+    ASSERT(lowBits(offset, 2) == 0);
+
+    // Tell the PCI controller which dword to read and then read it
+    PCIConfigAddress address(bus, device, function, offset);
+    outl(PCI_CONFIG_ADDRESS, address);
+    return inl(PCI_CONFIG_DATA);
+}
+
 static uint16_t readConfigWord(uint8_t bus, uint8_t device, uint8_t function,
                                uint8_t offset) {
-    // Offset must be word-aligned
-    ASSERT((offset & 1) == 0);
+    // Must be word-aligned
+    ASSERT(lowBits(offset, 1) == 0);
 
     // Round down the address to be dword-aligned
     uint8_t dwordOffset = clearLowBits(offset, 2);
     uint8_t offsetRemainder = offset - dwordOffset;
 
-    // Tell the PCI controller which dword we want to read from the config data
-    PCIConfigAddress address(bus, device, function, dwordOffset);
-    outl(PCI_CONFIG_ADDRESS, address);
+    uint32_t result32 = readConfigDword(bus, device, function, dwordOffset);
 
     // Extract the correct word out of the 32-bit result
-    uint32_t result32 = inl(PCI_CONFIG_DATA);
     return bitRange(result32, 8 * offsetRemainder, 16);
+}
+
+static uint8_t readConfigByte(uint8_t bus, uint8_t device, uint8_t function,
+                               uint8_t offset) {
+    // Round down the address to be dword-aligned
+    uint8_t dwordOffset = clearLowBits(offset, 2);
+    uint8_t offsetRemainder = offset - dwordOffset;
+
+    uint32_t result32 = readConfigDword(bus, device, function, dwordOffset);
+
+    // Extract the correct word out of the 32-bit result
+    return bitRange(result32, 8 * offsetRemainder, 8);
 }
 
 void initPCI() {
@@ -67,6 +87,33 @@ void initPCI() {
                 uint16_t classCode = readConfigWord(bus, device, 0, 0x0A);
                 if (classCode == 0x0101) {
                     println("IDE Controller");
+                    println("Vendor ID = {:04X}", readConfigWord(bus, device, 0, 0x00));
+                    println("Device ID = {:04X}", readConfigWord(bus, device, 0, 0x02));
+                    println("Command = {:04X}", readConfigWord(bus, device, 0, 0x04));
+                    println("Status = {:04X}", readConfigWord(bus, device, 0, 0x06));
+                    println("Revision ID = {:02X}", readConfigByte(bus, device, 0, 0x08));
+                    println("Prog IF = {:02X}", readConfigByte(bus, device, 0, 0x09));
+                    println("Subclass = {:02X}", readConfigByte(bus, device, 0, 0x0A));
+                    println("Class Code = {:02X}", readConfigByte(bus, device, 0, 0x0B));
+                    println("Cache Line Size = {:02X}", readConfigByte(bus, device, 0, 0x0C));
+                    println("Latency Timer = {:02X}", readConfigByte(bus, device, 0, 0x0D));
+                    println("Header Type = {:02X}", readConfigByte(bus, device, 0, 0x0E));
+                    println("BIST = {:02X}", readConfigByte(bus, device, 0, 0x0F));
+                    println("BAR0 = {:08X}", readConfigDword(bus, device, 0, 0x10));
+                    println("BAR1 = {:08X}", readConfigDword(bus, device, 0, 0x14));
+                    println("BAR2 = {:08X}", readConfigDword(bus, device, 0, 0x18));
+                    println("BAR3 = {:08X}", readConfigDword(bus, device, 0, 0x1C));
+                    println("BAR4 = {:08X}", readConfigDword(bus, device, 0, 0x20));
+                    println("BAR5 = {:08X}", readConfigDword(bus, device, 0, 0x24));
+                    println("Cardbus CIS Pointer = {:08X}", readConfigDword(bus, device, 0, 0x28));
+                    println("Subsystem Vendor ID = {:04X}", readConfigWord(bus, device, 0, 0x2C));
+                    println("Subsystem ID = {:04X}", readConfigWord(bus, device, 0, 0x2E));
+                    println("Expansion ROM Base Address = {:08X}", readConfigDword(bus, device, 0, 0x30));
+                    println("Capabilities Pointer = {:02X}", readConfigByte(bus, device, 0, 0x34));
+                    println("Interrupt Line = {:02X}", readConfigByte(bus, device, 0, 0x3C));
+                    println("Interrupt PIN = {:02X}", readConfigByte(bus, device, 0, 0x3D));
+                    println("Min Grant = {:02X}", readConfigByte(bus, device, 0, 0x3E));
+                    println("Max Latency = {:02X}", readConfigByte(bus, device, 0, 0x3F));
                 } else if (classCode == 0x0600) {
                     println("Host Bridge");
                 } else if (classCode == 0x0601) {
@@ -78,6 +125,7 @@ void initPCI() {
                 } else {
                     println("Unknown Device ({:04X})", classCode);
                 }
+
             }
         }
     }

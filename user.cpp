@@ -8,8 +8,8 @@ void umain() {
     const char* msg = "Hello World!\n";
     write(1, msg, 13);
 
-    if (getpid() == 0) {
-        const char* msg2 = "pid=0\n";
+    if (getpid() == 1) {
+        const char* msg2 = "pid=1\n";
         write(1, msg2, 6);
     }
 
