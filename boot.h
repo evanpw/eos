@@ -1,4 +1,5 @@
 #pragma once
+#include <stdint.h>
 
 constexpr uint64_t KERNEL_PML4 = 0x7C000;
 

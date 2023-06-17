@@ -1,8 +1,5 @@
 #include "pci.h"
 
-#include <stdint.h>
-
-#include "bits.h"
 #include "io.h"
 #include "print.h"
 #include "stdlib.h"
@@ -39,8 +36,7 @@ struct __attribute__((packed)) PCIConfigAddress {
 
 static_assert(sizeof(PCIConfigAddress) == sizeof(uint32_t));
 
-static uint32_t readConfigDword(uint8_t bus, uint8_t device, uint8_t function,
-                                uint8_t offset) {
+uint32_t PCIDevice::readConfigDword(uint8_t offset) const {
     // Must be dword-aligned
     ASSERT(lowBits(offset, 2) == 0);
 
@@ -50,8 +46,7 @@ static uint32_t readConfigDword(uint8_t bus, uint8_t device, uint8_t function,
     return inl(PCI_CONFIG_DATA);
 }
 
-static uint16_t readConfigWord(uint8_t bus, uint8_t device, uint8_t function,
-                               uint8_t offset) {
+uint16_t PCIDevice::readConfigWord(uint8_t offset) const {
     // Must be word-aligned
     ASSERT(lowBits(offset, 1) == 0);
 
@@ -59,74 +54,123 @@ static uint16_t readConfigWord(uint8_t bus, uint8_t device, uint8_t function,
     uint8_t dwordOffset = clearLowBits(offset, 2);
     uint8_t offsetRemainder = offset - dwordOffset;
 
-    uint32_t result32 = readConfigDword(bus, device, function, dwordOffset);
+    uint32_t result32 = readConfigDword(dwordOffset);
 
     // Extract the correct word out of the 32-bit result
     return bitRange(result32, 8 * offsetRemainder, 16);
 }
 
-static uint8_t readConfigByte(uint8_t bus, uint8_t device, uint8_t function,
-                               uint8_t offset) {
+uint8_t PCIDevice::readConfigByte(uint8_t offset) const {
     // Round down the address to be dword-aligned
     uint8_t dwordOffset = clearLowBits(offset, 2);
     uint8_t offsetRemainder = offset - dwordOffset;
 
-    uint32_t result32 = readConfigDword(bus, device, function, dwordOffset);
+    uint32_t result32 = readConfigDword(dwordOffset);
 
     // Extract the correct word out of the 32-bit result
     return bitRange(result32, 8 * offsetRemainder, 8);
 }
 
-void initPCI() {
-    for (uint16_t bus = 0; bus < 256; ++bus) {
-        for (uint8_t device = 0; device < 32; ++device) {
-            uint16_t vendor = readConfigWord(bus, device, 0, 0);
-            if (vendor != 0xFFFF) {
-                print("PCI device at bus={}, device={}: ", bus, device);
+PCIDevice* g_ideController;
 
-                uint16_t classCode = readConfigWord(bus, device, 0, 0x0A);
-                if (classCode == 0x0101) {
-                    println("IDE Controller");
-                    println("Vendor ID = {:04X}", readConfigWord(bus, device, 0, 0x00));
-                    println("Device ID = {:04X}", readConfigWord(bus, device, 0, 0x02));
-                    println("Command = {:04X}", readConfigWord(bus, device, 0, 0x04));
-                    println("Status = {:04X}", readConfigWord(bus, device, 0, 0x06));
-                    println("Revision ID = {:02X}", readConfigByte(bus, device, 0, 0x08));
-                    println("Prog IF = {:02X}", readConfigByte(bus, device, 0, 0x09));
-                    println("Subclass = {:02X}", readConfigByte(bus, device, 0, 0x0A));
-                    println("Class Code = {:02X}", readConfigByte(bus, device, 0, 0x0B));
-                    println("Cache Line Size = {:02X}", readConfigByte(bus, device, 0, 0x0C));
-                    println("Latency Timer = {:02X}", readConfigByte(bus, device, 0, 0x0D));
-                    println("Header Type = {:02X}", readConfigByte(bus, device, 0, 0x0E));
-                    println("BIST = {:02X}", readConfigByte(bus, device, 0, 0x0F));
-                    println("BAR0 = {:08X}", readConfigDword(bus, device, 0, 0x10));
-                    println("BAR1 = {:08X}", readConfigDword(bus, device, 0, 0x14));
-                    println("BAR2 = {:08X}", readConfigDword(bus, device, 0, 0x18));
-                    println("BAR3 = {:08X}", readConfigDword(bus, device, 0, 0x1C));
-                    println("BAR4 = {:08X}", readConfigDword(bus, device, 0, 0x20));
-                    println("BAR5 = {:08X}", readConfigDword(bus, device, 0, 0x24));
-                    println("Cardbus CIS Pointer = {:08X}", readConfigDword(bus, device, 0, 0x28));
-                    println("Subsystem Vendor ID = {:04X}", readConfigWord(bus, device, 0, 0x2C));
-                    println("Subsystem ID = {:04X}", readConfigWord(bus, device, 0, 0x2E));
-                    println("Expansion ROM Base Address = {:08X}", readConfigDword(bus, device, 0, 0x30));
-                    println("Capabilities Pointer = {:02X}", readConfigByte(bus, device, 0, 0x34));
-                    println("Interrupt Line = {:02X}", readConfigByte(bus, device, 0, 0x3C));
-                    println("Interrupt PIN = {:02X}", readConfigByte(bus, device, 0, 0x3D));
-                    println("Min Grant = {:02X}", readConfigByte(bus, device, 0, 0x3E));
-                    println("Max Latency = {:02X}", readConfigByte(bus, device, 0, 0x3F));
-                } else if (classCode == 0x0600) {
-                    println("Host Bridge");
-                } else if (classCode == 0x0601) {
-                    println("ISA Bridge");
-                } else if (classCode == 0x0300) {
-                    println("VGA Compatible Controller");
-                } else if (classCode == 0x0200) {
-                    println("Ethernet Controller");
-                } else {
-                    println("Unknown Device ({:04X})", classCode);
-                }
+void checkFunction(uint8_t bus, uint8_t device, uint8_t function) {
+    if (!PCIDevice::exists(bus, device, function)) return;
 
+    // println("");
+    print("PCI device at bus={}, device={}, function={}: ", bus, device,
+          function);
+
+    PCIDevice pciDevice{bus, device, function};
+    if (pciDevice.classSubclass() == 0x0101) {
+        println("IDE Controller");
+        g_ideController = new PCIDevice{bus, device, function};
+    } else if (pciDevice.classSubclass() == 0x0600) {
+        println("Host Bridge");
+    } else if (pciDevice.classSubclass() == 0x0601) {
+        println("ISA Bridge");
+    } else if (pciDevice.classSubclass() == 0x0300) {
+        println("VGA Compatible Controller");
+    } else if (pciDevice.classSubclass() == 0x0200) {
+        println("Ethernet Controller");
+    } else if (pciDevice.classSubclass() == 0x0680) {
+        println("Bridge (Other)");
+    } else {
+        println("Unknown Device ({:02X}{:02X})", pciDevice.classCode(),
+                pciDevice.subclass());
+    }
+
+    /*
+    println("Vendor ID = {:04X}", pciDevice.vendorId());
+    println("Device ID = {:04X}", pciDevice.deviceId());
+    println("Command = {:04X}", pciDevice.commandWord());
+    println("Status = {:04X}", pciDevice.statusWord());
+    println("Revision ID = {:02X}", pciDevice.revisionId());
+    println("Prog IF = {:02X}", pciDevice.progIf());
+    println("Header Type = {:02X}", pciDevice.headerType());
+    println("Multifunction = {}", pciDevice.multifunction());
+    println("BIST = {:02X}", pciDevice.bist());
+    if (pciDevice.headerType() == 0x00) {
+        println("BAR0 = {:08X}", pciDevice.bar0());
+        println("BAR1 = {:08X}", pciDevice.bar1());
+        println("BAR2 = {:08X}", pciDevice.bar2());
+        println("BAR3 = {:08X}", pciDevice.bar3());
+        println("BAR4 = {:08X}", pciDevice.bar4());
+        println("BAR5 = {:08X}", pciDevice.bar5());
+        println("Cardbus CIS Pointer = {:08X}", pciDevice.cardbusCISPointer());
+        println("Subsystem Vendor ID = {:04X}", pciDevice.subsystemVendorId());
+        println("Subsystem ID = {:04X}", pciDevice.subsystemId());
+        println("Expansion ROM Base Address = {:08X}",
+                pciDevice.expansionROMBaseAddress());
+        println("Capabilities Pointer = {:02X}",
+                pciDevice.capabilitiesPointer());
+        println("Interrupt Line = {:02X}", pciDevice.interruptLine());
+        println("Interrupt PIN = {:02X}", pciDevice.interruptPin());
+        println("Min Grant = {:02X}", pciDevice.minGrant());
+        println("Max Latency = {:02X}", pciDevice.maxLatency());
+    }
+    */
+}
+
+void checkDevice(uint16_t bus, uint8_t device) {
+    if (!PCIDevice::exists(bus, device)) return;
+
+    checkFunction(bus, device, 0);
+
+    if (PCIDevice{bus, device}.multifunction()) {
+        for (uint8_t function = 1; function < 8; ++function) {
+            checkFunction(bus, device, function);
+        }
+    }
+}
+
+void scanBus(uint16_t bus) {
+    for (uint8_t device = 0; device < 32; ++device) {
+        checkDevice(bus, device);
+    }
+}
+
+void findAllDevices() {
+    // bus 0, device 0 will be the Host Bridge
+    if (!PCIDevice::exists(0, 0)) {
+        println("No PCI bus found");
+        return;
+    }
+
+    scanBus(0);
+
+    // Multiple PCI controllers
+    if (PCIDevice{0, 0}.multifunction()) {
+        for (uint8_t bus = 1; bus < 32; ++bus) {
+            if (PCIDevice::exists(0, 0, bus)) {
+                scanBus(bus);
             }
         }
     }
+
+    // TODO: handle PCI-to-PCI bridges
+}
+
+void initPCI() {
+    findAllDevices();
+    println("PCI bus initialized");
 }

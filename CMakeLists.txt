@@ -16,6 +16,7 @@ project(eos LANGUAGES CXX ASM_NASM)
 set(KERNEL_SOURCES
     assertions.cpp
     file.cpp
+    ide.cpp
     interrupts.cpp
     keyboard.cpp
     kmain.cpp

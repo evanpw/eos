@@ -38,3 +38,12 @@ inline T clearLowBits(T value, int count) {
 inline uint64_t concatBits(uint32_t high, uint32_t low) {
     return ((uint64_t)high << 32) | low;
 }
+
+inline uint32_t concatBits(uint16_t high, uint16_t low) {
+    return ((uint32_t)high << 16) | low;
+}
+
+template <typename T>
+inline T checkBit(T value, int bit) {
+    return value & (T(1) << bit);
+}

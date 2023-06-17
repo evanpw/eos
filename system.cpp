@@ -1,6 +1,7 @@
 #include "system.h"
 
 #include "boot.h"
+#include "ide.h"
 #include "interrupts.h"
 #include "io.h"
 #include "keyboard.h"
@@ -87,4 +88,5 @@ System::System() {
     installInterrupts();
     initSyscalls();
     initPCI();
+    initIDE();
 }

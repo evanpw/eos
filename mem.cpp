@@ -171,6 +171,7 @@ void MemoryManager::initializeHeap() {
     *firstBlock = BlockHeader::freeBlock(HEAP_SIZE);
 }
 
+// TODO: this should return 16-byte aligned pointers to conform with the C spec
 void* MemoryManager::kmalloc(size_t size) {
     // Round up to the nearest multiple of 4 bytes
     size = 4 * ((size + 3) / 4);
