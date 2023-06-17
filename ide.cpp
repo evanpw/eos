@@ -6,22 +6,10 @@
 #include "print.h"
 #include "stdlib.h"
 
-namespace ide {
-
 // ATA-6 spec:
 // https://web.archive.org/web/20110915154404/http://www.t13.org/Documents/UploadedDocuments/project/d1410r3b-ATA-ATAPI-6.pdf
 
 static constexpr size_t SECTOR_SIZE = 512;
-
-enum Channel {
-    Primary,
-    Secondary,
-};
-
-enum DriveSelector {
-    Master,
-    Slave,
-};
 
 // Port numbers
 enum Register {
@@ -76,24 +64,14 @@ private:
     uint8_t _raw;
 };
 
-void copyString(char* dest, uint16_t* src, size_t numBytes) {
-    ASSERT(numBytes % 2 == 0);
-
-    uint8_t* pdest = (uint8_t*)dest;
-    uint16_t* psrc = src;
-    for (size_t i = 0; i < numBytes; i += 2) {
-        uint16_t next = *src++;
-        *pdest++ = highBits(next, 8);
-        *pdest++ = lowBits(next, 8);
-    }
-
-    *pdest = '\0';
-}
+enum class DriveSelector {
+    Master,
+    Slave,
+};
 
 class IDEChannel {
 public:
-    Channel id;
-    IDEChannel(Channel id, uint16_t commandBlock, uint16_t controlBlock);
+    IDEChannel(uint16_t commandBlock, uint16_t controlBlock);
 
     uint8_t readRegister(Register reg);
     StatusFlags readStatus();
@@ -120,8 +98,7 @@ private:
     uint16_t _ports[REGISTER_COUNT];
 };
 
-IDEChannel::IDEChannel(Channel id, uint16_t commandBlock, uint16_t controlBlock)
-: id(id) {
+IDEChannel::IDEChannel(uint16_t commandBlock, uint16_t controlBlock) {
     _ports[Data] = commandBlock;
     _ports[Error] = commandBlock + 1;
     _ports[Features] = commandBlock + 1;
@@ -207,7 +184,7 @@ void IDEChannel::selectDrive(DriveSelector drive, bool enableLBA) {
     uint8_t value = (1 << 5) | (1 << 7);
 
     // Bit 4 selects the drive
-    if (drive == Master) {
+    if (drive == DriveSelector::Slave) {
         value |= (1 << 4);
     }
 
@@ -225,43 +202,6 @@ void IDEChannel::sendCommand(CommandCode command) {
     // The spec says that it may take up to 400ns for status to be updated
     delay();
 }
-
-struct IDEDevice {
-    IDEChannel& channel;
-    DriveSelector drive;
-
-    char modelName[41] = {0};
-    bool lba48 = false;
-    uint64_t numSectors = 0;
-
-    IDEDevice(IDEChannel& channel, DriveSelector drive)
-    : channel(channel), drive(drive) {}
-
-    virtual bool readSectors(void* dest, uint64_t start, size_t count) = 0;
-
-    virtual bool isATAPI() const = 0;
-};
-
-struct ATADevice : public IDEDevice {
-    ATADevice(IDEChannel& channel, DriveSelector drive)
-    : IDEDevice(channel, drive) {}
-
-    bool readSectors(void* dest, uint64_t start, size_t count) override;
-
-    bool isATAPI() const override { return false; }
-};
-
-struct ATAPIDevice : public IDEDevice {
-    ATAPIDevice(IDEChannel& channel, DriveSelector drive)
-    : IDEDevice(channel, drive) {}
-
-    bool readSectors(void* dest, uint64_t start, size_t count) override {
-        println("ATAPIDevice::readSectors not implemented");
-        return false;
-    }
-
-    bool isATAPI() const override { return true; }
-};
 
 bool ATADevice::readSectors(void* dest, uint64_t start, size_t count) {
     // TODO: add support for LBA28
@@ -300,6 +240,22 @@ bool ATADevice::readSectors(void* dest, uint64_t start, size_t count) {
 }
 
 static const char* secretMsg = "FIND THIS STRING";
+
+// Copies a string from the IDE config info into a standard C string, swapping
+// bytes where necessary
+static void copyString(char* dest, uint16_t* src, size_t numBytes) {
+    ASSERT(numBytes % 2 == 0);
+
+    uint8_t* pdest = (uint8_t*)dest;
+    uint16_t* psrc = src;
+    for (size_t i = 0; i < numBytes; i += 2) {
+        uint16_t next = *src++;
+        *pdest++ = highBits(next, 8);
+        *pdest++ = lowBits(next, 8);
+    }
+
+    *pdest = '\0';
+}
 
 IDEDevice* detectDrive(IDEChannel& channel, DriveSelector drive) {
     channel.selectDrive(drive);
@@ -360,37 +316,11 @@ IDEDevice* detectDrive(IDEChannel& channel, DriveSelector drive) {
     return device;
 }
 
-bool checkDisk(IDEDevice* device) {
-    uint64_t count = device->numSectors;
-    uint8_t* data = new uint8_t[count * SECTOR_SIZE];
-
-    if (!device->readSectors(data, 0, count)) {
-        println("ide::checkDisk: read error");
-        delete[] data;
-        return false;
-    }
-
-    // Run some sanity checks to see if we read the data we expected
-    ASSERT(data[SECTOR_SIZE - 2] == 0x55);
-    ASSERT(data[SECTOR_SIZE - 1] == 0xAA);
-
-    // See if we can find the secret message in the data we just read
-    size_t offset = SECTOR_SIZE + secretMsg - (char*)_kernelStartPtr;
-    for (size_t i = 0; i < strlen(secretMsg); ++i) {
-        char actual = data[offset + i];
-        char expected = secretMsg[i];
-        ASSERT(actual == expected);
-    }
-
-    delete[] data;
-    return true;
-}
-
-}  // namespace ide
+IDEChannel* g_primary;
+IDEChannel* g_secondary;
+IDEDevice* g_hardDrive;
 
 void initIDE() {
-    using namespace ide;
-
     if (!g_ideController) {
         println("No IDE controller found");
         return;
@@ -401,31 +331,33 @@ void initIDE() {
     uint8_t progIf = g_ideController->progIf();
     ASSERT((progIf & ((1 << 0) | (1 << 2))) == 0);
 
-    IDEChannel primary(Primary, 0x1F0, 0x3F6);
-    IDEChannel secondary(Secondary, 0x170, 0x376);
+    IDEChannel* primary = new IDEChannel(0x1F0, 0x3F6);
+    IDEChannel* secondary = new IDEChannel(0x170, 0x376);
 
     // Turn off IRQs
-    primary.writeRegister(Control, 2);
-    secondary.writeRegister(Control, 2);
+    primary->writeRegister(Control, 2);
+    secondary->writeRegister(Control, 2);
 
     // Detect drives
-    IDEDevice* primaryMaster = detectDrive(primary, Master);
+    IDEDevice* primaryMaster = detectDrive(*primary, DriveSelector::Master);
     if (primaryMaster) {
         println("IDE primary master: {}", primaryMaster->modelName);
-        checkDisk(primaryMaster);
+        g_hardDrive = primaryMaster;
+    } else {
+        g_hardDrive = nullptr;
     }
 
-    IDEDevice* primarySlave = detectDrive(primary, Slave);
+    IDEDevice* primarySlave = detectDrive(*primary, DriveSelector::Slave);
     if (primarySlave) {
         println("IDE primary slave: {}", primarySlave->modelName);
     }
 
-    IDEDevice* secondaryMaster = detectDrive(secondary, Master);
+    IDEDevice* secondaryMaster = detectDrive(*secondary, DriveSelector::Master);
     if (secondaryMaster) {
         println("IDE secondary master: {}", secondaryMaster->modelName);
     }
 
-    IDEDevice* secondarySlave = detectDrive(secondary, Slave);
+    IDEDevice* secondarySlave = detectDrive(*secondary, DriveSelector::Slave);
     if (secondarySlave) {
         println("IDE secondary slave: {}", secondarySlave->modelName);
     }

@@ -5,8 +5,8 @@ constexpr uint64_t KERNEL_PML4 = 0x7C000;
 
 struct E820Entry;
 static uint32_t* const E820_NUM_ENTRIES_PTR =
-    reinterpret_cast<uint32_t*>(0x1004);
-static E820Entry* const E820_TABLE = reinterpret_cast<E820Entry*>(0x1008);
+    reinterpret_cast<uint32_t*>(0x1000);
+static E820Entry* const E820_TABLE = reinterpret_cast<E820Entry*>(0x1004);
 
 struct TaskStateSegment;
 static TaskStateSegment* const TSS =
@@ -22,5 +22,3 @@ enum SegmentSelector : uint16_t {
 
 static uint8_t* const _kernelStartPtr = reinterpret_cast<uint8_t*>(0x7E00);
 extern uint8_t _kernelEnd;  // set during linking
-static uint32_t* const _imageSizePtr =
-    reinterpret_cast<uint32_t*>(0x1000);  // set in the bootloader

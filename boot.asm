@@ -3,30 +3,22 @@ BITS 16
 ; ORG 0x7C00 - this is done during linking
 
 ; Useful constants
-SECTOR_SIZE    equ 512
-PAGE_SIZE      equ 4096
-MiB            equ 1024 * 1024
+SECTOR_SIZE     equ 512
+PAGE_SIZE       equ 4096
+MiB             equ 1024 * 1024
 
 ; Fixed memory locations
-IMAGE_SIZE     equ 0x01000
-MEMORY_MAP     equ 0x01004
-BOOT_LOADER    equ 0x07C00
-STACK_TOP      equ BOOT_LOADER - 0x70 ; grows downward
-TSS            equ STACK_TOP
-KERNEL_START   equ 0x07E00
-PAGE_MAP       equ 0x7C000 ; right before the EBDA
-PML4           equ PAGE_MAP
-PDP            equ PML4 + PAGE_SIZE
-PD             equ PDP + PAGE_SIZE
-VIDEO_MEM_TEXT equ 0xB8000
-
-%include "boot.inc"
-
-; Check size of kernel image vs. available memory
+MEMORY_MAP      equ 0x01000
+BOOT_LOADER     equ 0x07C00
+STACK_TOP       equ BOOT_LOADER - 0x70 ; grows downward
+TSS             equ STACK_TOP
+KERNEL_START    equ 0x07E00
+PAGE_MAP        equ 0x7C000 ; right before the EBDA
 MAX_KERNEL_SIZE equ PAGE_MAP - KERNEL_START
-%if KERNEL_SIZE_IN_SECTORS * SECTOR_SIZE > MAX_KERNEL_SIZE
-%error Kernel is too large
-%endif
+PML4            equ PAGE_MAP
+PDP             equ PML4 + PAGE_SIZE
+PD              equ PDP + PAGE_SIZE
+VIDEO_MEM_TEXT  equ 0xB8000
 
 main:
     ; Disable interrupts
@@ -51,14 +43,14 @@ main:
     mov ecx, 24
     mov edx, 'PAMS'
     int 0x15
-    jc .error
+    jc error
 
     ; Check that the first call at least succeeded
     mov edx, 'PAMS'
     cmp eax, edx
-    jne .error
+    jne error
     test ebx, ebx
-    jz .error
+    jz error
     jmp .loopNext
 
 .e820loop:
@@ -77,30 +69,26 @@ main:
     jne .e820loop
 
 .e820finished:
-    ; Load the rest of the boot loader from disk
+    ; Load the disk map from the second sector of the disk
     mov si, dap  ; data structure describing read
     mov ah, 0x42 ; extended read
     mov dl, 0x80 ; drive number 0
     int 0x13
-    jnc .readSuccess
+    jc error
 
-    ; If there was an error during reading, fill the screen with red
-.error:
-    cld
-    mov ax, VIDEO_MEM_TEXT / 16
-    mov es, ax
-    mov di, 0
-    mov ax, 0x4020
-    mov cx, 80 * 25
-    rep stosw
-    hlt
-    jmp $
+    ; Set up the dap to read the kernel into memory
+    mov si, KERNEL_START
+    mov ax, [si]
+    mov [dap.offset], ax
+    mov ax, [si + 2]
+    mov [dap.size], ax
 
-.readSuccess:
-    ; Store the size of the image loaded from disk in memory for the kernel to read
-    mov eax, KERNEL_SIZE_IN_SECTORS
-    shl eax, 9
-    mov dword [IMAGE_SIZE], eax
+    ; Load the kernel from disk
+    mov si, dap  ; data structure describing read
+    mov ah, 0x42 ; extended read
+    mov dl, 0x80 ; drive number 0
+    int 0x13
+    jc error
 
     ; Identity map the first 2MiB into virtual memory using a single large page
 
@@ -195,6 +183,19 @@ BITS 64
     call rax
 
     ; The kernel shouldn't return, but just in case, halt and loop
+.forever:
+    hlt
+    jmp .forever
+
+    ; If there was an error during boot, fill the screen with red
+error:
+    cld
+    mov ax, VIDEO_MEM_TEXT / 16
+    mov es, ax
+    mov di, 0
+    mov ax, 0x4020
+    mov cx, 80 * 25
+    rep stosw
     hlt
     jmp $
 
@@ -247,9 +248,11 @@ GDT:
 dap:
     db 0x10                    ; size of this structure (16 bytes)
     db 0                       ; always zero
-    dw KERNEL_SIZE_IN_SECTORS  ; number of sectors to transfer (each is 512 bytes)
+    .size:
+    dw 1                       ; number of sectors to transfer (each is 512 bytes)
     dw KERNEL_START            ; destination offset (right after boot sector)
     dw 0x0                     ; destination segment
+    .offset:
     dd 1                       ; lower 32-bits of starting LBA
     dd 0                       ; upper 16-bits of starting LBA
 

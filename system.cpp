@@ -37,8 +37,6 @@ static void switchAddressSpace(PhysicalAddress pml4) {
 void System::run() {
     System system;
 
-    println("Entering ring3");
-
     Process process1{1};
     process1.open(*system._terminal);  // stdin
     process1.open(*system._terminal);  // stdout
@@ -47,23 +45,28 @@ void System::run() {
     Thread thread{process1};
     Thread::s_current = &thread;
 
-    // Compute the location and size of the userland image loaded by the
-    // bootloader
-    uint8_t* userStart = &_kernelEnd;
-    uint8_t* userEnd = _kernelStartPtr + *_imageSizePtr;
-    size_t length = userEnd - userStart;
+    // Read the 2nd sector of the disk to find the location and size of the
+    // userland image
+    ASSERT(g_hardDrive);
 
-    // Copy the userland code and data to a fresh piece of memory so that it'll
-    // be page-aligned
-    uint64_t pagesNeeded = (length + PAGE_SIZE - 1) / PAGE_SIZE;
+    uint16_t* diskMap = new uint16_t[256];
+    g_hardDrive->readSectors(diskMap, 1, 1);
+
+    uint16_t userDiskOffset = diskMap[2];
+    uint16_t userDiskSize = diskMap[3];
+    size_t userImageSize = 512 * userDiskSize;
+
+    // Read userland from the disk into a fresh piece of page-aligned memory
+    uint64_t pagesNeeded = (userImageSize + PAGE_SIZE - 1) / PAGE_SIZE;
     PhysicalAddress userDest = mm().pageAlloc(pagesNeeded);
-    memcpy(mm().physicalToVirtual(userDest), userStart, length);
+    g_hardDrive->readSectors(mm().physicalToVirtual(userDest), userDiskOffset,
+                             userDiskSize);
 
     UserAddressSpace userAddressSpace =
         mm().kaddressSpace().makeUserAddressSpace();
 
     // Map the userland image at the user base
-    for (size_t i = 0; i < length; i += PAGE_SIZE) {
+    for (size_t i = 0; i < userImageSize; i += PAGE_SIZE) {
         userAddressSpace.mapPage(userAddressSpace.userMapBase() + i * PAGE_SIZE,
                                  userDest + i * PAGE_SIZE);
     }
@@ -72,6 +75,7 @@ void System::run() {
     VirtualAddress userStackBottom = userAddressSpace.vmalloc(4);
     VirtualAddress userStackTop = userStackBottom + 4 * PAGE_SIZE;
 
+    println("Entering ring3");
     switchAddressSpace(userAddressSpace.pml4().value);
     jumpToUser(userAddressSpace.userMapBase().value, userStackTop.value);
 }

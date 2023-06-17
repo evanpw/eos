@@ -100,31 +100,14 @@ set(CMAKE_ASM_NASM_FLAGS_DEBUG "-g -F dwarf")
 set(CMAKE_ASM_NASM_OBJECT_FORMAT elf64)
 set(CMAKE_ASM_NASM_LINK_EXECUTABLE "${CMAKE_LINKER} <CMAKE_ASM_NASM_LINK_FLAGS> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>")
 
-add_custom_command(
-    OUTPUT ${CMAKE_BINARY_DIR}/boot.inc
-    DEPENDS ${CMAKE_BINARY_DIR}/kernel.bin ${CMAKE_BINARY_DIR}/user.bin
-    COMMAND python
-        ${CMAKE_SOURCE_DIR}/scripts/get_kernel_size.py
-        ${CMAKE_BINARY_DIR}/kernel.bin
-        ${CMAKE_BINARY_DIR}/user.bin
-        ${CMAKE_BINARY_DIR}/boot.inc
-)
-
 set(BOOT_SOURCES
     boot.asm
-    ${CMAKE_BINARY_DIR}/boot.inc
 )
 
 set_source_files_properties(
     ${BOOT_SOURCES}
     PROPERTIES
     LANGUAGE ASM_NASM
-)
-
-set_source_files_properties(
-    ${CMAKE_BINARY_DIR}/boot.inc
-    PROPERTIES
-    HEADER_FILE_ONLY ON
 )
 
 add_executable(boot.elf ${BOOT_SOURCES})
@@ -152,13 +135,10 @@ add_custom_command(
         ${CMAKE_BINARY_DIR}/kernel.bin
         ${CMAKE_BINARY_DIR}/user.bin
     COMMAND
-        cat
+        python
+        ${CMAKE_SOURCE_DIR}/scripts/create_disk_image.py
         ${CMAKE_BINARY_DIR}/boot.bin
         ${CMAKE_BINARY_DIR}/kernel.bin
         ${CMAKE_BINARY_DIR}/user.bin
-        > ${CMAKE_BINARY_DIR}/diskimg
-    COMMAND
-        python
-        ${CMAKE_SOURCE_DIR}/scripts/pad_file.py
         ${CMAKE_BINARY_DIR}/diskimg
 )
