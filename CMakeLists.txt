@@ -14,6 +14,8 @@ project(eos LANGUAGES CXX ASM_NASM)
 ## Kernel binary ##
 
 set(KERNEL_SOURCES
+    acpi.cpp
+    aml.cpp
     assertions.cpp
     file.cpp
     ide.cpp

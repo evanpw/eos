@@ -1,5 +1,6 @@
 #include "system.h"
 
+#include "acpi.h"
 #include "boot.h"
 #include "ide.h"
 #include "interrupts.h"
@@ -93,4 +94,5 @@ System::System() {
     initSyscalls();
     initPCI();
     initIDE();
+    initACPI();
 }
