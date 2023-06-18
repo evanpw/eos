@@ -1,5 +1,5 @@
-#include <string.h>
 #include <stdint.h>
+#include <string.h>
 
 void* memcpy(void* dest, const void* src, size_t n) {
     uint8_t* d = (uint8_t*)dest;
@@ -54,4 +54,3 @@ char* strncpy(char* dest, const char* src, size_t n) {
 
     return dest;
 }
-

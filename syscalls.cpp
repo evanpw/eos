@@ -4,9 +4,10 @@
 
 #include "api/syscalls.h"
 #include "errno.h"
+#include "estd/print.h"
 #include "file.h"
 #include "io.h"
-#include "print.h"
+#include "panic.h"
 #include "process.h"
 #include "thread.h"
 
@@ -40,6 +41,12 @@ ssize_t sys_write(int fd, const void* buffer, size_t count) {
 pid_t sys_getpid() {
     Process& process = Thread::current().process;
     return process.pid;
+}
+
+void sys_exit(int status) {
+    // TODO: tear down the process and return to the scheduler
+    println("User process exited with status {}", status);
+    halt();
 }
 
 // We don't have static initialization, so this is initialized at runtime
@@ -112,6 +119,7 @@ void initSyscalls() {
     syscallTable[SYS_read] = reinterpret_cast<SyscallHandler>(sys_read);
     syscallTable[SYS_write] = reinterpret_cast<SyscallHandler>(sys_write);
     syscallTable[SYS_getpid] = reinterpret_cast<SyscallHandler>(sys_getpid);
+    syscallTable[SYS_exit] = reinterpret_cast<SyscallHandler>(sys_exit);
 
     println("Syscalls initialized");
 }

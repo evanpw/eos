@@ -3,10 +3,10 @@
 #include <stdint.h>
 
 #include "address.h"
-#include "assertions.h"
 #include "bits.h"
 #include "boot.h"
 #include "e820.h"
+#include "estd/assertions.h"
 #include "page_map.h"
 #include "span.h"
 #include "units.h"

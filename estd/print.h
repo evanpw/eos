@@ -1,7 +1,8 @@
 #pragma once
+#include <stddef.h>
 #include <stdint.h>
 
-#include "assertions.h"
+#include "estd/assertions.h"
 
 // TODO: better error handling / checking
 

@@ -2,11 +2,12 @@
 
 #include <string.h>
 
-#include "assertions.h"
+#include "estd/assertions.h"
+#include "estd/print.h"
 #include "klibc.h"
 #include "new.h"
 #include "page_map.h"
-#include "print.h"
+#include "panic.h"
 
 MemoryManager::MemoryManager()
 : _e820Table(E820_TABLE, *E820_NUM_ENTRIES_PTR), _kaddressSpace(*this) {

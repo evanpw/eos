@@ -1,6 +1,6 @@
-#include <stddef.h>
-#include <stdint.h>
 #include <unistd.h>
+
+#include "estd/print.h"
 
 extern "C" void main() __attribute__((section(".entry")));
 
@@ -8,10 +8,7 @@ void main() {
     const char* msg = "Hello World!\n";
     write(1, msg, 13);
 
-    if (getpid() == 1) {
-        const char* msg2 = "pid=1\n";
-        write(1, msg2, 6);
-    }
+    println("pid={}", getpid());
 
     char buffer[64];
     while (true) {

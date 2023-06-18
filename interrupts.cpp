@@ -1,13 +1,14 @@
 #include "interrupts.h"
 
-#include "assertions.h"
 #include "bits.h"
 #include "boot.h"
+#include "estd/assertions.h"
+#include "estd/print.h"
 #include "io.h"
 #include "keyboard.h"
 #include "mem.h"
 #include "new.h"
-#include "print.h"
+#include "panic.h"
 #include "system.h"
 
 InterruptDescriptor::InterruptDescriptor(uint64_t addr, uint8_t flags)

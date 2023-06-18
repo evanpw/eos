@@ -1,9 +1,9 @@
 #include "screen.h"
 
-#include "assertions.h"
 #include "bits.h"
+#include "estd/assertions.h"
+#include "estd/print.h"
 #include "io.h"
-#include "print.h"
 
 // VGA I/O ports
 enum : uint16_t {

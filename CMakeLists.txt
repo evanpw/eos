@@ -11,12 +11,18 @@ MARK_AS_ADVANCED(CMAKE_CXX_FLAGS_STANDARD CMAKE_C_FLAGS_STANDARD CMAKE_EXE_LINKE
 project(eos LANGUAGES CXX ASM_NASM)
 
 
+# Share between kernel and userland
+set(ESTD_SOURCES
+    estd/print.cpp
+    estd/assertions.cpp
+)
+
+
 ## Kernel binary ##
 
 set(KERNEL_SOURCES
     acpi.cpp
     aml.cpp
-    assertions.cpp
     file.cpp
     ide.cpp
     interrupts.cpp
@@ -26,14 +32,15 @@ set(KERNEL_SOURCES
     mem.cpp
     new.cpp
     page_map.cpp
+    panic.cpp
     pci.cpp
-    print.cpp
     process.cpp
     screen.cpp
     syscalls.cpp
     system.cpp
     terminal.cpp
     thread.cpp
+    ${ESTD_SOURCES}
 )
 
 add_executable(kernel.elf ${KERNEL_SOURCES})
@@ -46,10 +53,11 @@ target_compile_options(
     -fno-rtti
     -fno-exceptions
     -mgeneral-regs-only
+    -DKERNEL
 )
 
 target_link_options(kernel.elf PRIVATE -T ${CMAKE_SOURCE_DIR}/kernel.ld -nostdlib -lgcc LINKER:--no-warn-rwx-segments)
-target_include_directories(kernel.elf PRIVATE ${CMAKE_SOURCE_DIR}/libc/include)
+target_include_directories(kernel.elf PRIVATE ${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/libc/include)
 
 # Convert kernel.elf to flat binary
 add_custom_command(
@@ -64,10 +72,18 @@ add_custom_command(
 
 ## Userland ##
 
+set(LIBC_SOURCES
+    libc/stdio.cpp
+    libc/stdlib.cpp
+    libc/string.cpp
+    libc/syscall.cpp
+    libc/unistd.cpp
+)
+
 set(USER_SOURCES
     user.cpp
-    libc/unistd.cpp
-    libc/string.cpp
+    ${LIBC_SOURCES}
+    ${ESTD_SOURCES}
 )
 
 add_executable(user.elf ${USER_SOURCES})

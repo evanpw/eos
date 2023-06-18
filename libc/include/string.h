@@ -3,8 +3,8 @@
 
 extern "C" {
 
-// From POSIX
-void* memccpy(void* __restrict dest, const void* __restrict src, int c, size_t n);
+void* memccpy(void* __restrict dest, const void* __restrict src, int c,
+              size_t n);
 void* memchr(const void* s, int c, size_t n);
 int memcmp(const void* s1, const void* s2, size_t n);
 void* memcpy(void* __restrict dest, const void* __restrict src, size_t n);
@@ -30,5 +30,4 @@ char* strstr(const char* haystack, const char* needle);
 char* strtok(char* __restrict str, const char* __restrict delim);
 char* strtok_r(char* str, const char* delim, char** saveptr);
 size_t strxfrm(char* __restrict dest, const char* __restrict src, size_t n);
-
 }

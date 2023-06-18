@@ -1,6 +1,14 @@
-#include "print.h"
+#include "estd/print.h"
 
 #include <string.h>
+
+#ifdef KERNEL
+#include "io.h"
+void printChar(char c) { outb(0xE9, c); }
+#else
+#include <stdio.h>
+void printChar(char c) { putchar(c); }
+#endif
 
 struct FormatSpec {
     int base = 10;
@@ -8,8 +16,6 @@ struct FormatSpec {
     char padChar = ' ';
     bool uppercase = false;
 };
-
-void printChar(char c) { asm volatile("outb %0, $0xE9" ::"a"(c)); }
 
 void FormatArg::print(const FormatSpec& spec) {
     if (!isString) {

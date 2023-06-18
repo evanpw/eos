@@ -1,7 +1,7 @@
 #include "terminal.h"
 
+#include "estd/print.h"
 #include "io.h"
-#include "print.h"
 
 Terminal::Terminal(KeyboardDevice& keyboard, Screen& screen)
 : _keyboard(keyboard), _screen(screen) {
