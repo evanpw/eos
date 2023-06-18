@@ -1,6 +1,6 @@
 #include "print.h"
 
-#include "stdlib.h"
+#include <string.h>
 
 struct FormatSpec {
     int base = 10;

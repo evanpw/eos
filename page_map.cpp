@@ -1,7 +1,8 @@
 #include "page_map.h"
 
+#include <string.h>
+
 #include "mem.h"
-#include "stdlib.h"
 #include "system.h"
 
 // Page map flags

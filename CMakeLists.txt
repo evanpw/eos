@@ -21,6 +21,7 @@ set(KERNEL_SOURCES
     ide.cpp
     interrupts.cpp
     keyboard.cpp
+    klibc.cpp
     kmain.cpp
     mem.cpp
     new.cpp
@@ -29,7 +30,6 @@ set(KERNEL_SOURCES
     print.cpp
     process.cpp
     screen.cpp
-    stdlib.cpp
     syscalls.cpp
     system.cpp
     terminal.cpp
@@ -67,6 +67,7 @@ add_custom_command(
 set(USER_SOURCES
     user.cpp
     libc/unistd.cpp
+    libc/string.cpp
 )
 
 add_executable(user.elf ${USER_SOURCES})

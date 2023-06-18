@@ -1,9 +1,10 @@
 #include "aml.h"
 
+#include <string.h>
+
 #include "assertions.h"
 #include "bits.h"
 #include "print.h"
-#include "stdlib.h"
 
 struct StringBuilder {
     void append(char c) {

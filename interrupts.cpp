@@ -8,7 +8,6 @@
 #include "mem.h"
 #include "new.h"
 #include "print.h"
-#include "stdlib.h"
 #include "system.h"
 
 InterruptDescriptor::InterruptDescriptor(uint64_t addr, uint8_t flags)

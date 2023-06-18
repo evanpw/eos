@@ -1,9 +1,10 @@
 #include "acpi.h"
 
+#include <string.h>
+
 #include "aml.h"
 #include "bits.h"
 #include "print.h"
-#include "stdlib.h"
 #include "system.h"
 #include "units.h"
 

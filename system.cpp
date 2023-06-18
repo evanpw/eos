@@ -11,7 +11,7 @@
 #include "print.h"
 #include "process.h"
 #include "screen.h"
-#include "stdlib.h"
+#include "string.h"
 #include "syscalls.h"
 #include "terminal.h"
 #include "thread.h"

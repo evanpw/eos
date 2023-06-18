@@ -1,8 +1,9 @@
 #include "pci.h"
 
+#include <string.h>
+
 #include "io.h"
 #include "print.h"
-#include "stdlib.h"
 
 static constexpr uint16_t PCI_CONFIG_ADDRESS = 0xCF8;
 static constexpr uint16_t PCI_CONFIG_DATA = 0xCFC;
