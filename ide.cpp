@@ -338,10 +338,12 @@ void initIDE() {
     primary->writeRegister(Control, 2);
     secondary->writeRegister(Control, 2);
 
+    println("Detecting IDE drives");
+
     // Detect drives
     IDEDevice* primaryMaster = detectDrive(*primary, DriveSelector::Master);
     if (primaryMaster) {
-        println("IDE primary master: {}", primaryMaster->modelName);
+        println("Primary master: {}", primaryMaster->modelName);
         g_hardDrive = primaryMaster;
     } else {
         g_hardDrive = nullptr;
@@ -349,17 +351,17 @@ void initIDE() {
 
     IDEDevice* primarySlave = detectDrive(*primary, DriveSelector::Slave);
     if (primarySlave) {
-        println("IDE primary slave: {}", primarySlave->modelName);
+        println("Primary slave: {}", primarySlave->modelName);
     }
 
     IDEDevice* secondaryMaster = detectDrive(*secondary, DriveSelector::Master);
     if (secondaryMaster) {
-        println("IDE secondary master: {}", secondaryMaster->modelName);
+        println("Secondary master: {}", secondaryMaster->modelName);
     }
 
     IDEDevice* secondarySlave = detectDrive(*secondary, DriveSelector::Slave);
     if (secondarySlave) {
-        println("IDE secondary slave: {}", secondarySlave->modelName);
+        println("Secondary slave: {}", secondarySlave->modelName);
     }
 
     println("IDE controller initialized");

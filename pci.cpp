@@ -76,26 +76,24 @@ PCIDevice* g_ideController;
 void checkFunction(uint8_t bus, uint8_t device, uint8_t function) {
     if (!PCIDevice::exists(bus, device, function)) return;
 
-    // println("");
-    print("PCI device at bus={}, device={}, function={}: ", bus, device,
-          function);
+    print("{:02d}:{:02d}.{} - ", bus, device, function);
 
     PCIDevice pciDevice{bus, device, function};
     if (pciDevice.classSubclass() == 0x0101) {
-        println("IDE Controller");
+        println("IDE interface");
         g_ideController = new PCIDevice{bus, device, function};
     } else if (pciDevice.classSubclass() == 0x0600) {
-        println("Host Bridge");
+        println("Host bridge");
     } else if (pciDevice.classSubclass() == 0x0601) {
-        println("ISA Bridge");
+        println("ISA bridge");
     } else if (pciDevice.classSubclass() == 0x0300) {
-        println("VGA Compatible Controller");
+        println("VGA compatible controller");
     } else if (pciDevice.classSubclass() == 0x0200) {
-        println("Ethernet Controller");
+        println("Ethernet controller");
     } else if (pciDevice.classSubclass() == 0x0680) {
-        println("Bridge (Other)");
+        println("Bridge");
     } else {
-        println("Unknown Device ({:02X}{:02X})", pciDevice.classCode(),
+        println("Unknown Device ({:02X}:{:02X})", pciDevice.classCode(),
                 pciDevice.subclass());
     }
 
@@ -171,6 +169,7 @@ void findAllDevices() {
 }
 
 void initPCI() {
+    println("Detecting PCI devices");
     findAllDevices();
     println("PCI bus initialized");
 }

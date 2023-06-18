@@ -39,8 +39,6 @@ diskmap_size = 1
 
 kernel_offset = boot_size + diskmap_size
 kernel_size = len(kernel_data) // 512
-print("kernel offset:", kernel_offset)
-print("kernel size:", kernel_size)
 
 user_offset = boot_size + diskmap_size + kernel_size
 user_size = len(user_data) // 512

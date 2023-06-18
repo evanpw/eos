@@ -112,4 +112,6 @@ void initSyscalls() {
     syscallTable[SYS_read] = reinterpret_cast<SyscallHandler>(sys_read);
     syscallTable[SYS_write] = reinterpret_cast<SyscallHandler>(sys_write);
     syscallTable[SYS_getpid] = reinterpret_cast<SyscallHandler>(sys_getpid);
+
+    println("Syscalls initialized");
 }
