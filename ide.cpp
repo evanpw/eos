@@ -148,14 +148,7 @@ bool IDEChannel::isIdle() {
 
 void IDEChannel::readSector(void* dest) {
     ASSERT(readStatus().dataRequestReady());
-
-    uint16_t port = _ports[Data];
-    uint64_t count = SECTOR_SIZE / 2;
-
-    asm volatile("rep insw"
-                 : "=D"(dest), "=c"(count)
-                 : "Nd"(port), "0"(dest), "1"(count)
-                 : "memory");
+    insw(dest, _ports[Data], SECTOR_SIZE / 2);
 }
 
 void IDEChannel::delay() {

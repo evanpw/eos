@@ -33,6 +33,27 @@ inline void outl(uint16_t port, uint32_t value) {
     asm volatile("outl %0, %1" : : "a"(value), "Nd"(port) : "memory");
 }
 
+inline void insb(void* dest, uint16_t port, size_t count) {
+    asm volatile("rep insb"
+                 : "=D"(dest), "=c"(count)
+                 : "Nd"(port), "0"(dest), "1"(count)
+                 : "memory");
+}
+
+inline void insw(void* dest, uint16_t port, size_t count) {
+    asm volatile("rep insw"
+                 : "=D"(dest), "=c"(count)
+                 : "Nd"(port), "0"(dest), "1"(count)
+                 : "memory");
+}
+
+inline void insl(void* dest, uint16_t port, size_t count) {
+    asm volatile("rep insl"
+                 : "=D"(dest), "=c"(count)
+                 : "Nd"(port), "0"(dest), "1"(count)
+                 : "memory");
+}
+
 inline void iowait(int rounds = 1) {
     for (int i = 0; i < rounds; ++i) {
         // This doesn't do anything, but takes a microsecond or so to do it
