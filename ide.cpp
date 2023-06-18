@@ -233,8 +233,6 @@ bool ATADevice::readSectors(void* dest, uint64_t start, size_t count) {
     return true;
 }
 
-static const char* secretMsg = "FIND THIS STRING";
-
 // Copies a string from the IDE config info into a standard C string, swapping
 // bytes where necessary
 static void copyString(char* dest, uint16_t* src, size_t numBytes) {
