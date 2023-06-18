@@ -7,7 +7,6 @@
 #include "io.h"
 #include "keyboard.h"
 #include "mem.h"
-#include "new.h"
 #include "panic.h"
 #include "system.h"
 

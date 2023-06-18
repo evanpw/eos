@@ -13,8 +13,9 @@ project(eos LANGUAGES CXX ASM_NASM)
 
 # Share between kernel and userland
 set(ESTD_SOURCES
-    estd/print.cpp
     estd/assertions.cpp
+    estd/new.cpp
+    estd/print.cpp
 )
 
 
@@ -30,7 +31,6 @@ set(KERNEL_SOURCES
     klibc.cpp
     kmain.cpp
     mem.cpp
-    new.cpp
     page_map.cpp
     panic.cpp
     pci.cpp

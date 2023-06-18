@@ -3,9 +3,9 @@
 #include <string.h>
 
 #include "estd/assertions.h"
+#include "estd/new.h"
 #include "estd/print.h"
 #include "klibc.h"
-#include "new.h"
 #include "page_map.h"
 #include "panic.h"
 

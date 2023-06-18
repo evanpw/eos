@@ -1,14 +1,6 @@
-#include "new.h"
-
 #include "system.h"
 
-// Placement new / delete
-void *operator new(size_t, void *p) throw() { return p; }
-void *operator new[](size_t, void *p) throw() { return p; }
-void operator delete(void *, void *) throw(){};
-void operator delete[](void *, void *) throw(){};
-
-// Regular new / delete
+// Regular (non-placement) new / delete
 void *operator new(size_t size) { return System::mm().kmalloc(size); }
 void *operator new[](size_t size) { return System::mm().kmalloc(size); }
 void operator delete(void *p) { System::mm().kfree(p); }
