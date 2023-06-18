@@ -2,9 +2,9 @@
 #include <stdint.h>
 #include <unistd.h>
 
-extern "C" void umain() __attribute__((section(".entry")));
+extern "C" void main() __attribute__((section(".entry")));
 
-void umain() {
+void main() {
     const char* msg = "Hello World!\n";
     write(1, msg, 13);
 
