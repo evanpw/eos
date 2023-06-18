@@ -1,7 +1,7 @@
 #pragma once
 
-#include "atomic.h"
 #include "estd/assertions.h"
+#include "estd/atomic.h"
 #include "interrupts.h"
 
 class Spinlock {

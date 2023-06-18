@@ -19,6 +19,3 @@ enum SegmentSelector : uint16_t {
     SELECTOR_CODE3 = 0x28,
     SELECTOR_TSS = 0x30,
 };
-
-static uint8_t* const _kernelStartPtr = reinterpret_cast<uint8_t*>(0x7E00);
-extern uint8_t _kernelEnd;  // set during linking

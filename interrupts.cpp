@@ -1,8 +1,8 @@
 #include "interrupts.h"
 
-#include "bits.h"
 #include "boot.h"
 #include "estd/assertions.h"
+#include "estd/bits.h"
 #include "estd/print.h"
 #include "io.h"
 #include "keyboard.h"

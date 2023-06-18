@@ -2,8 +2,8 @@
 #include <stdint.h>
 
 #include "address.h"
-#include "bits.h"
 #include "boot.h"
+#include "estd/bits.h"
 #include "units.h"
 
 struct PageMapEntry {

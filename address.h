@@ -1,7 +1,7 @@
 #pragma once
 #include <stdint.h>
 
-#include "bits.h"
+#include "estd/bits.h"
 
 struct PhysicalAddress {
     PhysicalAddress(uint64_t value) : value(value) {}

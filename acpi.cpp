@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include "aml.h"
-#include "bits.h"
+#include "estd/bits.h"
 #include "estd/print.h"
 #include "system.h"
 #include "units.h"

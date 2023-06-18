@@ -7,5 +7,4 @@ SECTIONS
     .rodata : { *(.rodata*) }
     .bss : { *(.bss) }
     /DISCARD/ : { *(.eh_frame) }
-    _kernelEnd = .;
 }

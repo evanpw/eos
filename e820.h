@@ -1,5 +1,5 @@
 #pragma once
-#include "span.h"
+#include "estd/span.h"
 
 struct __attribute__((packed)) E820Entry {
     uint64_t base;

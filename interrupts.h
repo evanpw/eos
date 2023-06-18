@@ -1,7 +1,7 @@
 #pragma once
 #include <stdint.h>
 
-#include "bits.h"
+#include "estd/bits.h"
 
 // I/O ports for communicating with the PIC
 enum : uint16_t {

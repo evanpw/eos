@@ -3,12 +3,12 @@
 #include <stdint.h>
 
 #include "address.h"
-#include "bits.h"
 #include "boot.h"
 #include "e820.h"
 #include "estd/assertions.h"
+#include "estd/bits.h"
+#include "estd/span.h"
 #include "page_map.h"
-#include "span.h"
 #include "units.h"
 
 // Configuration

@@ -2,8 +2,8 @@
 
 #include <string.h>
 
-#include "bits.h"
 #include "estd/assertions.h"
+#include "estd/bits.h"
 #include "estd/print.h"
 
 struct StringBuilder {
