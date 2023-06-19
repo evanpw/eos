@@ -92,7 +92,7 @@ System::System() {
     _terminal = new Terminal(*_keyboard, *_screen);
     installInterrupts();
     initSyscalls();
-    initPCI();
+    _pciDevices = new PCIDevices;
     initIDE();
     initACPI();
 }

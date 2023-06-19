@@ -2,6 +2,7 @@
 #include <stdint.h>
 
 #include "estd/bits.h"
+#include "estd/vector.h"
 
 class PCIDevice {
 public:
@@ -60,7 +61,20 @@ private:
     uint8_t readConfigByte(uint8_t offset) const;
 };
 
-// TODO: Write a class to store all of the PCI devices found
-extern PCIDevice* g_ideController;
+class PCIDevices {
+public:
+    const Vector<PCIDevice*>& devices() { return _devices; }
+    PCIDevice* ideController() { return _ideController; }
 
-void initPCI();
+private:
+    friend class System;
+    PCIDevices();
+
+    void findAllDevices();
+    void scanBus(uint16_t bus);
+    void checkDevice(uint16_t bus, uint8_t device);
+    void checkFunction(uint8_t bus, uint8_t device, uint8_t function);
+
+    Vector<PCIDevice*> _devices;
+    PCIDevice* _ideController = nullptr;
+};

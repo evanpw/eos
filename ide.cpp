@@ -6,6 +6,7 @@
 #include "estd/print.h"
 #include "io.h"
 #include "pci.h"
+#include "system.h"
 
 // ATA-6 spec:
 // https://web.archive.org/web/20110915154404/http://www.t13.org/Documents/UploadedDocuments/project/d1410r3b-ATA-ATAPI-6.pdf
@@ -313,27 +314,29 @@ IDEChannel* g_secondary;
 IDEDevice* g_hardDrive;
 
 void initIDE() {
-    if (!g_ideController) {
+    PCIDevice* ideController = System::pciDevices().ideController();
+
+    if (!ideController) {
         println("No IDE controller found");
         return;
     }
 
     // Verify that the IDE controller is in compatibility mode
     // TODO: allow native mode (not supported by qemu)
-    uint8_t progIf = g_ideController->progIf();
+    uint8_t progIf = ideController->progIf();
     ASSERT((progIf & ((1 << 0) | (1 << 2))) == 0);
 
-    IDEChannel* primary = new IDEChannel(0x1F0, 0x3F6);
-    IDEChannel* secondary = new IDEChannel(0x170, 0x376);
+    g_primary = new IDEChannel(0x1F0, 0x3F6);
+    g_secondary = new IDEChannel(0x170, 0x376);
 
     // Turn off IRQs
-    primary->writeRegister(Control, 2);
-    secondary->writeRegister(Control, 2);
+    g_primary->writeRegister(Control, 2);
+    g_secondary->writeRegister(Control, 2);
 
     println("Detecting IDE drives");
 
     // Detect drives
-    IDEDevice* primaryMaster = detectDrive(*primary, DriveSelector::Master);
+    IDEDevice* primaryMaster = detectDrive(*g_primary, DriveSelector::Master);
     if (primaryMaster) {
         println("Primary master: {}", primaryMaster->modelName);
         g_hardDrive = primaryMaster;
@@ -341,17 +344,18 @@ void initIDE() {
         g_hardDrive = nullptr;
     }
 
-    IDEDevice* primarySlave = detectDrive(*primary, DriveSelector::Slave);
+    IDEDevice* primarySlave = detectDrive(*g_primary, DriveSelector::Slave);
     if (primarySlave) {
         println("Primary slave: {}", primarySlave->modelName);
     }
 
-    IDEDevice* secondaryMaster = detectDrive(*secondary, DriveSelector::Master);
+    IDEDevice* secondaryMaster =
+        detectDrive(*g_secondary, DriveSelector::Master);
     if (secondaryMaster) {
         println("Secondary master: {}", secondaryMaster->modelName);
     }
 
-    IDEDevice* secondarySlave = detectDrive(*secondary, DriveSelector::Slave);
+    IDEDevice* secondarySlave = detectDrive(*g_secondary, DriveSelector::Slave);
     if (secondarySlave) {
         println("Secondary slave: {}", secondarySlave->modelName);
     }

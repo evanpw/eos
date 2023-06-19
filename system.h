@@ -4,6 +4,7 @@
 class Screen;
 class KeyboardDevice;
 class Terminal;
+class PCIDevices;
 
 // Holder class for initializing and accessing various components
 // of the kernel
@@ -28,6 +29,11 @@ public:
         return *(instance()._terminal);
     }
 
+    static PCIDevices& pciDevices() {
+        ASSERT(instance()._pciDevices);
+        return *(instance()._pciDevices);
+    }
+
 private:
     System();
 
@@ -44,4 +50,5 @@ private:
     Screen* _screen = nullptr;
     KeyboardDevice* _keyboard = nullptr;
     Terminal* _terminal = nullptr;
+    PCIDevices* _pciDevices = nullptr;
 };
