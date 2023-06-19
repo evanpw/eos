@@ -80,18 +80,17 @@ void PCIDevices::checkFunction(uint8_t bus, uint8_t device, uint8_t function) {
     PCIDevice* pciDevice = new PCIDevice{bus, device, function};
     _devices.push_back(pciDevice);
 
-    if (pciDevice->classSubclass() == 0x0101) {
+    if (pciDevice->classSubclass() == (uint16_t)PCIDeviceClass::StorageIDE) {
         println("IDE interface");
-        _ideController = pciDevice;
-    } else if (pciDevice->classSubclass() == 0x0600) {
+    } else if (pciDevice->classSubclass() == (uint16_t)PCIDeviceClass::BridgeHost) {
         println("Host bridge");
-    } else if (pciDevice->classSubclass() == 0x0601) {
+    } else if (pciDevice->classSubclass() == (uint16_t)PCIDeviceClass::BridgeISA) {
         println("ISA bridge");
-    } else if (pciDevice->classSubclass() == 0x0300) {
+    } else if (pciDevice->classSubclass() == (uint16_t)PCIDeviceClass::DisplayVGA) {
         println("VGA compatible controller");
-    } else if (pciDevice->classSubclass() == 0x0200) {
+    } else if (pciDevice->classSubclass() == (uint16_t)PCIDeviceClass::NetworkEthernet) {
         println("Ethernet controller");
-    } else if (pciDevice->classSubclass() == 0x0680) {
+    } else if (pciDevice->classSubclass() == (uint16_t)PCIDeviceClass::BridgeOther) {
         println("Bridge");
     } else {
         println("Unknown Device ({:02X}:{:02X})", pciDevice->classCode(),
@@ -138,6 +137,16 @@ void PCIDevices::findAllDevices() {
     }
 
     // TODO: handle PCI-to-PCI bridges
+}
+
+PCIDevice* PCIDevices::findByClass(PCIDeviceClass classCode) {
+    for (size_t i = 0; i < _devices.size(); ++i) {
+        if (_devices[i]->classSubclass() == (uint16_t)classCode) {
+            return _devices[i];
+        }
+    }
+
+    return nullptr;
 }
 
 PCIDevices::PCIDevices() {

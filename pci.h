@@ -4,6 +4,15 @@
 #include "estd/bits.h"
 #include "estd/vector.h"
 
+enum class PCIDeviceClass : uint16_t {
+    StorageIDE = 0x0101,
+    BridgeHost = 0x0600,
+    BridgeISA = 0x0601,
+    DisplayVGA = 0x0300,
+    NetworkEthernet = 0x0200,
+    BridgeOther = 0x0680,
+};
+
 class PCIDevice {
 public:
     uint16_t bus;
@@ -64,7 +73,7 @@ private:
 class PCIDevices {
 public:
     const Vector<PCIDevice*>& devices() { return _devices; }
-    PCIDevice* ideController() { return _ideController; }
+    PCIDevice* findByClass(PCIDeviceClass classCode);
 
 private:
     friend class System;
@@ -76,5 +85,4 @@ private:
     void checkFunction(uint8_t bus, uint8_t device, uint8_t function);
 
     Vector<PCIDevice*> _devices;
-    PCIDevice* _ideController = nullptr;
 };

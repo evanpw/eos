@@ -314,7 +314,7 @@ IDEChannel* g_secondary;
 IDEDevice* g_hardDrive;
 
 void initIDE() {
-    PCIDevice* ideController = System::pciDevices().ideController();
+    PCIDevice* ideController = System::pciDevices().findByClass(PCIDeviceClass::StorageIDE);
 
     if (!ideController) {
         println("No IDE controller found");
