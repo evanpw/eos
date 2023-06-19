@@ -2,9 +2,11 @@
 
 #include <string.h>
 
+#include "address.h"
 #include "aml.h"
 #include "estd/bits.h"
 #include "estd/print.h"
+#include "estd/vector.h"
 #include "system.h"
 #include "units.h"
 
@@ -161,7 +163,46 @@ void parseFADT(TableHeader* fadt) {
 }
 
 // Multiple APIC Description Table
-void parseMADT(TableHeader* madt) {}
+void parseMADT(TableHeader* madt) {
+    // This is what we're looking for
+    PhysicalAddress localApicAddress = 0;
+    PhysicalAddress ioApicAddress = 0;
+    size_t numCores = 0;
+
+    uint8_t* ptr = (uint8_t*)(madt + 1);
+
+    // The common header is followed by two fixed fixed 4-byte fields
+    localApicAddress = *((uint32_t*)ptr);
+    ptr += 8;
+
+    // Then comes a sequence of variable-length fields
+    while (ptr < (uint8_t*)madt + madt->length) {
+        uint8_t entryType = *ptr++;
+        uint8_t recordLength = *ptr++;
+
+        if (entryType == 0) {
+            // Processor local APIC
+
+            // Check for processor enabled flag
+            uint32_t flags = *(uint32_t*)(ptr + 2);
+            if (flags & 1) {
+                ++numCores;
+            }
+        } else if (entryType == 1) {
+            // I/O APIC
+            ioApicAddress = *(uint32_t*)(ptr + 4);
+        } else if (entryType == 5) {
+            // Local APIC address override
+            localApicAddress = *(uint64_t*)(ptr + 4);
+        }
+
+        ptr += recordLength - 2;
+    }
+
+    println("CPU cores: {}", numCores);
+    println("Local APIC address: {:X}", localApicAddress.value);
+    println("I/O APIC address: {:X}", ioApicAddress.value);
+}
 
 bool parseACPITables() {
     RSDP* rsdp = findRSDP();
