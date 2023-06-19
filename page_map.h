@@ -1,3 +1,5 @@
+// Defines the structures and functions used in managing page tables and
+// address spaces
 #pragma once
 #include <stdint.h>
 

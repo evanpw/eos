@@ -1,3 +1,4 @@
+// Defines common units of memory
 #pragma once
 #include <stdint.h>
 

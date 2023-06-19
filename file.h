@@ -1,3 +1,4 @@
+// Basic top-level definitions for dealing with files
 #pragma once
 #include <stddef.h>
 #include <sys/types.h>

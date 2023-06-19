@@ -1,3 +1,4 @@
+// Driver for VGA text mode
 #pragma once
 #include <stddef.h>
 #include <stdint.h>

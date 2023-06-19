@@ -1,3 +1,4 @@
+// Parses AML bytecode read from ACPI tables
 #pragma once
 #include <stddef.h>
 #include <stdint.h>

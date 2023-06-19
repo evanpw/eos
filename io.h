@@ -1,3 +1,4 @@
+// Defines some functions for port I/O and reading and writing MSRs
 #pragma once
 #include <stdint.h>
 

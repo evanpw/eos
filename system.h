@@ -1,3 +1,4 @@
+// Holder class for initializing and accessing various components of the kernel
 #pragma once
 #include "mem.h"
 
@@ -6,8 +7,6 @@ class KeyboardDevice;
 class Terminal;
 class PCIDevices;
 
-// Holder class for initializing and accessing various components
-// of the kernel
 class System {
 public:
     static void run();

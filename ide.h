@@ -1,3 +1,5 @@
+// Drivers for an IDE controller connected to the PCI bus and for ATA and ATAPI
+// devices connected to it
 #pragma once
 #include <stddef.h>
 #include <stdint.h>

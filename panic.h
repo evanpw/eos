@@ -1,3 +1,4 @@
+// Kernel panics and CPU halts
 #pragma once
 #include <stddef.h>
 

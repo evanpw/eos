@@ -1,3 +1,6 @@
+// Defines classes to represent physical and virtual memory addresses, mainly
+// to distinguish one from another in places where it matter (e.g., paging
+// infrastructure)
 #pragma once
 #include <stdint.h>
 

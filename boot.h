@@ -1,3 +1,5 @@
+// Makes definitions and memory addresses defined in the bootloader available
+// to the kernel
 #pragma once
 #include <stdint.h>
 

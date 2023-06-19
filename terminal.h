@@ -1,3 +1,4 @@
+// TTY driver combining the keyboard and the screen
 #pragma once
 #include "estd/ring_buffer.h"
 #include "file.h"

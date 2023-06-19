@@ -1,3 +1,4 @@
+// Defines a spinlock and utility classes
 #pragma once
 
 #include "estd/assertions.h"

@@ -1,3 +1,4 @@
+// Process class
 #pragma once
 #include <stddef.h>
 #include <unistd.h>

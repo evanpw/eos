@@ -1,3 +1,4 @@
+// Programs the PIC, sets up an IDT, and defines IRQ and exception handlers
 #pragma once
 #include <stdint.h>
 

@@ -1,3 +1,4 @@
+// Thread class
 #pragma once
 
 struct Process;

@@ -1,3 +1,4 @@
+// Defines the memory map structure return by the INT 15h, EAX=E820h function
 #pragma once
 #include "estd/span.h"
 
