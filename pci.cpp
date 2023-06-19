@@ -82,15 +82,20 @@ void PCIDevices::checkFunction(uint8_t bus, uint8_t device, uint8_t function) {
 
     if (pciDevice->classSubclass() == (uint16_t)PCIDeviceClass::StorageIDE) {
         println("IDE interface");
-    } else if (pciDevice->classSubclass() == (uint16_t)PCIDeviceClass::BridgeHost) {
+    } else if (pciDevice->classSubclass() ==
+               (uint16_t)PCIDeviceClass::BridgeHost) {
         println("Host bridge");
-    } else if (pciDevice->classSubclass() == (uint16_t)PCIDeviceClass::BridgeISA) {
+    } else if (pciDevice->classSubclass() ==
+               (uint16_t)PCIDeviceClass::BridgeISA) {
         println("ISA bridge");
-    } else if (pciDevice->classSubclass() == (uint16_t)PCIDeviceClass::DisplayVGA) {
+    } else if (pciDevice->classSubclass() ==
+               (uint16_t)PCIDeviceClass::DisplayVGA) {
         println("VGA compatible controller");
-    } else if (pciDevice->classSubclass() == (uint16_t)PCIDeviceClass::NetworkEthernet) {
+    } else if (pciDevice->classSubclass() ==
+               (uint16_t)PCIDeviceClass::NetworkEthernet) {
         println("Ethernet controller");
-    } else if (pciDevice->classSubclass() == (uint16_t)PCIDeviceClass::BridgeOther) {
+    } else if (pciDevice->classSubclass() ==
+               (uint16_t)PCIDeviceClass::BridgeOther) {
         println("Bridge");
     } else {
         println("Unknown Device ({:02X}:{:02X})", pciDevice->classCode(),
@@ -140,9 +145,9 @@ void PCIDevices::findAllDevices() {
 }
 
 PCIDevice* PCIDevices::findByClass(PCIDeviceClass classCode) {
-    for (size_t i = 0; i < _devices.size(); ++i) {
-        if (_devices[i]->classSubclass() == (uint16_t)classCode) {
-            return _devices[i];
+    for (auto* device : _devices) {
+        if (device->classSubclass() == (uint16_t)classCode) {
+            return device;
         }
     }
 

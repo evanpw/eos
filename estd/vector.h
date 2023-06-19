@@ -4,6 +4,9 @@
 template <typename T>
 class Vector {
 public:
+    using iterator = T*;
+    using const_iterator = const T*;
+
     Vector() : _data(nullptr), _capacity(0), _size(0) {}
 
     Vector(size_t count, const T& value = T()) {
@@ -54,6 +57,14 @@ public:
         ASSERT(index < _capacity);
         return _data[index];
     }
+
+    iterator begin() { return data(); }
+
+    iterator end() { return data() + size(); }
+
+    const_iterator cbegin() { return data(); }
+
+    const_iterator cend() { return data() + size(); }
 
     // TODO: implement these
     Vector(const Vector&) = delete;
