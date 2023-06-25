@@ -28,14 +28,20 @@ main:
     jmp 0x0000:.setcs
 
 .setcs:
+    ; Set up other segment registers
+    xor eax, eax
+    mov ds, ax
+    mov es, ax
+
+    ; Save drive number passed in by the firmware
+    mov byte [driveNumber], dl
+
     ; Enable the A20 line
     in al, 0x92
     or al, 2
     out 0x92, al
 
     ; Probe the BIOS memory map, store at MEMORY_MAP (with first dword = # of entries)
-    xor eax, eax
-    mov es, ax
     mov dword [MEMORY_MAP], eax
     mov di, MEMORY_MAP + 4
     mov eax, 0xE820
@@ -77,7 +83,7 @@ main:
     ; Load the disk map from the second sector of the disk
     mov si, dap  ; data structure describing read
     mov ah, 0x42 ; extended read
-    mov dl, 0x80 ; drive number 0
+    mov dl, byte [driveNumber] ; boot drive
     int 0x13
     jc error
 
@@ -248,6 +254,10 @@ GDT:
     .pointer:
         dw $ - GDT - 1
         dd GDT
+
+; Store the drive number passed in DL to the boot loader by the firmware
+driveNumber:
+    db 0
 
 ; Disk address packet structure describing how to load the rest of the boot loader
 dap:
