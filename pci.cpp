@@ -75,7 +75,7 @@ uint8_t PCIDevice::readConfigByte(uint8_t offset) const {
 void PCIDevices::checkFunction(uint8_t bus, uint8_t device, uint8_t function) {
     if (!PCIDevice::exists(bus, device, function)) return;
 
-    print("{:02d}:{:02d}.{} - ", bus, device, function);
+    print("pci: {:02d}:{:02d}.{} - ", bus, device, function);
 
     PCIDevice* pciDevice = new PCIDevice{bus, device, function};
     _devices.push_back(pciDevice);
