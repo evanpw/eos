@@ -30,7 +30,6 @@ enum Register {
     // Control block register
     AltStatus,
     Control,
-    DriveAddress,
     REGISTER_COUNT,
 };
 
@@ -111,9 +110,8 @@ IDEChannel::IDEChannel(uint16_t commandBlock, uint16_t controlBlock) {
     _ports[DriveSelect] = commandBlock + 6;
     _ports[Command] = commandBlock + 7;
     _ports[Status] = commandBlock + 7;
-    _ports[AltStatus] = controlBlock;
-    _ports[Control] = controlBlock;
-    _ports[DriveAddress] = controlBlock + 1;
+    _ports[AltStatus] = controlBlock + 2;
+    _ports[Control] = controlBlock + 2;
 }
 
 uint8_t IDEChannel::readRegister(Register reg) { return inb(_ports[reg]); }
@@ -327,8 +325,8 @@ void initIDE() {
     uint8_t progIf = ideController->progIf();
     ASSERT((progIf & ((1 << 0) | (1 << 2))) == 0);
 
-    g_primary = new IDEChannel(0x1F0, 0x3F6);
-    g_secondary = new IDEChannel(0x170, 0x376);
+    g_primary = new IDEChannel(0x1F0, 0x3F4);
+    g_secondary = new IDEChannel(0x170, 0x374);
 
     // Turn off IRQs
     g_primary->writeRegister(Control, 2);
