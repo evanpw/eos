@@ -19,11 +19,53 @@ MemoryManager::MemoryManager()
     // physical memory starting at 1MiB (we have to start there because only the
     // first 2MiB is identity-mapped by the bootloader)
     for (const auto& entry : _e820Table) {
+        print("mem: {:08X}:{:08X} (", entry.base, entry.base + entry.length);
+        switch (entry.type) {
+            case AddressRangeType::Available:
+                print("available");
+                break;
+
+            case AddressRangeType::ACPI:
+                print("acpi reclaimable");
+                break;
+
+            case AddressRangeType::NVS:
+                print("nvs");
+                break;
+
+            case AddressRangeType::Unusable:
+                print("unusable");
+                break;
+
+            case AddressRangeType::Disabled:
+                print("disabled");
+                break;
+
+            case AddressRangeType::Reserved:
+            default:
+                print("reserved");
+                break;
+        }
+
+        if (entry.extended & AddressRangeExtended::NonVolatile) {
+            print(", non-volatile");
+        }
+
+        if (entry.extended & AddressRangeExtended::SlowAccess) {
+            print(", slow");
+        }
+
+        if (entry.extended & AddressRangeExtended::ErrorLog) {
+            print(", error-log");
+        }
+
+        println(")");
+
         // TODO: check for overlapping entries
         uint64_t end = entry.base + entry.length;
         physicalMemoryRange = max(physicalMemoryRange, end);
 
-        if (entry.type != 1) {
+        if (entry.type != AddressRangeType::Available) {
             continue;
         }
 
@@ -92,7 +134,7 @@ FreePageRange* MemoryManager::buildFreePageList() {
     FreePageRange* tail = nullptr;
     for (const auto& entry : _e820Table) {
         // TODO: check for overlapping entries
-        if (entry.type != 1) {
+        if (entry.type != AddressRangeType::Available || entry.extended != 1) {
             continue;
         }
 

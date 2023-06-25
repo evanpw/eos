@@ -51,7 +51,7 @@ main:
     jne error
     test ebx, ebx
     jz error
-    jmp .loopNext
+    jmp .e820Entry
 
 .e820loop:
     mov eax, 0xE820
@@ -59,6 +59,11 @@ main:
     mov edx, 'PAMS'
     int 0x15
     jc .e820finished
+
+.e820Entry:
+    cmp ecx, 24
+    jnl .loopNext
+    mov dword es:[di + 20], 1
 
 .loopNext:
     inc dword [MEMORY_MAP]
