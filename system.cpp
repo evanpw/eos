@@ -10,6 +10,7 @@
 #include "mem.h"
 #include "pci.h"
 #include "process.h"
+#include "processor.h"
 #include "screen.h"
 #include "string.h"
 #include "syscalls.h"
@@ -87,6 +88,7 @@ System::System() {
     ASSERT(_instance == nullptr);
     _instance = this;
 
+    initProcessor();
     _screen = new Screen;
     _keyboard = new KeyboardDevice;
     _terminal = new Terminal(*_keyboard, *_screen);

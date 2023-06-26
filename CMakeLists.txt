@@ -35,6 +35,7 @@ set(KERNEL_SOURCES
     panic.cpp
     pci.cpp
     process.cpp
+    processor.cpp
     screen.cpp
     syscalls.cpp
     system.cpp
