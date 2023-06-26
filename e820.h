@@ -21,7 +21,7 @@ struct __attribute__((packed)) E820Entry {
     uint64_t base;
     uint64_t length;
     AddressRangeType type;
-    uint32_t extended;
+    AddressRangeExtended extended;
 };
 
 using E820Table = Span<E820Entry>;
