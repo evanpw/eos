@@ -7,6 +7,7 @@
 #include "estd/print.h"
 #include "file.h"
 #include "io.h"
+#include "processor.h"
 #include "panic.h"
 #include "process.h"
 #include "thread.h"
@@ -104,16 +105,16 @@ static constexpr uint64_t IA32_LSTAR = 0xC0000082;
 
 void initSyscalls() {
     // Set syscall enable bit of the IA32_EFER MSR
-    wrmsr(IA32_EFER, rdmsr(IA32_EFER) | 1);
+    Processor::wrmsr(IA32_EFER, Processor::rdmsr(IA32_EFER) | 1);
 
     // Set the upper dword of the IA32_STAR MSR to 0x0018'0008. This instructs
     // the CPU to set CS to 0x28 (0x18 + 0x10) and SS to 0x20 (0x18 + 0x08). And
     // it also sets up a later syscall to set CS to 0x08 and SS to 0x10
-    uint32_t lowStar = lowBits(rdmsr(IA32_STAR), 32);
-    wrmsr(IA32_STAR, concatBits((uint32_t)0x00180008, lowStar));
+    uint32_t lowStar = lowBits(Processor::rdmsr(IA32_STAR), 32);
+    Processor::wrmsr(IA32_STAR, concatBits((uint32_t)0x00180008, lowStar));
 
     // Set up syscall to jump to syscallEntry
-    wrmsr(IA32_LSTAR, (uint64_t)&syscallEntry);
+    Processor::wrmsr(IA32_LSTAR, (uint64_t)&syscallEntry);
 
     // Create table of syscall handlers
     syscallTable[SYS_read] = reinterpret_cast<SyscallHandler>(sys_read);

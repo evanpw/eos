@@ -3,7 +3,7 @@
 
 #include "estd/assertions.h"
 #include "estd/atomic.h"
-#include "interrupts.h"
+#include "processor.h"
 
 class Spinlock {
 public:
@@ -16,13 +16,13 @@ public:
     Spinlock& operator=(Spinlock&&) = delete;
 
     InterruptsFlag lock() {
-        InterruptsFlag flag = Interrupts::saveAndDisable();
+        InterruptsFlag flag = Processor::saveAndDisableInterrupts();
 
         // This isn't really necessary on a single processor. Disabling
         // interrupts is enough already
         while (_locked.exchange(true)) {
             // Gives hint to the processor that this is a spin-wait loop
-            asm volatile("pause");
+            Processor::pause();
         }
 
         return flag;
@@ -31,7 +31,7 @@ public:
     void unlock(InterruptsFlag flag) {
         ASSERT(isLocked());
         _locked.store(false);
-        Interrupts::restore(flag);
+        Processor::restoreInterrupts(flag);
     }
 
     bool isLocked() { return _locked.load(); }

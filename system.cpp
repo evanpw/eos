@@ -17,10 +17,6 @@
 #include "terminal.h"
 #include "thread.h"
 
-static void switchAddressSpace(PhysicalAddress pml4) {
-    asm volatile("movq %0, %%cr3" : : "r"(pml4.value) : "memory");
-}
-
 [[noreturn]] static void jumpToUser(uint64_t rip, uint64_t rsp) {
     // TODO: be more careful about interrupts
     asm volatile(
@@ -78,7 +74,7 @@ void System::run() {
     VirtualAddress userStackTop = userStackBottom + 4 * PAGE_SIZE;
 
     println("Entering ring3");
-    switchAddressSpace(userAddressSpace.pml4().value);
+    Processor::loadCR3(userAddressSpace.pml4());
     jumpToUser(userAddressSpace.userMapBase().value, userStackTop.value);
 }
 
@@ -88,7 +84,7 @@ System::System() {
     ASSERT(_instance == nullptr);
     _instance = this;
 
-    initProcessor();
+    Processor::init();
     _screen = new Screen;
     _keyboard = new KeyboardDevice;
     _terminal = new Terminal(*_keyboard, *_screen);

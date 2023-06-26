@@ -3,6 +3,7 @@
 #include "boot.h"
 #include "estd/assertions.h"
 #include "estd/bits.h"
+#include "processor.h"
 #include "estd/print.h"
 #include "io.h"
 #include "keyboard.h"
@@ -254,8 +255,8 @@ void installInterrupts() {
     uint8_t* kernelStackTop = kernelStackBottom + 4 * PAGE_SIZE;
     TSS->rsp0 = (uint64_t)kernelStackTop;
 
-    asm volatile("lidt %0" : : "m"(g_idtr));
-    asm volatile("sti");
+    Processor::lidt(g_idtr);
+    Processor::enableInterrupts();
 
     // Unmask all IRQs
     outb(PIC1_DATA, 0x00);

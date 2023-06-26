@@ -2,6 +2,7 @@
 #pragma once
 #include <stdint.h>
 
+#include "processor.h"
 #include "estd/bits.h"
 
 // I/O ports for communicating with the PIC
@@ -29,11 +30,6 @@ struct __attribute__((packed)) InterruptDescriptor {
 };
 
 static_assert(sizeof(InterruptDescriptor) == 16);
-
-struct __attribute__((packed)) IDTRegister {
-    uint16_t limit;
-    uint64_t addr;
-};
 
 extern InterruptDescriptor* g_idt;
 extern IDTRegister g_idtr;
@@ -67,38 +63,3 @@ struct __attribute__((packed)) TaskStateSegment {
 static_assert(sizeof(TaskStateSegment) == 0x68);
 
 void installInterrupts();
-
-enum class InterruptsFlag {
-    Enabled = 0,
-    Disabled = 1,
-};
-
-struct Interrupts {
-    static void enable() { asm volatile("sti"); }
-
-    static void disable() { asm volatile("cli"); }
-
-    // Disables interrupts and returns the previous interrupt state
-    static InterruptsFlag saveAndDisable() {
-        uint64_t rflags;
-        asm volatile(
-            "pushf\n"
-            "pop %0\n"
-            : "=rm"(rflags)
-            :
-            : "memory");
-
-        disable();
-
-        bool ifFlag = rflags & (1 << 9);
-        return ifFlag ? InterruptsFlag::Enabled : InterruptsFlag::Disabled;
-    }
-
-    // Enables interrupts if they were enabled at the corresponding call to
-    // save()
-    static void restore(InterruptsFlag state) {
-        if (state == InterruptsFlag::Enabled) {
-            enable();
-        }
-    }
-};

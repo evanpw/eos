@@ -61,18 +61,3 @@ inline void iowait(int rounds = 1) {
         outb(0x80, 0);
     }
 }
-
-inline uint64_t rdmsr(uint64_t msr) {
-    uint32_t low, high;
-
-    asm volatile("rdmsr" : "=a"(low), "=d"(high) : "c"(msr));
-
-    return concatBits(high, low);
-}
-
-inline void wrmsr(uint64_t msr, uint64_t value) {
-    uint32_t low = bitSlice(value, 0, 32);
-    uint32_t high = bitSlice(value, 32, 64);
-
-    asm volatile("wrmsr" : : "c"(msr), "a"(low), "d"(high));
-}

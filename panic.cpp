@@ -1,10 +1,12 @@
 #include "panic.h"
 
 #include "estd/print.h"
+#include "processor.h"
 
 [[noreturn]] void halt() {
     while (true) {
-        asm volatile("cli; hlt");
+        Processor::disableInterrupts();
+        Processor::halt();
     }
 }
 

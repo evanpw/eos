@@ -24,7 +24,7 @@ static CPUIDResult cpuid(uint32_t func) {
     return result;
 }
 
-void initProcessor() {
+void Processor::init() {
     // Make sure that the processor supports the cpuid functions we need
     size_t maxFunc = cpuid(0).eax;
     ASSERT(maxFunc >= 1);

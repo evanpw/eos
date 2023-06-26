@@ -11,15 +11,6 @@ constexpr uint64_t PAGE_WRITABLE = 1 << 1;
 constexpr uint64_t PAGE_USER = 1 << 2;
 constexpr uint64_t PAGE_SIZE_FLAG = 1 << 7;
 
-static inline void flushTLB() {
-    asm volatile(
-        "movq  %%cr3, %%rax\n\t"
-        "movq  %%rax, %%cr3\n\t"
-        :
-        :
-        : "memory", "rax");
-}
-
 VirtualAddress KernelAddressSpace::physicalToVirtual(PhysicalAddress physAddr) {
     if (physAddr < _linearMapEnd) {
         return _linearMapOffset + physAddr.value;
