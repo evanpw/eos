@@ -7,9 +7,9 @@
 #include "estd/print.h"
 #include "file.h"
 #include "io.h"
-#include "processor.h"
 #include "panic.h"
 #include "process.h"
+#include "processor.h"
 #include "thread.h"
 
 using SyscallHandler = int64_t (*)(uint64_t, uint64_t, uint64_t, uint64_t,

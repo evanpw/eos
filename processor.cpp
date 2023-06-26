@@ -1,9 +1,11 @@
 #include "processor.h"
-#include "panic.h"
-#include "estd/print.h"
-#include "estd/bits.h"
-#include <string.h>
+
 #include <stdint.h>
+#include <string.h>
+
+#include "estd/bits.h"
+#include "estd/print.h"
+#include "panic.h"
 
 struct CPUIDResult {
     uint32_t eax;
@@ -14,12 +16,11 @@ struct CPUIDResult {
 
 static CPUIDResult cpuid(uint32_t func) {
     CPUIDResult result;
-    asm volatile(
-        "cpuid"
-        : "=a"(result.eax), "=b"(result.ebx), "=c"(result.ecx), "=d"(result.edx)
-        : "a"(func)
-        :
-    );
+    asm volatile("cpuid"
+                 : "=a"(result.eax), "=b"(result.ebx), "=c"(result.ecx),
+                   "=d"(result.edx)
+                 : "a"(func)
+                 :);
 
     return result;
 }
@@ -67,7 +68,9 @@ void Processor::init() {
     uint8_t baseFamily = bitSlice(result1.eax, 8, 12);
     uint8_t baseModel = bitSlice(result1.eax, 4, 8);
     uint8_t family = baseFamily < 0x0F ? baseFamily : (baseFamily + extFamily);
-    uint8_t model = (baseFamily == 0x0F || baseFamily == 0x06) ? ((extModel << 4) | baseModel) : baseModel;
+    uint8_t model = (baseFamily == 0x0F || baseFamily == 0x06)
+                        ? ((extModel << 4) | baseModel)
+                        : baseModel;
     uint8_t stepping = bitSlice(result1.eax, 0, 4);
     println("cpu: family={}, model={}, stepping={}", family, model, stepping);
 
@@ -77,7 +80,7 @@ void Processor::init() {
     if (checkBit(result1.ecx, 30)) print(" rdrand");
     if (checkBit(result1.ecx, 29)) print(" f16c");
     if (checkBit(result1.ecx, 28)) print(" avx");
-    if (checkBit(result1.ecx, 27)) print(" osxsave"); // xsave enabled by OS
+    if (checkBit(result1.ecx, 27)) print(" osxsave");  // xsave enabled by OS
     if (checkBit(result1.ecx, 26)) print(" xsave");
     if (checkBit(result1.ecx, 25)) print(" aes");
     if (checkBit(result1.ecx, 24)) print(" tsc_deadline_timer");

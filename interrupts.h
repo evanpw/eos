@@ -2,8 +2,8 @@
 #pragma once
 #include <stdint.h>
 
-#include "processor.h"
 #include "estd/bits.h"
+#include "processor.h"
 
 // I/O ports for communicating with the PIC
 enum : uint16_t {

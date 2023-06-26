@@ -11,21 +11,19 @@ struct __attribute__((packed)) IDTRegister {
     uint64_t addr;
 };
 
-// TODO: for multi-core supports, everything will need to be non-static
+// TODO: to support multiple cores, these static methods will have to be instance methods
 struct Processor {
     static void init();
+
+    static void halt() { asm volatile("hlt"); }
+    static void pause() { asm volatile("pause"); }
 
     static void lidt(IDTRegister& idtr) {
         asm volatile("lidt %0" : : "m"(idtr));
     }
 
-    static void enableInterrupts() {
-        asm volatile("sti");
-    }
-
-    static void disableInterrupts() {
-        asm volatile("cli");
-    }
+    static void enableInterrupts() { asm volatile("sti"); }
+    static void disableInterrupts() { asm volatile("cli"); }
 
     // Disables interrupts and returns the previous interrupt state
     static InterruptsFlag saveAndDisableInterrupts() {
@@ -49,14 +47,6 @@ struct Processor {
         if (state == InterruptsFlag::Enabled) {
             enableInterrupts();
         }
-    }
-
-    static void halt() {
-        asm volatile("hlt");
-    }
-
-    static void pause() {
-        asm volatile("pause");
     }
 
     static void loadCR3(PhysicalAddress pml4) {

@@ -3,12 +3,12 @@
 #include "boot.h"
 #include "estd/assertions.h"
 #include "estd/bits.h"
-#include "processor.h"
 #include "estd/print.h"
 #include "io.h"
 #include "keyboard.h"
 #include "mem.h"
 #include "panic.h"
+#include "processor.h"
 #include "system.h"
 
 InterruptDescriptor::InterruptDescriptor(uint64_t addr, uint8_t flags)
