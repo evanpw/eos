@@ -10,6 +10,12 @@ void main() {
 
     println("pid={}", getpid());
 
+    while (true) {
+        sleep(20);
+        print("u");
+    }
+
+    /*
     char buffer[64];
     while (true) {
         while (read(0, buffer, 64) == 0) {
@@ -21,4 +27,5 @@ void main() {
             write(1, "\bno\n", 4);
         }
     }
+    */
 }

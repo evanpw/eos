@@ -16,6 +16,7 @@
 #include "syscalls.h"
 #include "terminal.h"
 #include "thread.h"
+#include "timer.h"
 
 [[noreturn]] static void jumpToUser(uint64_t rip, uint64_t rsp) {
     // TODO: be more careful about interrupts
@@ -93,4 +94,5 @@ System::System() {
     _pciDevices = new PCIDevices;
     initIDE();
     initACPI();
+    Timer::init();
 }

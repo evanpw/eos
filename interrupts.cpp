@@ -10,6 +10,7 @@
 #include "panic.h"
 #include "processor.h"
 #include "system.h"
+#include "timer.h"
 
 InterruptDescriptor::InterruptDescriptor(uint64_t addr, uint8_t flags)
 : addr0(bitSlice(addr, 0, 16)),
@@ -70,7 +71,7 @@ void handleIRQ(uint8_t irq, InterruptFrame* frame) {
         handleIRQ(idx, frame);                                               \
     }
 
-IRQ_HANDLER(0)
+// IRQ_HANDLER(0)
 // IRQ_HANDLER(1)
 IRQ_HANDLER(2)
 IRQ_HANDLER(3)

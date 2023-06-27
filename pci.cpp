@@ -97,16 +97,19 @@ void PCIDevices::checkFunction(uint8_t bus, uint8_t device, uint8_t function) {
     } else if (pciDevice->classSubclass() ==
                (uint16_t)PCIDeviceClass::BridgeOther) {
         println("Bridge");
-    } else if (pciDevice->classSubclass() == (uint16_t)PCIDeviceClass::StorageSATA) {
+    } else if (pciDevice->classSubclass() ==
+               (uint16_t)PCIDeviceClass::StorageSATA) {
         print("SATA controller");
         if (pciDevice->progIf() == 0x01) {
             println(" (AHCI)");
         } else {
             println("");
         }
-    } else if (pciDevice->classSubclass() == (uint16_t)PCIDeviceClass::SerialSMBus) {
+    } else if (pciDevice->classSubclass() ==
+               (uint16_t)PCIDeviceClass::SerialSMBus) {
         println("SMBus controller");
-    } else if (pciDevice->classSubclass() == (uint16_t)PCIDeviceClass::SerialUSB) {
+    } else if (pciDevice->classSubclass() ==
+               (uint16_t)PCIDeviceClass::SerialUSB) {
         print("USB host controller");
         if (pciDevice->progIf() == 0x00) {
             println(" (UHCI)");
@@ -119,9 +122,11 @@ void PCIDevices::checkFunction(uint8_t bus, uint8_t device, uint8_t function) {
         } else {
             println("");
         }
-    } else if (pciDevice->classSubclass() == (uint16_t)PCIDeviceClass::MultimediaAudio) {
+    } else if (pciDevice->classSubclass() ==
+               (uint16_t)PCIDeviceClass::MultimediaAudio) {
         println("Audio device");
-    } else if (pciDevice->classSubclass() == (uint16_t)PCIDeviceClass::BridgePCI) {
+    } else if (pciDevice->classSubclass() ==
+               (uint16_t)PCIDeviceClass::BridgePCI) {
         println("PCI bridge");
         scanBus(pciDevice->secondaryBus());
     } else {

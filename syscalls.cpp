@@ -11,6 +11,7 @@
 #include "process.h"
 #include "processor.h"
 #include "thread.h"
+#include "timer.h"
 
 using SyscallHandler = int64_t (*)(uint64_t, uint64_t, uint64_t, uint64_t,
                                    uint64_t, uint64_t);
@@ -48,6 +49,15 @@ void sys_exit(int status) {
     // TODO: tear down the process and return to the scheduler
     println("User process exited with status {}", status);
     halt();
+}
+
+int sys_sleep(int ticks) {
+    uint64_t end = Timer::tickCount() + ticks;
+    while (Timer::tickCount() < end) {
+        Processor::pause();
+    }
+
+    return 0;
 }
 
 // We don't have static initialization, so this is initialized at runtime
@@ -121,6 +131,7 @@ void initSyscalls() {
     syscallTable[SYS_write] = reinterpret_cast<SyscallHandler>(sys_write);
     syscallTable[SYS_getpid] = reinterpret_cast<SyscallHandler>(sys_getpid);
     syscallTable[SYS_exit] = reinterpret_cast<SyscallHandler>(sys_exit);
+    syscallTable[SYS_sleep] = reinterpret_cast<SyscallHandler>(sys_sleep);
 
     println("Syscalls initialized");
 }

@@ -14,3 +14,6 @@ ssize_t write(int fd, const void* buffer, size_t count) {
 }
 
 pid_t getpid() { return __syscall(SYS_getpid); }
+
+// Non-standard
+int sleep(int ticks) { return __syscall(SYS_sleep, ticks); }

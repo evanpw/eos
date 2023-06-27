@@ -41,6 +41,7 @@ set(KERNEL_SOURCES
     system.cpp
     terminal.cpp
     thread.cpp
+    timer.cpp
     ${ESTD_SOURCES}
 )
 

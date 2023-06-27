@@ -11,7 +11,8 @@ struct __attribute__((packed)) IDTRegister {
     uint64_t addr;
 };
 
-// TODO: to support multiple cores, these static methods will have to be instance methods
+// TODO: to support multiple cores, these static methods will have to be
+// instance methods
 struct Processor {
     static void init();
 
