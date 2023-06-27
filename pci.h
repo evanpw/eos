@@ -7,11 +7,16 @@
 
 enum class PCIDeviceClass : uint16_t {
     StorageIDE = 0x0101,
+    StorageSATA = 0x0106,
+    NetworkEthernet = 0x0200,
+    DisplayVGA = 0x0300,
+    MultimediaAudio = 0x0403,
     BridgeHost = 0x0600,
     BridgeISA = 0x0601,
-    DisplayVGA = 0x0300,
-    NetworkEthernet = 0x0200,
+    BridgePCI = 0x0604,
     BridgeOther = 0x0680,
+    SerialUSB = 0x0C03,
+    SerialSMBus = 0x0C05,
 };
 
 class PCIDevice {
@@ -60,6 +65,7 @@ public:
     uint8_t maxLatency() const { return readConfigByte(0x3F); }
 
     // Applicable to headerType 0x01 (PCI-to-PCI Bridge)
+    uint8_t secondaryBus() const { return readConfigByte(0x19); }
     // TODO: fill this in
 
     // Applicable to headerType 0x02 (PCI-to-Cardbus Bridge)

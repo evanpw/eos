@@ -75,13 +75,13 @@ uint8_t PCIDevice::readConfigByte(uint8_t offset) const {
 void PCIDevices::checkFunction(uint8_t bus, uint8_t device, uint8_t function) {
     if (!PCIDevice::exists(bus, device, function)) return;
 
-    print("pci: {:02d}:{:02d}.{} - ", bus, device, function);
+    print("pci: {:02x}:{:02x}.{} - ", bus, device, function);
 
     PCIDevice* pciDevice = new PCIDevice{bus, device, function};
     _devices.push_back(pciDevice);
 
     if (pciDevice->classSubclass() == (uint16_t)PCIDeviceClass::StorageIDE) {
-        println("IDE interface");
+        println("IDE controller");
     } else if (pciDevice->classSubclass() ==
                (uint16_t)PCIDeviceClass::BridgeHost) {
         println("Host bridge");
@@ -97,6 +97,33 @@ void PCIDevices::checkFunction(uint8_t bus, uint8_t device, uint8_t function) {
     } else if (pciDevice->classSubclass() ==
                (uint16_t)PCIDeviceClass::BridgeOther) {
         println("Bridge");
+    } else if (pciDevice->classSubclass() == (uint16_t)PCIDeviceClass::StorageSATA) {
+        print("SATA controller");
+        if (pciDevice->progIf() == 0x01) {
+            println(" (AHCI)");
+        } else {
+            println("");
+        }
+    } else if (pciDevice->classSubclass() == (uint16_t)PCIDeviceClass::SerialSMBus) {
+        println("SMBus controller");
+    } else if (pciDevice->classSubclass() == (uint16_t)PCIDeviceClass::SerialUSB) {
+        print("USB host controller");
+        if (pciDevice->progIf() == 0x00) {
+            println(" (UHCI)");
+        } else if (pciDevice->progIf() == 0x10) {
+            println(" (OHCI)");
+        } else if (pciDevice->progIf() == 0x20) {
+            println(" (EHCI)");
+        } else if (pciDevice->progIf() == 0x30) {
+            println(" (xHCI)");
+        } else {
+            println("");
+        }
+    } else if (pciDevice->classSubclass() == (uint16_t)PCIDeviceClass::MultimediaAudio) {
+        println("Audio device");
+    } else if (pciDevice->classSubclass() == (uint16_t)PCIDeviceClass::BridgePCI) {
+        println("PCI bridge");
+        scanBus(pciDevice->secondaryBus());
     } else {
         println("Unknown Device ({:02X}:{:02X})", pciDevice->classCode(),
                 pciDevice->subclass());
@@ -140,8 +167,6 @@ void PCIDevices::findAllDevices() {
             }
         }
     }
-
-    // TODO: handle PCI-to-PCI bridges
 }
 
 PCIDevice* PCIDevices::findByClass(PCIDeviceClass classCode) {
