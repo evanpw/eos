@@ -42,6 +42,7 @@ main:
     out 0x92, al
 
     ; Probe the BIOS memory map, store at MEMORY_MAP (with first dword = # of entries)
+    xor eax, eax
     mov dword [MEMORY_MAP], eax
     mov di, MEMORY_MAP + 4
     mov eax, 0xE820
