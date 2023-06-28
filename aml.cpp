@@ -289,7 +289,37 @@ public:
     ast::TermArg* Operand() { return TermArg(); }
 
     // Target = SuperName | NullName
-    void Target() { ASSERT(false); }
+    const char* Target() {
+        if (accept(NullName)) {
+            return "";
+        } else {
+            return SuperName();
+        }
+    }
+
+    // SuperName = SimpleName | DebugObj | ReferenceTypeOpcode
+    const char* SuperName() {
+        switch (peek()) {
+            case ExtOpPrefix:
+                return DebugObj();
+
+            case RefOfOp:
+            case DerefOfOp:
+            case IndexOp:
+                return ReferenceTypeOpcode();
+
+            default:
+                return SimpleName();
+        }
+    }
+
+    const char* DebugObj() {
+        expect(ExtOpPrefix);
+        expect(DebugOp);
+        return "DebugObj";
+    }
+
+    const char* ReferenceTypeOpcode() {}
 
     // TermArg = ExpressionOpcode | DataObject | ArgObj | LocalObj
     ast::TermArg* TermArg() {
