@@ -116,133 +116,42 @@ void initExt2FS() {
     // The ext2 superblock is always 1024 bytes at LBA 2 (offset 1024)
     SuperBlock* superBlock = new SuperBlock;
     if (!g_hardDrive2->readSectors(superBlock, 2, 1024)) {
-        panic("Failed to read superblock");
+        panic("ext2: failed to read superblock");
     }
 
-    println("magic: {:04X}", superBlock->s_magic);
-    ASSERT(superBlock->s_magic == EXT2_SUPER_MAGIC);
-
-    print("major revision: ");
-    switch (superBlock->s_rev_level) {
-        case EXT2_GOOD_OLD_REV:
-            println("EXT2_GOOD_OLD_REV");
-            break;
-
-        case EXT2_DYNAMIC_REV:
-            println("EXT2_DYNAMIC_REV");
-            break;
-
-        default:
-            ASSERT(false);
+    if (superBlock->s_magic != EXT2_SUPER_MAGIC) {
+        println("ext2: superblock magic number is wrong: {:04X}",
+                superBlock->s_magic);
+        panic();
     }
 
-    println("minor revision: {}", superBlock->s_minor_rev_level);
+    if (superBlock->s_rev_level != EXT2_DYNAMIC_REV) {
+        println("ext2: unsupported major revision level: {}",
+                superBlock->s_rev_level);
+        panic();
+    }
+
+    if (superBlock->s_state != EXT2_VALID_FS) {
+        panic("ext2: filesystem was not unmounted safely");
+    }
+
+    if (superBlock->s_creator_os != EXT2_OS_LINUX) {
+        println("ext2: unsupported creator os: {}", superBlock->s_creator_os);
+        panic();
+    }
 
     println("number of inodes: {}", superBlock->s_inodes_count);
     println("number of blocks: {}", superBlock->s_blocks_count);
     println("number of reserved blocks: {}", superBlock->s_r_blocks_count);
     println("number of free blocks: {}", superBlock->s_free_blocks_count);
     println("number of free inodes: {}", superBlock->s_free_inodes_count);
-
-    println("first data block: {}", superBlock->s_first_data_block);
-    if (superBlock->blockSize() > 1 * KiB) {
-        ASSERT(superBlock->s_first_data_block == 0);
-    } else {
-        ASSERT(superBlock->s_first_data_block == 1);
-    }
-
     println("block size: {} KiB", superBlock->blockSize() / KiB);
-    ASSERT(superBlock->blockSize() >= 512 &&
-           superBlock->blockSize() <= PAGE_SIZE);
-
     println("blocks per group: {}", superBlock->s_blocks_per_group);
-
     println("inodes per group: {}", superBlock->s_inodes_per_group);
-    ASSERT(superBlock->s_inodes_per_group %
-               ((1024 << superBlock->s_log_block_size) /
-                superBlock->s_inode_size) ==
-           0);
-
-    println("last mount time: {}", superBlock->s_mtime);
-    println("last write time: {}", superBlock->s_wtime);
-    println("mounts since last verification: {}", superBlock->s_mnt_count);
-    println("max mounts before verification: {}", superBlock->s_max_mnt_count);
-
-    print("filesystem state: ");
-    switch (superBlock->s_state) {
-        case EXT2_VALID_FS:
-            println("EXT2_VALID_FS");
-            break;
-
-        case EXT2_ERROR_FS:
-            println("EXT2_ERROR_FS");
-            break;
-
-        default:
-            ASSERT(false);
-    }
-
-    print("error handling: ");
-    switch (superBlock->s_errors) {
-        case EXT2_ERRORS_CONTINUE:
-            println("EXT2_ERRORS_CONTINUE");
-            break;
-
-        case EXT2_ERRORS_RO:
-            println("EXT2_ERRORS_RO");
-            break;
-
-        case EXT2_ERRORS_PANIC:
-            println("EXT2_ERRORS_PANIC");
-            break;
-
-        default:
-            ASSERT(false);
-    }
-
-    println("last filesystem check time: {}", superBlock->s_lastcheck);
-    println("max interval between filesystem checks: {}",
-            superBlock->s_checkinterval);
-
-    print("creator os: ");
-    switch (superBlock->s_creator_os) {
-        case EXT2_OS_LINUX:
-            println("EXT2_OS_LINUX");
-            break;
-
-        case EXT2_OS_HURD:
-            println("EXT2_OS_HURD");
-            break;
-
-        case EXT2_OS_MASIX:
-            println("EXT2_OS_MASIX");
-            break;
-
-        case EXT2_OS_FREEBSD:
-            println("EXT2_OS_FREEBSD");
-            break;
-
-        case EXT2_OS_LITES:
-            println("EXT2_OS_LITES");
-            break;
-
-        default:
-            ASSERT(false);
-    }
-
-    println("default userid for reserved blocks: {}", superBlock->s_def_resuid);
-    println("default group id for reserved blocks: {}",
-            superBlock->s_def_resgid);
-
     println("first inode index: {}", superBlock->s_first_ino);
+    println("inode size: {}", superBlock->s_inode_size);
 
-    println("node size: {}", superBlock->s_inode_size);
-    ASSERT((superBlock->s_inode_size & (superBlock->s_inode_size - 1)) == 0);
-    ASSERT(superBlock->s_inode_size <= superBlock->blockSize());
-
-    println("superblock block group number: {}", superBlock->s_block_group_nr);
-
-    print("compatible features:", superBlock->s_feature_compat);
+    print("features:");
     if (superBlock->s_feature_compat & EXT2_FEATURE_COMPAT_DIR_PREALLOC) {
         print(" EXT2_FEATURE_COMPAT_DIR_PREALLOC");
     }
@@ -261,9 +170,6 @@ void initExt2FS() {
     if (superBlock->s_feature_compat & EXT2_FEATURE_COMPAT_DIR_INDEX) {
         print(" EXT2_FEATURE_COMPAT_DIR_INDEX");
     }
-    println("");
-
-    print("incompatible features:");
     if (superBlock->s_feature_incompat & EXT2_FEATURE_INCOMPAT_COMPRESSION) {
         print(" EXT2_FEATURE_INCOMPAT_COMPRESSION");
     }
@@ -279,11 +185,6 @@ void initExt2FS() {
     if (superBlock->s_feature_incompat & EXT2_FEATURE_INCOMPAT_META_BG) {
         print(" EXT2_FEATURE_META_BG");
     }
-    println("");
-    ASSERT((superBlock->s_feature_incompat & ~EXT2_FEATURE_INCOMPAT_FILETYPE) ==
-           0);
-
-    print("write-incompatible features:");
     if (superBlock->s_feature_ro_compat & EXT2_FEATURE_RO_COMPAT_SPARSE_SUPER) {
         print(" EXT2_FEATURE_RO_COMPAT_SPARSE_SUPER");
     }
@@ -295,18 +196,8 @@ void initExt2FS() {
     }
     println("");
 
-    // println("s_uuid: {}", superBlock->s_uuid);
-    println("s_volume_name: {}", superBlock->s_volume_name);
-    println("s_last_mounted: {}", superBlock->s_last_mounted);
-    println("s_algo_bitmap: {}", superBlock->s_algo_bitmap);
-    println("s_prealloc_blocks: {}", superBlock->s_prealloc_blocks);
-    println("s_prealloc_dir_blocks: {}", superBlock->s_prealloc_dir_blocks);
-    // println("s_journal_uuid: {}", superBlock->s_journal_uuid);
-    println("s_journal_inum: {}", superBlock->s_journal_inum);
-    println("s_journal_dev: {}", superBlock->s_journal_dev);
-    println("s_last_orphan: {}", superBlock->s_last_orphan);
-    // println("s_hash_seed[4]: {}", superBlock->s_hash_seed[4]);
-    println("s_def_hash_version: {}", superBlock->s_def_hash_version);
-    println("s_default_mount_options: {}", superBlock->s_default_mount_options);
-    println("s_first_meta_bg: {}", superBlock->s_first_meta_bg);
+    if ((superBlock->s_feature_incompat & ~EXT2_FEATURE_INCOMPAT_FILETYPE) !=
+        0) {
+        panic("ext2: unsupported incompatible features");
+    }
 }
