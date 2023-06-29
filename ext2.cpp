@@ -113,9 +113,9 @@ void initExt2FS() {
     ASSERT(g_hardDrive2);
     println("Initializing ext2 filesystem");
 
-    // The ext2 superblock is always 1024 bytes at LBA 2 (offset 1024)
+    // The ext2 superblock is always 1024 bytes (2 sectors) at LBA 2 (offset 1024)
     SuperBlock* superBlock = new SuperBlock;
-    if (!g_hardDrive2->readSectors(superBlock, 2, 1024)) {
+    if (!g_hardDrive2->readSectors(superBlock, 2, 2)) {
         panic("ext2: failed to read superblock");
     }
 
