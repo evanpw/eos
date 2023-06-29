@@ -4,6 +4,56 @@
 #include "panic.h"
 #include "units.h"
 
+// s_magic
+static constexpr uint16_t EXT2_SUPER_MAGIC = 0xEF53;
+
+enum SState : uint16_t {
+    EXT2_VALID_FS = 1,
+    EXT2_ERROR_FS = 2,
+};
+
+enum SRevLevel : uint32_t {
+    EXT2_GOOD_OLD_REV = 0,
+    EXT2_DYNAMIC_REV = 1,
+};
+
+enum SErrors : uint16_t {
+    EXT2_ERRORS_CONTINUE = 1,
+    EXT2_ERRORS_RO = 2,
+    EXT2_ERRORS_PANIC = 3,
+};
+
+enum SCreatorOS : uint32_t {
+    EXT2_OS_LINUX = 0,
+    EXT2_OS_HURD = 1,
+    EXT2_OS_MASIX = 2,
+    EXT2_OS_FREEBSD = 3,
+    EXT2_OS_LITES = 4,
+};
+
+enum SFeatureCompat : uint32_t {
+    EXT2_FEATURE_COMPAT_DIR_PREALLOC = 0x0001,
+    EXT2_FEATURE_COMPAT_IMAGIC_INODES = 0x0002,
+    EXT2_FEATURE_COMPAT_HAS_JOURNAL = 0x0004,
+    EXT2_FEATURE_COMPAT_EXT_ATTR = 0x0008,
+    EXT2_FEATURE_COMPAT_RESIZE_INO = 0x0010,
+    EXT2_FEATURE_COMPAT_DIR_INDEX = 0x0020,
+};
+
+enum SFeatureIncompat : uint32_t {
+    EXT2_FEATURE_INCOMPAT_COMPRESSION = 0x0001,
+    EXT2_FEATURE_INCOMPAT_FILETYPE = 0x0002,
+    EXT2_FEATURE_INCOMPAT_RECOVER = 0x0004,
+    EXT2_FEATURE_INCOMPAT_JOURNAL_DEV = 0x0008,
+    EXT2_FEATURE_INCOMPAT_META_BG = 0x0010,
+};
+
+enum SFeatureROCompat : uint32_t {
+    EXT2_FEATURE_RO_COMPAT_SPARSE_SUPER = 0x0001,
+    EXT2_FEATURE_RO_COMPAT_LARGE_FILE = 0x0002,
+    EXT2_FEATURE_RO_COMPAT_BTREE_DIR = 0x0004,
+};
+
 struct __attribute__((packed)) SuperBlock {
     uint32_t s_inodes_count;
     uint32_t s_blocks_count;
@@ -12,31 +62,30 @@ struct __attribute__((packed)) SuperBlock {
     uint32_t s_free_inodes_count;
     uint32_t s_first_data_block;
     uint32_t s_log_block_size;
-    uint32_t s_log_frag_size;
+    uint32_t s_log_frag_size;  // not used
     uint32_t s_blocks_per_group;
-    uint32_t s_frags_per_group;
+    uint32_t s_frags_per_group;  // not used
     uint32_t s_inodes_per_group;
     uint32_t s_mtime;
     uint32_t s_wtime;
     uint16_t s_mnt_count;
     uint16_t s_max_mnt_count;
     uint16_t s_magic;
-    uint16_t s_state;
-    uint16_t s_errors;
+    SState s_state;
+    SErrors s_errors;
     uint16_t s_minor_rev_level;
     uint32_t s_lastcheck;
     uint32_t s_checkinterval;
-    uint32_t s_creator_os;
-    uint32_t s_rev_level;
+    SCreatorOS s_creator_os;
+    SRevLevel s_rev_level;
     uint16_t s_def_resuid;
     uint16_t s_def_resgid;
-
     uint32_t s_first_ino;
     uint16_t s_inode_size;
     uint16_t s_block_group_nr;
-    uint32_t s_feature_compat;
-    uint32_t s_feature_incompat;
-    uint32_t s_feature_ro_compat;
+    SFeatureCompat s_feature_compat;
+    SFeatureIncompat s_feature_incompat;
+    SFeatureROCompat s_feature_ro_compat;
     uint8_t s_uuid[16];
     char s_volume_name[16];
     char s_last_mounted[64];
@@ -53,8 +102,9 @@ struct __attribute__((packed)) SuperBlock {
     uint8_t _padding[3];
     uint32_t s_default_mount_options;
     uint32_t s_first_meta_bg;
-
     uint8_t unused[760];
+
+    size_t blockSize() const { return 1024UL << s_log_block_size; }
 };
 
 static_assert(sizeof(SuperBlock) == 1024);
@@ -70,16 +120,20 @@ void initExt2FS() {
     }
 
     println("magic: {:04X}", superBlock->s_magic);
-    ASSERT(superBlock->s_magic == 0xEF53);
+    ASSERT(superBlock->s_magic == EXT2_SUPER_MAGIC);
 
     print("major revision: ");
-    if (superBlock->s_rev_level == 0) {
-        println("EXT2_GOOD_OLD_REV");
-        ASSERT(false);
-    } else if (superBlock->s_rev_level == 1) {
-        println("EXT2_DYNAMIC_REV");
-    } else {
-        ASSERT(false);
+    switch (superBlock->s_rev_level) {
+        case EXT2_GOOD_OLD_REV:
+            println("EXT2_GOOD_OLD_REV");
+            break;
+
+        case EXT2_DYNAMIC_REV:
+            println("EXT2_DYNAMIC_REV");
+            break;
+
+        default:
+            ASSERT(false);
     }
 
     println("minor revision: {}", superBlock->s_minor_rev_level);
@@ -91,22 +145,17 @@ void initExt2FS() {
     println("number of free inodes: {}", superBlock->s_free_inodes_count);
 
     println("first data block: {}", superBlock->s_first_data_block);
-    if (superBlock->s_log_block_size > 0) {
+    if (superBlock->blockSize() > 1 * KiB) {
         ASSERT(superBlock->s_first_data_block == 0);
     } else {
         ASSERT(superBlock->s_first_data_block == 1);
     }
 
-    println("block size: {} KiB", (1024 << superBlock->s_log_block_size) / KiB);
-    ASSERT((1024UL << superBlock->s_log_block_size) >= 512);
-    ASSERT((1024UL << superBlock->s_log_block_size) <= PAGE_SIZE);
-
-    println("fragment size: {} KiB",
-            (1024UL << superBlock->s_log_frag_size) / KiB);
-    ASSERT(superBlock->s_log_frag_size >= superBlock->s_log_block_size);
+    println("block size: {} KiB", superBlock->blockSize() / KiB);
+    ASSERT(superBlock->blockSize() >= 512 &&
+           superBlock->blockSize() <= PAGE_SIZE);
 
     println("blocks per group: {}", superBlock->s_blocks_per_group);
-    println("fragments per group: {}", superBlock->s_frags_per_group);
 
     println("inodes per group: {}", superBlock->s_inodes_per_group);
     ASSERT(superBlock->s_inodes_per_group %
@@ -120,23 +169,35 @@ void initExt2FS() {
     println("max mounts before verification: {}", superBlock->s_max_mnt_count);
 
     print("filesystem state: ");
-    if (superBlock->s_state == 1) {
-        println("EXT2_VALID_FS");
-    } else if (superBlock->s_state == 2) {
-        println("EXT2_ERROR_FS");
-    } else {
-        ASSERT(false);
+    switch (superBlock->s_state) {
+        case EXT2_VALID_FS:
+            println("EXT2_VALID_FS");
+            break;
+
+        case EXT2_ERROR_FS:
+            println("EXT2_ERROR_FS");
+            break;
+
+        default:
+            ASSERT(false);
     }
 
     print("error handling: ");
-    if (superBlock->s_errors == 1) {
-        println("EXT2_ERRORS_CONTINUE");
-    } else if (superBlock->s_errors == 2) {
-        println("EXT2_ERRORS_RO");
-    } else if (superBlock->s_errors == 3) {
-        println("EXT2_ERRORS_PANIC");
-    } else {
-        println("{}", superBlock->s_errors);
+    switch (superBlock->s_errors) {
+        case EXT2_ERRORS_CONTINUE:
+            println("EXT2_ERRORS_CONTINUE");
+            break;
+
+        case EXT2_ERRORS_RO:
+            println("EXT2_ERRORS_RO");
+            break;
+
+        case EXT2_ERRORS_PANIC:
+            println("EXT2_ERRORS_PANIC");
+            break;
+
+        default:
+            ASSERT(false);
     }
 
     println("last filesystem check time: {}", superBlock->s_lastcheck);
@@ -144,18 +205,29 @@ void initExt2FS() {
             superBlock->s_checkinterval);
 
     print("creator os: ");
-    if (superBlock->s_creator_os == 0) {
-        println("EXT2_OS_LINUX");
-    } else if (superBlock->s_creator_os == 1) {
-        println("EXT2_OS_HURD");
-    } else if (superBlock->s_creator_os == 2) {
-        println("EXT2_OS_MASIX");
-    } else if (superBlock->s_creator_os == 3) {
-        println("EXT2_OS_FREEBSD");
-    } else if (superBlock->s_creator_os == 4) {
-        println("EXT2_OS_LITES");
-    } else {
-        ASSERT(false);
+    switch (superBlock->s_creator_os) {
+        case EXT2_OS_LINUX:
+            println("EXT2_OS_LINUX");
+            break;
+
+        case EXT2_OS_HURD:
+            println("EXT2_OS_HURD");
+            break;
+
+        case EXT2_OS_MASIX:
+            println("EXT2_OS_MASIX");
+            break;
+
+        case EXT2_OS_FREEBSD:
+            println("EXT2_OS_FREEBSD");
+            break;
+
+        case EXT2_OS_LITES:
+            println("EXT2_OS_LITES");
+            break;
+
+        default:
+            ASSERT(false);
     }
 
     println("default userid for reserved blocks: {}", superBlock->s_def_resuid);
@@ -166,58 +238,59 @@ void initExt2FS() {
 
     println("node size: {}", superBlock->s_inode_size);
     ASSERT((superBlock->s_inode_size & (superBlock->s_inode_size - 1)) == 0);
-    ASSERT(superBlock->s_inode_size <= (1024 << superBlock->s_log_block_size));
+    ASSERT(superBlock->s_inode_size <= superBlock->blockSize());
 
     println("superblock block group number: {}", superBlock->s_block_group_nr);
 
     print("compatible features:", superBlock->s_feature_compat);
-    if (superBlock->s_feature_compat & 0x0001) {
+    if (superBlock->s_feature_compat & EXT2_FEATURE_COMPAT_DIR_PREALLOC) {
         print(" EXT2_FEATURE_COMPAT_DIR_PREALLOC");
     }
-    if (superBlock->s_feature_compat & 0x0002) {
+    if (superBlock->s_feature_compat & EXT2_FEATURE_COMPAT_IMAGIC_INODES) {
         print(" EXT2_FEATURE_COMPAT_IMAGIC_INODES");
     }
-    if (superBlock->s_feature_compat & 0x0004) {
+    if (superBlock->s_feature_compat & EXT2_FEATURE_COMPAT_HAS_JOURNAL) {
         print(" EXT2_FEATURE_COMPAT_HAS_JOURNAL");
     }
-    if (superBlock->s_feature_compat & 0x0008) {
+    if (superBlock->s_feature_compat & EXT2_FEATURE_COMPAT_EXT_ATTR) {
         print(" EXT2_FEATURE_COMPAT_EXT_ATTR");
     }
-    if (superBlock->s_feature_compat & 0x0010) {
+    if (superBlock->s_feature_compat & EXT2_FEATURE_COMPAT_RESIZE_INO) {
         print(" EXT2_FEATURE_COMPAT_RESIZE_INO");
     }
-    if (superBlock->s_feature_compat & 0x0020) {
+    if (superBlock->s_feature_compat & EXT2_FEATURE_COMPAT_DIR_INDEX) {
         print(" EXT2_FEATURE_COMPAT_DIR_INDEX");
     }
     println("");
 
     print("incompatible features:");
-    if (superBlock->s_feature_incompat & 0x0001) {
+    if (superBlock->s_feature_incompat & EXT2_FEATURE_INCOMPAT_COMPRESSION) {
         print(" EXT2_FEATURE_INCOMPAT_COMPRESSION");
     }
-    if (superBlock->s_feature_incompat & 0x0002) {
+    if (superBlock->s_feature_incompat & EXT2_FEATURE_INCOMPAT_FILETYPE) {
         print(" EXT2_FEATURE_INCOMPAT_FILETYPE");
     }
-    if (superBlock->s_feature_incompat & 0x0004) {
+    if (superBlock->s_feature_incompat & EXT2_FEATURE_INCOMPAT_RECOVER) {
         print(" EXT2_FEATURE_INCOMPAT_RECOVER");
     }
-    if (superBlock->s_feature_incompat & 0x0008) {
+    if (superBlock->s_feature_incompat & EXT2_FEATURE_INCOMPAT_JOURNAL_DEV) {
         print(" EXT2_FEATURE_JOURNAL_DEV");
     }
-    if (superBlock->s_feature_incompat & 0x0010) {
+    if (superBlock->s_feature_incompat & EXT2_FEATURE_INCOMPAT_META_BG) {
         print(" EXT2_FEATURE_META_BG");
     }
     println("");
-    ASSERT((superBlock->s_feature_incompat & ~uint16_t(0x0002)) == 0);
+    ASSERT((superBlock->s_feature_incompat & ~EXT2_FEATURE_INCOMPAT_FILETYPE) ==
+           0);
 
     print("write-incompatible features:");
-    if (superBlock->s_feature_ro_compat & 0x0001) {
+    if (superBlock->s_feature_ro_compat & EXT2_FEATURE_RO_COMPAT_SPARSE_SUPER) {
         print(" EXT2_FEATURE_RO_COMPAT_SPARSE_SUPER");
     }
-    if (superBlock->s_feature_ro_compat & 0x0002) {
+    if (superBlock->s_feature_ro_compat & EXT2_FEATURE_RO_COMPAT_LARGE_FILE) {
         print(" EXT2_FEATURE_RO_COMPAT_LARGE_FILE");
     }
-    if (superBlock->s_feature_ro_compat & 0x0004) {
+    if (superBlock->s_feature_ro_compat & EXT2_FEATURE_RO_COMPAT_BTREE_DIR) {
         print(" EXT2_FEATURE_RO_COMPAT_BTREE_DIR");
     }
     println("");
