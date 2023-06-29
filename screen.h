@@ -38,5 +38,5 @@ private:
 
     size_t _width = 80;
     size_t _height = 25;
-    uint16_t* _vram = (uint16_t*)0xB8000;
+    uint16_t* _vram = reinterpret_cast<uint16_t*>(0xB8000);
 };

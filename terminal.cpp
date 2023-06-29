@@ -576,7 +576,7 @@ ssize_t Terminal::read(OpenFileDescription&, void* buffer, size_t count) {
     // TODO: check fd mode
     // TODO: blocking, canonical mode
     size_t bytesRead = 0;
-    char* dest = (char*)buffer;
+    char* dest = static_cast<char*>(buffer);
 
     SpinlockLocker locker(_lock);
     while (_inputBuffer && bytesRead < count) {
@@ -591,7 +591,7 @@ ssize_t Terminal::write(OpenFileDescription&, const void* buffer,
                         size_t count) {
     // TODO: check fd mode
     // TODO: output processing (NL/CR)
-    char* src = (char*)buffer;
+    const char* src = static_cast<const char*>(buffer);
 
     for (size_t i = 0; i < count; ++i) {
         echo(*src++);

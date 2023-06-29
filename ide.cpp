@@ -219,7 +219,7 @@ bool ATADevice::readSectors(void* dest, uint64_t start, size_t count) {
     channel.sendCommand(ReadPIOExt);
 
     // Each sector is read separately
-    uint8_t* ptr = (uint8_t*)dest;
+    uint8_t* ptr = static_cast<uint8_t*>(dest);
     for (size_t sector = 0; sector < count; ++sector) {
         if (!channel.waitForData()) {
             return false;
@@ -235,7 +235,7 @@ bool ATADevice::readSectors(void* dest, uint64_t start, size_t count) {
 // Copies a string from the IDE config info into a standard C string, swapping
 // bytes where necessary
 static void copyString(char* dest, uint16_t* src, size_t numBytes) {
-    uint8_t* d = (uint8_t*)dest;
+    char* d = dest;
     const uint16_t* s = src;
 
     ASSERT(numBytes % 2 == 0);

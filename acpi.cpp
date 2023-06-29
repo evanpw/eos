@@ -44,7 +44,7 @@ struct __attribute__((packed)) RSDP {
 
     bool verifyChecksum() {
         uint8_t sum = 0;
-        uint8_t* ptr = (uint8_t*)this;
+        uint8_t* ptr = reinterpret_cast<uint8_t*>(this);
         for (size_t i = 0; i < sizeof(RSDP); ++i) {
             sum += ptr[i];
         }
@@ -91,7 +91,7 @@ struct __attribute__((packed)) TableHeader {
     bool verifyChecksum() {
         // All bytes of the table (including the checksum) must sum to 0
         uint8_t sum = 0;
-        uint8_t* ptr = (uint8_t*)this;
+        uint8_t* ptr = reinterpret_cast<uint8_t*>(this);
         for (size_t i = 0; i < length; ++i) {
             sum += ptr[i];
         }
@@ -105,7 +105,7 @@ static_assert(sizeof(TableHeader) == 36);
 // Find the location of the RSDP
 RSDP* findRSDP() {
     // BIOS data area (BDA)
-    uint16_t* bda = (uint16_t*)0x400;
+    const uint16_t* bda = reinterpret_cast<const uint16_t*>(0x400);
 
     // The 7th word of the BDA gives the real-mode segment of the extended
     // BIOS data area (EBDA)
@@ -139,7 +139,7 @@ static void copyString(char* dest, const char* src, size_t n) {
 
 void printTableHeader(TableHeader* header) {
     char buffer[64];
-    copyString(buffer, (char*)&header->signature, 4);
+    copyString(buffer, reinterpret_cast<const char*>(&header->signature), 4);
     println("{}: length {}, revision {}", buffer, header->length,
             header->revision);
 }

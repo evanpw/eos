@@ -54,7 +54,7 @@ void FormatArg::printInt(const FormatSpec& spec) {
 }
 
 void FormatArg::printString(const FormatSpec& spec) {
-    const char* str = (const char*)value;
+    const char* str = reinterpret_cast<const char*>(value);
     size_t length = strlen(str);
 
     // Add padding if necessary
