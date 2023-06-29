@@ -51,5 +51,6 @@ struct ATAPIDevice : public IDEDevice {
 
 // TODO: encapsulate this rather than making it global
 extern IDEDevice* g_hardDrive;
+extern IDEDevice* g_hardDrive2;
 
 void initIDE();

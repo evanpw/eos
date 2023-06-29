@@ -3,6 +3,7 @@
 #include "acpi.h"
 #include "boot.h"
 #include "estd/print.h"
+#include "ext2.h"
 #include "ide.h"
 #include "interrupts.h"
 #include "io.h"
@@ -95,4 +96,5 @@ System::System() {
     initIDE();
     initACPI();
     Timer::init();
+    initExt2FS();
 }

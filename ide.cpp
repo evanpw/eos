@@ -310,6 +310,7 @@ IDEDevice* detectDrive(IDEChannel& channel, DriveSelector drive) {
 IDEChannel* g_primary;
 IDEChannel* g_secondary;
 IDEDevice* g_hardDrive;
+IDEDevice* g_hardDrive2;
 
 void initIDE() {
     PCIDevice* ideController =
@@ -346,6 +347,9 @@ void initIDE() {
     IDEDevice* primarySlave = detectDrive(*g_primary, DriveSelector::Slave);
     if (primarySlave) {
         println("Primary slave: {}", primarySlave->modelName);
+        g_hardDrive2 = primarySlave;
+    } else {
+        g_hardDrive2 = nullptr;
     }
 
     IDEDevice* secondaryMaster =

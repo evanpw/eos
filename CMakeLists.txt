@@ -24,6 +24,7 @@ set(ESTD_SOURCES
 set(KERNEL_SOURCES
     acpi.cpp
     aml.cpp
+    ext2.cpp
     file.cpp
     ide.cpp
     interrupts.cpp

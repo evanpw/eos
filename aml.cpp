@@ -308,9 +308,11 @@ public:
             case IndexOp:
                 return ReferenceTypeOpcode();
 
-            default:
-                return SimpleName();
+                // default:
+                //     return SimpleName();
         }
+
+        ASSERT(false);
     }
 
     const char* DebugObj() {
@@ -319,7 +321,7 @@ public:
         return "DebugObj";
     }
 
-    const char* ReferenceTypeOpcode() {}
+    const char* ReferenceTypeOpcode() { ASSERT(false); }
 
     // TermArg = ExpressionOpcode | DataObject | ArgObj | LocalObj
     ast::TermArg* TermArg() {
