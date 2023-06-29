@@ -14,7 +14,7 @@ enum : uint16_t {
 };
 
 // PS/2 Keyboard IRQ
-void __attribute__((interrupt)) irqHandler1(InterruptFrame* frame) {
+void __attribute__((interrupt)) irqHandler1(InterruptFrame*) {
     if (inb(PS2_STATUS) & 1) {
         uint8_t byte = inb(PS2_DATA);
         System::keyboard().handleKey(byte);

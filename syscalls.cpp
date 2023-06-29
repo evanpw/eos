@@ -7,6 +7,7 @@
 #include "estd/print.h"
 #include "file.h"
 #include "io.h"
+#include "klibc.h"
 #include "panic.h"
 #include "process.h"
 #include "processor.h"
@@ -127,11 +128,11 @@ void initSyscalls() {
     Processor::wrmsr(IA32_LSTAR, (uint64_t)&syscallEntry);
 
     // Create table of syscall handlers
-    syscallTable[SYS_read] = reinterpret_cast<SyscallHandler>(sys_read);
-    syscallTable[SYS_write] = reinterpret_cast<SyscallHandler>(sys_write);
-    syscallTable[SYS_getpid] = reinterpret_cast<SyscallHandler>(sys_getpid);
-    syscallTable[SYS_exit] = reinterpret_cast<SyscallHandler>(sys_exit);
-    syscallTable[SYS_sleep] = reinterpret_cast<SyscallHandler>(sys_sleep);
+    syscallTable[SYS_read] = bit_cast<SyscallHandler>(sys_read);
+    syscallTable[SYS_write] = bit_cast<SyscallHandler>(sys_write);
+    syscallTable[SYS_getpid] = bit_cast<SyscallHandler>(sys_getpid);
+    syscallTable[SYS_exit] = bit_cast<SyscallHandler>(sys_exit);
+    syscallTable[SYS_sleep] = bit_cast<SyscallHandler>(sys_sleep);
 
     println("Syscalls initialized");
 }

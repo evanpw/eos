@@ -49,7 +49,7 @@ public:
 
     void mapPage(VirtualAddress virtAddr, PhysicalAddress physAddr,
                  int pageSize = 0, uint64_t flags = 0) {
-        mapPageImpl(_pml4, virtAddr, physAddr, pageSize, 0);
+        mapPageImpl(_pml4, virtAddr, physAddr, pageSize, flags);
     }
 
     VirtualAddress physicalToVirtual(PhysicalAddress physAddr);

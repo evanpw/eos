@@ -98,11 +98,11 @@ void initExt2FS() {
     }
 
     println("block size: {} KiB", (1024 << superBlock->s_log_block_size) / KiB);
-    ASSERT((1025 << superBlock->s_log_block_size) >= 512);
-    ASSERT((1024 << superBlock->s_log_block_size) <= PAGE_SIZE);
+    ASSERT((1024UL << superBlock->s_log_block_size) >= 512);
+    ASSERT((1024UL << superBlock->s_log_block_size) <= PAGE_SIZE);
 
     println("fragment size: {} KiB",
-            (1024 << superBlock->s_log_frag_size) / KiB);
+            (1024UL << superBlock->s_log_frag_size) / KiB);
     ASSERT(superBlock->s_log_frag_size >= superBlock->s_log_block_size);
 
     println("blocks per group: {}", superBlock->s_blocks_per_group);

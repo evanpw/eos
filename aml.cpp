@@ -281,7 +281,7 @@ public:
     // DefToHexString = ToHexStringOp Operand Target
     void DefToHexString() {
         expect(ToHexStringOp);
-        ast::TermArg* operand = Operand();
+        /*ast::TermArg* operand = */ Operand();
         Target();
     }
 

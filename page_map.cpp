@@ -73,7 +73,6 @@ void KernelAddressSpace::mapPageImpl(PhysicalAddress pml4,
 
             // Create a new empty next PML in fresh physical memory
             PhysicalAddress pmlNextPhysAddr = _mm.pageAlloc();
-            void* pmlNext = _mm.physicalToVirtual(pmlNextPhysAddr);
 
             // Point the correct entry in the PML4 to the new PDP and mark it
             // present and writable

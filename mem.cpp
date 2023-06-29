@@ -252,7 +252,7 @@ void* MemoryManager::kmalloc(size_t size) {
         }
 
         if (header->size() >= requiredSize) {
-            int64_t extraSize = header->size() - requiredSize;
+            uint64_t extraSize = header->size() - requiredSize;
 
             // Split block into two pieces if possible
             if (extraSize >= 4 + sizeof(BlockHeader)) {

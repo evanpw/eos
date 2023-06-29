@@ -11,12 +11,12 @@ static constexpr uint16_t PCI_CONFIG_DATA = 0xCFC;
 struct __attribute__((packed)) PCIConfigAddress {
     PCIConfigAddress(uint8_t bus, uint8_t device, uint8_t function,
                      uint8_t offset)
-    : enable(1),
-      reserved(0),
-      bus(bus),
-      device(device),
+    : offset(offset),
       function(function),
-      offset(offset) {
+      device(device),
+      bus(bus),
+      reserved(0),
+      enable(1) {
         ASSERT(lowBits(offset, 2) == 0);
     }
 
@@ -140,7 +140,7 @@ void PCIDevices::checkDevice(uint16_t bus, uint8_t device) {
 
     checkFunction(bus, device, 0);
 
-    if (PCIDevice{bus, device}.multifunction()) {
+    if (PCIDevice{bus, device, 0}.multifunction()) {
         for (uint8_t function = 1; function < 8; ++function) {
             checkFunction(bus, device, function);
         }
@@ -165,7 +165,7 @@ void PCIDevices::findAllDevices() {
     scanBus(0);
 
     // Multiple PCI controllers
-    if (PCIDevice{0, 0}.multifunction()) {
+    if (PCIDevice{0, 0, 0}.multifunction()) {
         for (uint8_t bus = 1; bus < 32; ++bus) {
             if (PCIDevice::exists(0, 0, bus)) {
                 scanBus(bus);

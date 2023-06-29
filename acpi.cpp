@@ -145,7 +145,7 @@ void printTableHeader(TableHeader* header) {
 }
 
 // Differentiated System Description Table (DSDT)
-void parseDSDT(TableHeader* dsdt) {
+void parseDSDT(TableHeader* /*dsdt*/) {
     // parseAML((uint8_t*)(dsdt + 1), dsdt->length - sizeof(TableHeader));
 }
 

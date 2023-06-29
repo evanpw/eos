@@ -179,9 +179,9 @@ void Processor::init() {
     println("");
 
     // Physical and virtual address sizes in bits
-    uint8_t localApicId = bitSlice(result1.ebx, 24, 32);
+    // uint8_t localApicId = bitSlice(result1.ebx, 24, 32);
     uint8_t linearAddressSize = bitSlice(resultExt8.eax, 8, 16);
-    uint8_t physicalAddressSize = bitSlice(resultExt8.eax, 0, 8);
+    // uint8_t physicalAddressSize = bitSlice(resultExt8.eax, 0, 8);
 
     // Test for the properties that we're assuming (some are guaranteed given
     // that we've reached this point in the kernel)

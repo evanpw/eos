@@ -235,17 +235,17 @@ bool ATADevice::readSectors(void* dest, uint64_t start, size_t count) {
 // Copies a string from the IDE config info into a standard C string, swapping
 // bytes where necessary
 static void copyString(char* dest, uint16_t* src, size_t numBytes) {
-    ASSERT(numBytes % 2 == 0);
+    uint8_t* d = (uint8_t*)dest;
+    const uint16_t* s = src;
 
-    uint8_t* pdest = (uint8_t*)dest;
-    uint16_t* psrc = src;
+    ASSERT(numBytes % 2 == 0);
     for (size_t i = 0; i < numBytes; i += 2) {
-        uint16_t next = *src++;
-        *pdest++ = highBits(next, 8);
-        *pdest++ = lowBits(next, 8);
+        uint16_t next = *s++;
+        *d++ = highBits(next, 8);
+        *d++ = lowBits(next, 8);
     }
 
-    *pdest = '\0';
+    *d = '\0';
 }
 
 IDEDevice* detectDrive(IDEChannel& channel, DriveSelector drive) {

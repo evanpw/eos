@@ -14,6 +14,8 @@ struct OpenFileDescription {
 // file on disk, a socket, a pipe, or a bunch of other things. It may or may
 // not be accessible via the file system
 struct File {
+    virtual ~File() = default;
+
     virtual OpenFileDescription* open();
     virtual void close(){};
     virtual ssize_t read(OpenFileDescription& fd, void* buffer,

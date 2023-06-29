@@ -56,6 +56,8 @@ target_compile_options(
     -fno-rtti
     -fno-exceptions
     -mgeneral-regs-only
+    -Wall
+    -Wextra
     -DKERNEL
 )
 

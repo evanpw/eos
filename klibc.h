@@ -11,3 +11,8 @@ template <typename T>
 T max(const T& lhs, const T& rhs) {
     return (lhs < rhs) ? rhs : lhs;
 }
+
+template <typename T, typename U>
+T bit_cast(const U& u) {
+    return __builtin_bit_cast(T, u);
+}

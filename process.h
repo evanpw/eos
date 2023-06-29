@@ -6,7 +6,7 @@
 struct OpenFileDescription;
 struct File;
 
-static constexpr size_t RLIMIT_NOFILE = 256;
+static constexpr int RLIMIT_NOFILE = 256;
 
 // Represents and maintains state for a single usermode process. A process may
 // have multiple threads, but they all share the same address space.

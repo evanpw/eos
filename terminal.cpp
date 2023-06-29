@@ -555,11 +555,14 @@ void Terminal::newline() {
 }
 
 void Terminal::backspace() {
-    --_x;
-    if (_x < 0) {
+    if (_x > 0) {
+        --_x;
+    } else {
         _x = _screen.width() - 1;
-        --_y;
-        if (_y < 0) {
+
+        if (_y > 0) {
+            --_y;
+        } else {
             // TODO: scroll
             _y = _screen.height() - 1;
         }
@@ -569,7 +572,7 @@ void Terminal::backspace() {
     _screen.setCursor(_x, _y);
 }
 
-ssize_t Terminal::read(OpenFileDescription& fd, void* buffer, size_t count) {
+ssize_t Terminal::read(OpenFileDescription&, void* buffer, size_t count) {
     // TODO: check fd mode
     // TODO: blocking, canonical mode
     size_t bytesRead = 0;
@@ -584,7 +587,7 @@ ssize_t Terminal::read(OpenFileDescription& fd, void* buffer, size_t count) {
     return bytesRead;
 }
 
-ssize_t Terminal::write(OpenFileDescription& fd, const void* buffer,
+ssize_t Terminal::write(OpenFileDescription&, const void* buffer,
                         size_t count) {
     // TODO: check fd mode
     // TODO: output processing (NL/CR)

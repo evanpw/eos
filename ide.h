@@ -14,6 +14,8 @@ struct IDEDevice {
     IDEDevice(IDEChannel& channel, DriveSelector drive)
     : channel(channel), drive(drive) {}
 
+    virtual ~IDEDevice() = default;
+
     virtual bool readSectors(void* dest, uint64_t start, size_t count) = 0;
 
     virtual bool isATAPI() const = 0;
@@ -41,7 +43,8 @@ struct ATAPIDevice : public IDEDevice {
     ATAPIDevice(IDEChannel& channel, DriveSelector drive)
     : IDEDevice(channel, drive) {}
 
-    bool readSectors(void* dest, uint64_t start, size_t count) override {
+    bool readSectors(void* /*dest*/, uint64_t /*start*/,
+                     size_t /*count*/) override {
         println("ATAPIDevice::readSectors not implemented");
         return false;
     }
