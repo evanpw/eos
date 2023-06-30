@@ -54,7 +54,7 @@ void System::run() {
 
     uint16_t userDiskOffset = diskMap[2];
     uint16_t userDiskSize = diskMap[3];
-    size_t userImageSize = 512 * userDiskSize;
+    size_t userImageSize = SECTOR_SIZE * userDiskSize;
 
     // Read userland from the disk into a fresh piece of page-aligned memory
     uint64_t pagesNeeded = (userImageSize + PAGE_SIZE - 1) / PAGE_SIZE;

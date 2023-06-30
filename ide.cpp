@@ -7,11 +7,10 @@
 #include "io.h"
 #include "pci.h"
 #include "system.h"
+#include "units.h"
 
 // ATA-6 spec:
 // https://web.archive.org/web/20110915154404/http://www.t13.org/Documents/UploadedDocuments/project/d1410r3b-ATA-ATAPI-6.pdf
-
-static constexpr size_t SECTOR_SIZE = 512;
 
 // Port numbers
 enum Register {
