@@ -212,8 +212,8 @@ size_t Ext2Filesystem::sectorsPerBlock() const {
 bool Ext2Filesystem::readSuperBlock() {
     // The ext2 superblock is always 1024 bytes (2 sectors) at LBA 2 (offset
     // 1024)
-    _superBlock = OwnPtr(new SuperBlock);
-    if (!_disk->readSectors(_superBlock, 2, 2)) {
+    _superBlock.assign(new SuperBlock);
+    if (!_disk->readSectors(_superBlock.get(), 2, 2)) {
         return false;
     }
 
@@ -256,17 +256,17 @@ bool Ext2Filesystem::readBlockGroupDescriptorTable() {
     // Starts on the first block following the superblock
     size_t blockId = _superBlock->s_log_block_size == 0 ? 2 : 1;
 
-    _blockGroups = new BlockGroupDescriptor[numBlockGroups()];
+    _blockGroups.assign(new BlockGroupDescriptor[numBlockGroups()]);
 
     size_t numBytes = numBlockGroups() * sizeof(BlockGroupDescriptor);
-    if (!readRange(_blockGroups, blockId, numBytes)) {
+    if (!readRange(_blockGroups.get(), blockId, numBytes)) {
         return false;
     }
 
     return true;
 }
 
-Inode* Ext2Filesystem::readInode(uint32_t ino) {
+OwnPtr<Inode> Ext2Filesystem::readInode(uint32_t ino) {
     uint32_t blockGroup = (ino - 1) / _superBlock->s_inodes_per_group;
     uint32_t index = (ino - 1) % _superBlock->s_inodes_per_group;
 
@@ -274,17 +274,16 @@ Inode* Ext2Filesystem::readInode(uint32_t ino) {
     uint32_t offset = index * _superBlock->s_inode_size;
     uint32_t size = sizeof(Inode);
 
-    Inode* inode = new Inode;
-    if (!readRange(inode, blockId, size, offset)) {
-        delete inode;
-        return nullptr;
+    OwnPtr<Inode> inode(new Inode);
+    if (!readRange(inode.get(), blockId, size, offset)) {
+        return {};
     }
 
     return inode;
 }
 
-uint8_t* Ext2Filesystem::readFile(Inode* inode) {
-    size_t numBlocks = ceilDiv(inode->size(), blockSize());
+uint8_t* Ext2Filesystem::readFile(Inode& inode) {
+    size_t numBlocks = ceilDiv(inode.size(), blockSize());
     uint8_t* buffer = new uint8_t[numBlocks * blockSize()];
 
     size_t blocksRemaining = numBlocks;
@@ -292,7 +291,7 @@ uint8_t* Ext2Filesystem::readFile(Inode* inode) {
 
     // Direct blocks
     for (size_t i = 0; i < 12 && blocksRemaining > 0; ++i) {
-        if (!readBlock(dest, inode->i_block[i])) {
+        if (!readBlock(dest, inode.i_block[i])) {
             delete[] buffer;
             return nullptr;
         }
@@ -308,7 +307,7 @@ uint8_t* Ext2Filesystem::readFile(Inode* inode) {
     // Indirect blocks
     size_t entriesPerBlock = blockSize() / sizeof(uint32_t);
     uint32_t* indBlock = new uint32_t[entriesPerBlock];
-    if (!readBlock(indBlock, inode->i_block[12])) {
+    if (!readBlock(indBlock, inode.i_block[12])) {
         delete[] buffer;
         delete[] indBlock;
         return nullptr;
@@ -378,7 +377,7 @@ bool Ext2Filesystem::init(IDEDevice* disk) {
         return false;
     }
 
-    Inode* rootInode = readInode(EXT2_ROOT_INO);
+    OwnPtr<Inode> rootInode = readInode(EXT2_ROOT_INO);
     if (!rootInode) {
         println("ext2: error while reading root directory inode");
         return false;
@@ -386,14 +385,12 @@ bool Ext2Filesystem::init(IDEDevice* disk) {
 
     if ((rootInode->i_mode & 0xF000) != EXT2_S_IFDIR) {
         println("ext2: root directory is not a directory");
-        delete rootInode;
         return false;
     }
 
-    uint8_t* rootDir = readFile(rootInode);
+    uint8_t* rootDir = readFile(*rootInode);
     if (!rootDir) {
         println("ext2: failed to read root directory");
-        delete rootInode;
         return false;
     }
 
@@ -419,47 +416,38 @@ bool Ext2Filesystem::init(IDEDevice* disk) {
     if (ino == 0) {
         println("ext2: file not found: 'dictionary.txt'");
         delete[] rootDir;
-        delete rootInode;
         return false;
     }
 
-    Inode* inode = readInode(ino);
+    OwnPtr<Inode> inode = readInode(ino);
     if (!inode) {
         println("ext2: can't read inode for file 'dictionary.txt'");
         delete[] rootDir;
-        delete rootInode;
         return false;
     }
 
-    uint8_t* fileData = readFile(inode);
+    uint8_t* fileData = readFile(*inode);
     if (!fileData) {
-        delete inode;
         delete[] rootDir;
-        delete rootInode;
         println("ext2: can't read file 'dictionary.txt'");
         return false;
     }
 
-    delete fileData;
-    delete inode;
+    delete[] fileData;
     delete[] rootDir;
-    delete rootInode;
 
     println("ext2 filesystem initialized");
     return true;
 }
 
-Ext2Filesystem* Ext2Filesystem::create(IDEDevice* disk) {
-    Ext2Filesystem* fs = new Ext2Filesystem;
+OwnPtr<Ext2Filesystem> Ext2Filesystem::create(IDEDevice* disk) {
+    OwnPtr<Ext2Filesystem> fs(new Ext2Filesystem);
 
     if (!fs->init(disk)) {
-        delete fs;
-        return nullptr;
+        return {};
     }
 
     return fs;
 }
 
-Ext2Filesystem::~Ext2Filesystem() {
-    delete _blockGroups;
-}
+Ext2Filesystem::~Ext2Filesystem() = default;

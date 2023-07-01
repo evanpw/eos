@@ -1,6 +1,7 @@
 // Holder class for initializing and accessing various components of the kernel
 #pragma once
 #include "mem.h"
+#include "estd/ownptr.h"
 
 class Screen;
 class KeyboardDevice;
@@ -51,5 +52,5 @@ private:
     KeyboardDevice* _keyboard = nullptr;
     Terminal* _terminal = nullptr;
     PCIDevices* _pciDevices = nullptr;
-    Ext2Filesystem* _fs = nullptr;
+    OwnPtr<Ext2Filesystem> _fs;
 };
