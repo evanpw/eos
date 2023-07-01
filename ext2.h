@@ -25,6 +25,10 @@ private:
     Ext2Filesystem() = default;
     bool init(IDEDevice* disk);
 
+    size_t blockSize() const;
+    size_t numBlockGroups() const;
+    size_t sectorsPerBlock() const;
+
     // Medium-level interface
     bool readSuperBlock();
     bool readBlockGroupDescriptorTable();
@@ -36,7 +40,7 @@ private:
     bool readRange(void* dest, uint32_t blockId, uint32_t numBytes,
                    uint32_t offset = 0);
 
-    IDEDevice* _disk = 0;
-    SuperBlock* _superBlock = 0;
-    BlockGroupDescriptor* _blockGroups = 0;
+    IDEDevice* _disk = nullptr;
+    SuperBlock* _superBlock = nullptr;
+    BlockGroupDescriptor* _blockGroups = nullptr;
 };

@@ -115,12 +115,6 @@ struct __attribute__((packed)) SuperBlock {
     uint32_t s_default_mount_options;
     uint32_t s_first_meta_bg;
     uint8_t unused[760];
-
-    size_t blockSize() const { return 1024UL << s_log_block_size; }
-    size_t numBlockGroups() const {
-        return ceilDiv(s_blocks_count, s_blocks_per_group);
-    }
-    size_t sectorsPerBlock() const { return blockSize() / SECTOR_SIZE; }
 };
 
 static_assert(sizeof(SuperBlock) == 1024);
@@ -204,6 +198,17 @@ struct __attribute__((packed)) DirectoryEntry {
 
 static_assert(sizeof(DirectoryEntry) == 8);
 
+size_t Ext2Filesystem::blockSize() const {
+    return 1024UL << _superBlock->s_log_block_size;
+}
+size_t Ext2Filesystem::numBlockGroups() const {
+    return ceilDiv(_superBlock->s_blocks_count,
+                   _superBlock->s_blocks_per_group);
+}
+size_t Ext2Filesystem::sectorsPerBlock() const {
+    return blockSize() / SECTOR_SIZE;
+}
+
 bool Ext2Filesystem::readSuperBlock() {
     // The ext2 superblock is always 1024 bytes (2 sectors) at LBA 2 (offset
     // 1024)
@@ -251,10 +256,9 @@ bool Ext2Filesystem::readBlockGroupDescriptorTable() {
     // Starts on the first block following the superblock
     size_t blockId = _superBlock->s_log_block_size == 0 ? 2 : 1;
 
-    size_t numBlockGroups = _superBlock->numBlockGroups();
-    _blockGroups = new BlockGroupDescriptor[numBlockGroups];
+    _blockGroups = new BlockGroupDescriptor[numBlockGroups()];
 
-    size_t numBytes = numBlockGroups * sizeof(BlockGroupDescriptor);
+    size_t numBytes = numBlockGroups() * sizeof(BlockGroupDescriptor);
     if (!readRange(_blockGroups, blockId, numBytes)) {
         return false;
     }
@@ -280,8 +284,8 @@ Inode* Ext2Filesystem::readInode(uint32_t ino) {
 }
 
 uint8_t* Ext2Filesystem::readFile(Inode* inode) {
-    size_t numBlocks = ceilDiv(inode->size(), _superBlock->blockSize());
-    uint8_t* buffer = new uint8_t[numBlocks * _superBlock->blockSize()];
+    size_t numBlocks = ceilDiv(inode->size(), blockSize());
+    uint8_t* buffer = new uint8_t[numBlocks * blockSize()];
 
     size_t blocksRemaining = numBlocks;
     uint8_t* dest = buffer;
@@ -293,7 +297,7 @@ uint8_t* Ext2Filesystem::readFile(Inode* inode) {
             return nullptr;
         }
 
-        dest += _superBlock->blockSize();
+        dest += blockSize();
         --blocksRemaining;
     }
 
@@ -302,7 +306,7 @@ uint8_t* Ext2Filesystem::readFile(Inode* inode) {
     }
 
     // Indirect blocks
-    size_t entriesPerBlock = _superBlock->blockSize() / sizeof(uint32_t);
+    size_t entriesPerBlock = blockSize() / sizeof(uint32_t);
     uint32_t* indBlock = new uint32_t[entriesPerBlock];
     if (!readBlock(indBlock, inode->i_block[12])) {
         delete[] buffer;
@@ -317,7 +321,7 @@ uint8_t* Ext2Filesystem::readFile(Inode* inode) {
             return nullptr;
         }
 
-        dest += _superBlock->blockSize();
+        dest += blockSize();
         --blocksRemaining;
     }
 
@@ -327,8 +331,8 @@ uint8_t* Ext2Filesystem::readFile(Inode* inode) {
 }
 
 bool Ext2Filesystem::readBlock(void* dest, uint32_t blockId) {
-    size_t lba = blockId * _superBlock->sectorsPerBlock();
-    size_t numSectors = _superBlock->sectorsPerBlock();
+    size_t lba = blockId * sectorsPerBlock();
+    size_t numSectors = sectorsPerBlock();
 
     if (!_disk->readSectors(dest, lba, numSectors)) {
         return false;
@@ -339,7 +343,7 @@ bool Ext2Filesystem::readBlock(void* dest, uint32_t blockId) {
 
 bool Ext2Filesystem::readRange(void* dest, uint32_t blockId, uint32_t numBytes,
                                uint32_t offset) {
-    size_t lba = blockId * _superBlock->sectorsPerBlock();
+    size_t lba = blockId * sectorsPerBlock();
     size_t numSectors = ceilDiv(offset + numBytes, SECTOR_SIZE);
 
     if (offset >= SECTOR_SIZE) {
