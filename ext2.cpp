@@ -212,7 +212,7 @@ size_t Ext2Filesystem::sectorsPerBlock() const {
 bool Ext2Filesystem::readSuperBlock() {
     // The ext2 superblock is always 1024 bytes (2 sectors) at LBA 2 (offset
     // 1024)
-    _superBlock = new SuperBlock;
+    _superBlock = OwnPtr(new SuperBlock);
     if (!_disk->readSectors(_superBlock, 2, 2)) {
         return false;
     }
@@ -449,7 +449,17 @@ bool Ext2Filesystem::init(IDEDevice* disk) {
     return true;
 }
 
+Ext2Filesystem* Ext2Filesystem::create(IDEDevice* disk) {
+    Ext2Filesystem* fs = new Ext2Filesystem;
+
+    if (!fs->init(disk)) {
+        delete fs;
+        return nullptr;
+    }
+
+    return fs;
+}
+
 Ext2Filesystem::~Ext2Filesystem() {
-    delete _superBlock;
     delete _blockGroups;
 }

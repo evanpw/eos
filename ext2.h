@@ -1,5 +1,6 @@
 #pragma once
 #include "ide.h"
+#include "estd/ownptr.h"
 
 struct SuperBlock;
 struct BlockGroupDescriptor;
@@ -8,17 +9,7 @@ struct Inode;
 class Ext2Filesystem {
 public:
     // Create using a static method because creation can fail
-    static Ext2Filesystem* create(IDEDevice* disk) {
-        Ext2Filesystem* fs = new Ext2Filesystem;
-
-        if (!fs->init(disk)) {
-            delete fs;
-            return nullptr;
-        }
-
-        return fs;
-    }
-
+    static Ext2Filesystem* create(IDEDevice* disk);
     ~Ext2Filesystem();
 
 private:
@@ -41,6 +32,6 @@ private:
                    uint32_t offset = 0);
 
     IDEDevice* _disk = nullptr;
-    SuperBlock* _superBlock = nullptr;
+    OwnPtr<SuperBlock> _superBlock;
     BlockGroupDescriptor* _blockGroups = nullptr;
 };
