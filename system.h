@@ -6,6 +6,7 @@ class Screen;
 class KeyboardDevice;
 class Terminal;
 class PCIDevices;
+class Ext2Filesystem;
 
 class System {
 public:
@@ -50,4 +51,5 @@ private:
     KeyboardDevice* _keyboard = nullptr;
     Terminal* _terminal = nullptr;
     PCIDevices* _pciDevices = nullptr;
+    Ext2Filesystem* _fs = nullptr;
 };

@@ -96,5 +96,7 @@ System::System() {
     initIDE();
     initACPI();
     Timer::init();
-    initExt2FS();
+
+    _fs = Ext2Filesystem::create(g_hardDrive2);
+    ASSERT(_fs);
 }

@@ -57,7 +57,7 @@ enum SFeatureROCompat : uint32_t {
     EXT2_FEATURE_RO_COMPAT_BTREE_DIR = 0x0004,
 };
 
-enum ReservedINodes : uint32_t {
+enum ReservedInodes : uint32_t {
     EXT2_BAD_INO = 1,
     EXT2_ROOT_INO = 2,
     EXT2_ACL_IDX_INO = 3,
@@ -163,7 +163,7 @@ enum IMode : uint16_t {
     EXT2_S_IXOTH = 0x0001,
 };
 
-struct __attribute__((packed)) INode {
+struct __attribute__((packed)) Inode {
     IMode i_mode;
     uint16_t i_uid;
     uint32_t i_size;
@@ -192,7 +192,7 @@ struct __attribute__((packed)) INode {
     }
 };
 
-static_assert(sizeof(INode) == 128);
+static_assert(sizeof(Inode) == 128);
 
 struct __attribute__((packed)) DirectoryEntry {
     uint32_t inode;
@@ -204,303 +204,248 @@ struct __attribute__((packed)) DirectoryEntry {
 
 static_assert(sizeof(DirectoryEntry) == 8);
 
-SuperBlock* readSuperBlock() {
+bool Ext2Filesystem::readSuperBlock() {
     // The ext2 superblock is always 1024 bytes (2 sectors) at LBA 2 (offset
     // 1024)
-    SuperBlock* superBlock = new SuperBlock;
-    if (!g_hardDrive2->readSectors(superBlock, 2, 2)) {
-        panic("ext2: failed to read superblock");
+    _superBlock = new SuperBlock;
+    if (!_disk->readSectors(_superBlock, 2, 2)) {
+        return false;
     }
 
-    if (superBlock->s_magic != EXT2_SUPER_MAGIC) {
+    if (_superBlock->s_magic != EXT2_SUPER_MAGIC) {
         println("ext2: superblock magic number is wrong: {:04X}",
-                superBlock->s_magic);
-        panic();
+                _superBlock->s_magic);
+        return false;
     }
 
-    if (superBlock->s_rev_level != EXT2_DYNAMIC_REV) {
+    if (_superBlock->s_rev_level != EXT2_DYNAMIC_REV) {
         println("ext2: unsupported major revision level: {}",
-                superBlock->s_rev_level);
-        panic();
+                _superBlock->s_rev_level);
+        return false;
     }
 
-    if (superBlock->s_state != EXT2_VALID_FS) {
-        panic("ext2: filesystem was not unmounted safely");
+    if (_superBlock->s_state != EXT2_VALID_FS) {
+        println("ext2: filesystem was not unmounted safely");
+        return false;
     }
 
-    if (superBlock->s_creator_os != EXT2_OS_LINUX) {
-        println("ext2: unsupported creator os: {}", superBlock->s_creator_os);
-        panic();
+    if (_superBlock->s_creator_os != EXT2_OS_LINUX) {
+        println("ext2: unsupported creator os: {}", _superBlock->s_creator_os);
+        return false;
     }
 
-    if (superBlock->s_first_ino <= 2) {
-        panic("ext2: no reserved inode for root directory");
+    if (_superBlock->s_first_ino <= 2) {
+        println("ext2: no reserved inode for root directory");
+        return false;
     }
 
-    println("number of inodes: {}", superBlock->s_inodes_count);
-    println("number of blocks: {}", superBlock->s_blocks_count);
-    println("number of reserved blocks: {}", superBlock->s_r_blocks_count);
-    println("number of free blocks: {}", superBlock->s_free_blocks_count);
-    println("number of free inodes: {}", superBlock->s_free_inodes_count);
-    println("block size: {} KiB", superBlock->blockSize() / KiB);
-    println("blocks per group: {}", superBlock->s_blocks_per_group);
-    println("inodes per group: {}", superBlock->s_inodes_per_group);
-    println("first inode index: {}", superBlock->s_first_ino);
-    println("inode size: {}", superBlock->s_inode_size);
-
-    print("features:");
-    if (superBlock->s_feature_compat & EXT2_FEATURE_COMPAT_DIR_PREALLOC) {
-        print(" EXT2_FEATURE_COMPAT_DIR_PREALLOC");
-    }
-    if (superBlock->s_feature_compat & EXT2_FEATURE_COMPAT_IMAGIC_INODES) {
-        print(" EXT2_FEATURE_COMPAT_IMAGIC_INODES");
-    }
-    if (superBlock->s_feature_compat & EXT2_FEATURE_COMPAT_HAS_JOURNAL) {
-        print(" EXT2_FEATURE_COMPAT_HAS_JOURNAL");
-    }
-    if (superBlock->s_feature_compat & EXT2_FEATURE_COMPAT_EXT_ATTR) {
-        print(" EXT2_FEATURE_COMPAT_EXT_ATTR");
-    }
-    if (superBlock->s_feature_compat & EXT2_FEATURE_COMPAT_RESIZE_INO) {
-        print(" EXT2_FEATURE_COMPAT_RESIZE_INO");
-    }
-    if (superBlock->s_feature_compat & EXT2_FEATURE_COMPAT_DIR_INDEX) {
-        print(" EXT2_FEATURE_COMPAT_DIR_INDEX");
-    }
-    if (superBlock->s_feature_incompat & EXT2_FEATURE_INCOMPAT_COMPRESSION) {
-        print(" EXT2_FEATURE_INCOMPAT_COMPRESSION");
-    }
-    if (superBlock->s_feature_incompat & EXT2_FEATURE_INCOMPAT_FILETYPE) {
-        print(" EXT2_FEATURE_INCOMPAT_FILETYPE");
-    }
-    if (superBlock->s_feature_incompat & EXT2_FEATURE_INCOMPAT_RECOVER) {
-        print(" EXT2_FEATURE_INCOMPAT_RECOVER");
-    }
-    if (superBlock->s_feature_incompat & EXT2_FEATURE_INCOMPAT_JOURNAL_DEV) {
-        print(" EXT2_FEATURE_JOURNAL_DEV");
-    }
-    if (superBlock->s_feature_incompat & EXT2_FEATURE_INCOMPAT_META_BG) {
-        print(" EXT2_FEATURE_META_BG");
-    }
-    if (superBlock->s_feature_ro_compat & EXT2_FEATURE_RO_COMPAT_SPARSE_SUPER) {
-        print(" EXT2_FEATURE_RO_COMPAT_SPARSE_SUPER");
-    }
-    if (superBlock->s_feature_ro_compat & EXT2_FEATURE_RO_COMPAT_LARGE_FILE) {
-        print(" EXT2_FEATURE_RO_COMPAT_LARGE_FILE");
-    }
-    if (superBlock->s_feature_ro_compat & EXT2_FEATURE_RO_COMPAT_BTREE_DIR) {
-        print(" EXT2_FEATURE_RO_COMPAT_BTREE_DIR");
-    }
-    println("");
-
-    if ((superBlock->s_feature_incompat & ~EXT2_FEATURE_INCOMPAT_FILETYPE) !=
-        0) {
-        panic("ext2: unsupported incompatible features");
-    }
-
-    return superBlock;
-}
-
-uint8_t* readBlocks(SuperBlock* superBlock, uint32_t blockId,
-                    uint32_t numBlocks) {
-    size_t lba = blockId * superBlock->sectorsPerBlock();
-    size_t numSectors = numBlocks * superBlock->sectorsPerBlock();
-
-    uint8_t* buffer = new uint8_t[numBlocks * superBlock->blockSize()];
-    if (!g_hardDrive2->readSectors(buffer, lba, numSectors)) {
-        delete[] buffer;
-        return nullptr;
-    }
-
-    return buffer;
-}
-
-bool readBlock(SuperBlock* superBlock, void* dest, uint32_t blockId) {
-    size_t lba = blockId * superBlock->sectorsPerBlock();
-    size_t numSectors = superBlock->sectorsPerBlock();
-
-    if (!g_hardDrive2->readSectors(dest, lba, numSectors)) {
+    if (_superBlock->s_feature_incompat & ~EXT2_FEATURE_INCOMPAT_FILETYPE) {
+        println("ext2: unsupported incompatible features");
         return false;
     }
 
     return true;
 }
 
-bool readFromBlocks(SuperBlock* superBlock, void* dest, uint32_t blockId,
-                    uint32_t numBytes, uint32_t offset = 0) {
-    size_t lba = blockId * superBlock->sectorsPerBlock();
-    size_t numSectors = ceilDiv(offset + numBytes, SECTOR_SIZE);
-
-    if (offset >= SECTOR_SIZE) {
-        size_t skipSectors = offset / SECTOR_SIZE;
-        lba -= skipSectors;
-        numSectors -= skipSectors;
-        offset -= skipSectors * SECTOR_SIZE;
-    }
-
-    uint8_t* buffer = new uint8_t[SECTOR_SIZE * numSectors];
-    if (!g_hardDrive2->readSectors(buffer, lba, numSectors)) {
-        delete[] buffer;
-        return false;
-    }
-
-    memcpy(dest, buffer + offset, numBytes);
-    return true;
-}
-
-BlockGroupDescriptor* readBlockGroupDescriptorTable(SuperBlock* superBlock) {
+bool Ext2Filesystem::readBlockGroupDescriptorTable() {
     // Starts on the first block following the superblock
-    size_t blockId = superBlock->s_log_block_size == 0 ? 2 : 1;
+    size_t blockId = _superBlock->s_log_block_size == 0 ? 2 : 1;
 
-    size_t numBlockGroups = superBlock->numBlockGroups();
-    BlockGroupDescriptor* blockGroupDescriptorTable =
-        new BlockGroupDescriptor[numBlockGroups];
+    size_t numBlockGroups = _superBlock->numBlockGroups();
+    _blockGroups = new BlockGroupDescriptor[numBlockGroups];
 
     size_t numBytes = numBlockGroups * sizeof(BlockGroupDescriptor);
-    if (!readFromBlocks(superBlock, blockGroupDescriptorTable, blockId,
-                        numBytes)) {
-        panic("Failed to read block group descriptor table");
+    if (!readRange(_blockGroups, blockId, numBytes)) {
+        return false;
     }
 
-    return blockGroupDescriptorTable;
-
-    /*
-    // ??
-    ASSERT(superBlock->s_inodes_count == superBlock->s_inodes_per_group *
-    numBlockGroups);
-
-    uint32_t blocksRemaining = superBlock->s_blocks_count;
-    uint32_t inodesRemaining = superBlock->s_inodes_count;
-    for (size_t i = 0; i < numBlockGroups; ++i) {
-        println("Block Group {}:", i);
-        println("bg_block_bitmap: {}",
-    blockGroupDescriptorTable[i].bg_block_bitmap); println("bg_inode_bitmap:
-    {}", blockGroupDescriptorTable[i].bg_inode_bitmap); println("bg_inode_table:
-    {}", blockGroupDescriptorTable[i].bg_inode_table);
-        println("bg_free_blocks_count: {}",
-    blockGroupDescriptorTable[i].bg_free_blocks_count);
-        println("bg_free_inodes_count: {}",
-    blockGroupDescriptorTable[i].bg_free_inodes_count);
-        println("bg_used_dirs_count: {}",
-    blockGroupDescriptorTable[i].bg_used_dirs_count);
-
-        size_t blocksInGroup = min(superBlock->s_blocks_per_group,
-    blocksRemaining); blocksRemaining -= blocksInGroup;
-
-        size_t blockBitmapSize = ceilDiv(blocksInGroup, 8);
-        uint8_t* blockBitmap = new uint8_t[blockBitmapSize];
-        if (!readFromBlocks(superBlock, blockBitmap,
-    blockGroupDescriptorTable[i].bg_block_bitmap, blockBitmapSize)) {
-            panic("Failed to read block bitmap");
-        }
-
-        size_t inodesInGroup = min(superBlock->s_inodes_per_group,
-    inodesRemaining); inodesRemaining -= inodesInGroup;
-
-        size_t inodeBitmapSize = ceilDiv(inodesInGroup, 8);
-        uint8_t* inodeBitmap = new uint8_t[inodeBitmapSize];
-        if (!readFromBlocks(superBlock, inodeBitmap,
-    blockGroupDescriptorTable[i].bg_inode_bitmap, inodeBitmapSize)) {
-            panic("Failed to read inode bitmap");
-        }
-
-        INode* inodeTable = new INode[superBlock->s_inodes_per_group];
-        if (!readFromBlocks(superBlock, inodeTable,
-    blockGroupDescriptorTable[i].bg_inode_table, superBlock->s_inodes_per_group
-    * sizeof(INode))) { panic("Failed to read inode table");
-        }
-    }
-    */
+    return true;
 }
 
-INode* readINode(SuperBlock* superBlock,
-                 BlockGroupDescriptor* blockGroupDescriptorTable,
-                 uint32_t ino) {
-    uint32_t blockGroup = (ino - 1) / superBlock->s_inodes_per_group;
-    uint32_t index = (ino - 1) % superBlock->s_inodes_per_group;
+Inode* Ext2Filesystem::readInode(uint32_t ino) {
+    uint32_t blockGroup = (ino - 1) / _superBlock->s_inodes_per_group;
+    uint32_t index = (ino - 1) % _superBlock->s_inodes_per_group;
 
-    uint32_t blockId = blockGroupDescriptorTable[blockGroup].bg_inode_table;
-    uint32_t offset = index * superBlock->s_inode_size;
-    uint32_t size = sizeof(INode);
+    uint32_t blockId = _blockGroups[blockGroup].bg_inode_table;
+    uint32_t offset = index * _superBlock->s_inode_size;
+    uint32_t size = sizeof(Inode);
 
-    INode* inode = new INode;
-    if (!readFromBlocks(superBlock, inode, blockId, size, offset)) {
-        panic("ext2: unable to read root directory inode");
+    Inode* inode = new Inode;
+    if (!readRange(inode, blockId, size, offset)) {
+        delete inode;
+        return nullptr;
     }
 
     return inode;
 }
 
-uint8_t* readFile(SuperBlock* superBlock, INode* inode) {
-    size_t numBlocks = inode->i_blocks * SECTOR_SIZE / superBlock->blockSize();
-    ASSERT(numBlocks <=
-           12);  // TODO handle indirect and multiply-indirect blocks
-    ASSERT(numBlocks * superBlock->blockSize() >= inode->size());
-    ASSERT(numBlocks * superBlock->blockSize() - inode->size() <
-           superBlock->blockSize());
+uint8_t* Ext2Filesystem::readFile(Inode* inode) {
+    size_t numBlocks = ceilDiv(inode->size(), _superBlock->blockSize());
+    uint8_t* buffer = new uint8_t[numBlocks * _superBlock->blockSize()];
 
-    uint8_t* buffer = new uint8_t[numBlocks * superBlock->blockSize()];
-
+    size_t blocksRemaining = numBlocks;
     uint8_t* dest = buffer;
-    for (size_t i = 0; i < numBlocks; ++i) {
-        if (!readBlock(superBlock, dest, inode->i_block[i])) {
+
+    // Direct blocks
+    for (size_t i = 0; i < 12 && blocksRemaining > 0; ++i) {
+        if (!readBlock(dest, inode->i_block[i])) {
             delete[] buffer;
             return nullptr;
         }
 
-        dest += superBlock->blockSize();
+        dest += _superBlock->blockSize();
+        --blocksRemaining;
     }
 
+    if (blocksRemaining == 0) {
+        return buffer;
+    }
+
+    // Indirect blocks
+    size_t entriesPerBlock = _superBlock->blockSize() / sizeof(uint32_t);
+    uint32_t* indBlock = new uint32_t[entriesPerBlock];
+    if (!readBlock(indBlock, inode->i_block[12])) {
+        delete[] buffer;
+        delete[] indBlock;
+        return nullptr;
+    }
+
+    for (size_t i = 0; i < entriesPerBlock && blocksRemaining > 0; ++i) {
+        if (!readBlock(dest, indBlock[i])) {
+            delete[] buffer;
+            delete[] indBlock;
+            return nullptr;
+        }
+
+        dest += _superBlock->blockSize();
+        --blocksRemaining;
+    }
+
+    // TODO: support doubly-indirect and triply-indirect blocks
+    ASSERT(blocksRemaining == 0);
     return buffer;
 }
 
-void initExt2FS() {
-    ASSERT(g_hardDrive2);
-    println("Initializing ext2 filesystem");
+bool Ext2Filesystem::readBlock(void* dest, uint32_t blockId) {
+    size_t lba = blockId * _superBlock->sectorsPerBlock();
+    size_t numSectors = _superBlock->sectorsPerBlock();
 
-    SuperBlock* superBlock = readSuperBlock();
-    if (!superBlock) {
-        return;
+    if (!_disk->readSectors(dest, lba, numSectors)) {
+        return false;
     }
 
-    BlockGroupDescriptor* blockGroupDescriptorTable =
-        readBlockGroupDescriptorTable(superBlock);
-    if (!blockGroupDescriptorTable) {
-        return;
+    return true;
+}
+
+bool Ext2Filesystem::readRange(void* dest, uint32_t blockId, uint32_t numBytes,
+                               uint32_t offset) {
+    size_t lba = blockId * _superBlock->sectorsPerBlock();
+    size_t numSectors = ceilDiv(offset + numBytes, SECTOR_SIZE);
+
+    if (offset >= SECTOR_SIZE) {
+        size_t skipSectors = offset / SECTOR_SIZE;
+        lba += skipSectors;
+        numSectors -= skipSectors;
+        offset -= skipSectors * SECTOR_SIZE;
     }
 
-    INode* root =
-        readINode(superBlock, blockGroupDescriptorTable, EXT2_ROOT_INO);
-    if (!root) {
-        return;
+    uint8_t* buffer = new uint8_t[SECTOR_SIZE * numSectors];
+    if (!_disk->readSectors(buffer, lba, numSectors)) {
+        delete[] buffer;
+        return false;
     }
 
-    if ((root->i_mode & 0xF000) != EXT2_S_IFDIR) {
-        panic("ext2: root directory is not a directory");
+    memcpy(dest, buffer + offset, numBytes);
+    delete[] buffer;
+    return true;
+}
+
+bool Ext2Filesystem::init(IDEDevice* disk) {
+    ASSERT(disk);
+    _disk = disk;
+
+    if (!readSuperBlock()) {
+        println("ext2: error while reading superblock");
+        return false;
     }
 
-    uint8_t* contents = readFile(superBlock, root);
-    if (!contents) {
-        panic("ext2: failed to read root directory");
-        return;
+    if (!readBlockGroupDescriptorTable()) {
+        println("ext2: error while reading block group descriptor table");
+        return false;
+    }
+
+    Inode* rootInode = readInode(EXT2_ROOT_INO);
+    if (!rootInode) {
+        println("ext2: error while reading root directory inode");
+        return false;
+    }
+
+    if ((rootInode->i_mode & 0xF000) != EXT2_S_IFDIR) {
+        println("ext2: root directory is not a directory");
+        delete rootInode;
+        return false;
+    }
+
+    uint8_t* rootDir = readFile(rootInode);
+    if (!rootDir) {
+        println("ext2: failed to read root directory");
+        delete rootInode;
+        return false;
     }
 
     char nameBuffer[256];
 
+    uint32_t ino = 0;
     uint16_t offset = 0;
-    while (offset < root->size()) {
+    while (offset < rootInode->size()) {
         DirectoryEntry dirEntry;
-        memcpy(&dirEntry, contents + offset, sizeof(dirEntry));
-        println("inode: {}", dirEntry.inode);
-        println("rec_len: {}", dirEntry.rec_len);
-        println("name_len: {}", dirEntry.name_len);
-        println("file_type: {}", dirEntry.file_type);
+        memcpy(&dirEntry, rootDir + offset, sizeof(dirEntry));
 
-        memcpy(nameBuffer, contents + offset + sizeof(dirEntry),
+        memcpy(nameBuffer, rootDir + offset + sizeof(dirEntry),
                dirEntry.name_len);
         nameBuffer[dirEntry.name_len] = '\0';
-        println("name: {}", nameBuffer);
+
+        if (strncmp(nameBuffer, "dictionary.txt", dirEntry.name_len + 1) == 0) {
+            ino = dirEntry.inode;
+        }
 
         offset += dirEntry.rec_len;
     }
+
+    if (ino == 0) {
+        println("ext2: file not found: 'dictionary.txt'");
+        delete[] rootDir;
+        delete rootInode;
+        return false;
+    }
+
+    Inode* inode = readInode(ino);
+    if (!inode) {
+        println("ext2: can't read inode for file 'dictionary.txt'");
+        delete[] rootDir;
+        delete rootInode;
+        return false;
+    }
+
+    uint8_t* fileData = readFile(inode);
+    if (!fileData) {
+        delete inode;
+        delete[] rootDir;
+        delete rootInode;
+        println("ext2: can't read file 'dictionary.txt'");
+        return false;
+    }
+
+    delete fileData;
+    delete inode;
+    delete[] rootDir;
+    delete rootInode;
+
+    println("ext2 filesystem initialized");
+    return true;
+}
+
+Ext2Filesystem::~Ext2Filesystem() {
+    delete _superBlock;
+    delete _blockGroups;
 }
