@@ -48,10 +48,10 @@ void System::run() {
 
     // Read the 2nd sector of the disk to find the location and size of the
     // userland image
-    ASSERT(g_hardDrive);
+    IDEDevice& hardDrive = system._ideController->primaryMaster();
 
     uint16_t* diskMap = new uint16_t[256];
-    g_hardDrive->readSectors(diskMap, 1, 1);
+    hardDrive.readSectors(diskMap, 1, 1);
 
     uint16_t userDiskOffset = diskMap[2];
     uint16_t userDiskSize = diskMap[3];
@@ -60,8 +60,8 @@ void System::run() {
     // Read userland from the disk into a fresh piece of page-aligned memory
     uint64_t pagesNeeded = ceilDiv(userImageSize, PAGE_SIZE);
     PhysicalAddress userDest = mm().pageAlloc(pagesNeeded);
-    g_hardDrive->readSectors(mm().physicalToVirtual(userDest), userDiskOffset,
-                             userDiskSize);
+    hardDrive.readSectors(mm().physicalToVirtual(userDest), userDiskOffset,
+                          userDiskSize);
 
     UserAddressSpace userAddressSpace =
         mm().kaddressSpace().makeUserAddressSpace();
@@ -88,16 +88,16 @@ System::System() {
     _instance = this;
 
     Processor::init();
-    _screen = new Screen;
-    _keyboard = new KeyboardDevice;
-    _terminal = new Terminal(*_keyboard, *_screen);
+    _screen.assign(new Screen);
+    _keyboard.assign(new KeyboardDevice);
+    _terminal.assign(new Terminal(*_keyboard, *_screen));
     installInterrupts();
     initSyscalls();
-    _pciDevices = new PCIDevices;
-    initIDE();
+    _pciDevices.assign(new PCIDevices);
+    _ideController.assign(new IDEController);
     initACPI();
     Timer::init();
 
-    _fs = Ext2Filesystem::create(g_hardDrive2);
+    _fs = Ext2Filesystem::create(_ideController->primarySlave());
     ASSERT(_fs);
 }

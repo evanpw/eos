@@ -1,6 +1,6 @@
 #pragma once
-#include "estd/stdlib.h"
 #include "estd/assertions.h"
+#include "estd/stdlib.h"
 
 template <typename T>
 class OwnPtr {
@@ -30,8 +30,7 @@ public:
     OwnPtr& operator=(const OwnPtr&) = delete;
 
     // Movable
-    OwnPtr(OwnPtr&& other) : _ptr(other.release()) {
-    }
+    OwnPtr(OwnPtr&& other) : _ptr(other.release()) {}
 
     OwnPtr& operator=(OwnPtr&& other) {
         _ptr = other.release();
@@ -84,8 +83,7 @@ public:
     OwnPtr& operator=(const OwnPtr&) = delete;
 
     // Movable
-    OwnPtr(OwnPtr&& other) : _ptr(other.release()) {
-    }
+    OwnPtr(OwnPtr&& other) : _ptr(other.release()) {}
 
     OwnPtr& operator=(OwnPtr&& other) {
         _ptr = other.release();

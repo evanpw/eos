@@ -3,6 +3,8 @@
 #include <stddef.h>
 #include <unistd.h>
 
+#include "estd/ownptr.h"
+
 struct OpenFileDescription;
 struct File;
 
@@ -12,7 +14,7 @@ static constexpr int RLIMIT_NOFILE = 256;
 // have multiple threads, but they all share the same address space.
 struct Process {
     pid_t pid;
-    OpenFileDescription* openFiles[RLIMIT_NOFILE] = {};
+    OwnPtr<OpenFileDescription> openFiles[RLIMIT_NOFILE] = {};
 
     int open(File& file);
     int close(int fd);

@@ -1,3 +1,5 @@
 #include "file.h"
 
-OpenFileDescription* File::open() { return new OpenFileDescription{*this}; }
+OwnPtr<OpenFileDescription> File::open() {
+    return OwnPtr<OpenFileDescription>(new OpenFileDescription{*this});
+}

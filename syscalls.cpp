@@ -20,7 +20,7 @@ using SyscallHandler = int64_t (*)(uint64_t, uint64_t, uint64_t, uint64_t,
 ssize_t sys_read(int fd, void* buffer, size_t count) {
     Process& process = Thread::current().process;
 
-    if (fd < 0 || fd >= RLIMIT_NOFILE || process.openFiles[fd] == nullptr) {
+    if (fd < 0 || fd >= RLIMIT_NOFILE || !process.openFiles[fd]) {
         return -EBADF;
     }
 
@@ -32,7 +32,7 @@ ssize_t sys_read(int fd, void* buffer, size_t count) {
 ssize_t sys_write(int fd, const void* buffer, size_t count) {
     Process& process = Thread::current().process;
 
-    if (fd < 0 || fd >= RLIMIT_NOFILE || process.openFiles[fd] == nullptr) {
+    if (fd < 0 || fd >= RLIMIT_NOFILE || !process.openFiles[fd]) {
         return -EBADF;
     }
 

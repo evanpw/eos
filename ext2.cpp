@@ -213,7 +213,7 @@ bool Ext2Filesystem::readSuperBlock() {
     // The ext2 superblock is always 1024 bytes (2 sectors) at LBA 2 (offset
     // 1024)
     _superBlock.assign(new SuperBlock);
-    if (!_disk->readSectors(_superBlock.get(), 2, 2)) {
+    if (!_disk.readSectors(_superBlock.get(), 2, 2)) {
         return false;
     }
 
@@ -333,7 +333,7 @@ bool Ext2Filesystem::readBlock(void* dest, uint32_t blockId) {
     size_t lba = blockId * sectorsPerBlock();
     size_t numSectors = sectorsPerBlock();
 
-    if (!_disk->readSectors(dest, lba, numSectors)) {
+    if (!_disk.readSectors(dest, lba, numSectors)) {
         return false;
     }
 
@@ -353,7 +353,7 @@ bool Ext2Filesystem::readRange(void* dest, uint32_t blockId, uint32_t numBytes,
     }
 
     uint8_t* buffer = new uint8_t[SECTOR_SIZE * numSectors];
-    if (!_disk->readSectors(buffer, lba, numSectors)) {
+    if (!_disk.readSectors(buffer, lba, numSectors)) {
         delete[] buffer;
         return false;
     }
@@ -363,10 +363,7 @@ bool Ext2Filesystem::readRange(void* dest, uint32_t blockId, uint32_t numBytes,
     return true;
 }
 
-bool Ext2Filesystem::init(IDEDevice* disk) {
-    ASSERT(disk);
-    _disk = disk;
-
+bool Ext2Filesystem::init() {
     if (!readSuperBlock()) {
         println("ext2: error while reading superblock");
         return false;
@@ -440,14 +437,15 @@ bool Ext2Filesystem::init(IDEDevice* disk) {
     return true;
 }
 
-OwnPtr<Ext2Filesystem> Ext2Filesystem::create(IDEDevice* disk) {
-    OwnPtr<Ext2Filesystem> fs(new Ext2Filesystem);
+OwnPtr<Ext2Filesystem> Ext2Filesystem::create(IDEDevice& disk) {
+    OwnPtr<Ext2Filesystem> fs(new Ext2Filesystem(disk));
 
-    if (!fs->init(disk)) {
+    if (!fs->init()) {
         return {};
     }
 
     return fs;
 }
 
+Ext2Filesystem::Ext2Filesystem(IDEDevice& disk) : _disk(disk) {}
 Ext2Filesystem::~Ext2Filesystem() = default;

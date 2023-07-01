@@ -3,6 +3,8 @@
 #include <stddef.h>
 #include <sys/types.h>
 
+#include "estd/ownptr.h"
+
 struct File;
 
 // The kernel data structure that a usermode file descriptor points to
@@ -16,7 +18,7 @@ struct OpenFileDescription {
 struct File {
     virtual ~File() = default;
 
-    virtual OpenFileDescription* open();
+    virtual OwnPtr<OpenFileDescription> open();
     virtual void close(){};
     virtual ssize_t read(OpenFileDescription& fd, void* buffer,
                          size_t count) = 0;

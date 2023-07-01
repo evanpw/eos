@@ -1,12 +1,13 @@
 // Holder class for initializing and accessing various components of the kernel
 #pragma once
-#include "mem.h"
 #include "estd/ownptr.h"
+#include "mem.h"
 
 class Screen;
 class KeyboardDevice;
 class Terminal;
 class PCIDevices;
+class IDEController;
 class Ext2Filesystem;
 
 class System {
@@ -48,9 +49,10 @@ private:
     // This can't be a pointer because we need it to implement new()
     MemoryManager _mm;
 
-    Screen* _screen = nullptr;
-    KeyboardDevice* _keyboard = nullptr;
-    Terminal* _terminal = nullptr;
-    PCIDevices* _pciDevices = nullptr;
+    OwnPtr<Screen> _screen;
+    OwnPtr<KeyboardDevice> _keyboard;
+    OwnPtr<Terminal> _terminal;
+    OwnPtr<PCIDevices> _pciDevices;
+    OwnPtr<IDEController> _ideController;
     OwnPtr<Ext2Filesystem> _fs;
 };

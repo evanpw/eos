@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "estd/ownptr.h"
 #include "estd/print.h"
 
 class IDEChannel;
@@ -43,8 +44,7 @@ struct ATAPIDevice : public IDEDevice {
     ATAPIDevice(IDEChannel& channel, DriveSelector drive)
     : IDEDevice(channel, drive) {}
 
-    bool readSectors(void* /*dest*/, uint64_t /*start*/,
-                     size_t /*count*/) override {
+    bool readSectors(void*, uint64_t, size_t) override {
         println("ATAPIDevice::readSectors not implemented");
         return false;
     }
@@ -52,8 +52,22 @@ struct ATAPIDevice : public IDEDevice {
     bool isATAPI() const override { return true; }
 };
 
-// TODO: encapsulate this rather than making it global
-extern IDEDevice* g_hardDrive;
-extern IDEDevice* g_hardDrive2;
+class IDEController {
+public:
+    IDEController();
+    ~IDEController();
 
-void initIDE();
+    IDEDevice& primaryMaster() const { return *_primaryMaster; }
+    IDEDevice& primarySlave() const { return *_primarySlave; }
+    IDEDevice& secondaryMaster() const { return *_secondaryMaster; }
+    IDEDevice& secondarySlave() const { return *_secondarySlave; }
+
+private:
+    OwnPtr<IDEChannel> _primary;
+    OwnPtr<IDEChannel> _secondary;
+
+    OwnPtr<IDEDevice> _primaryMaster;
+    OwnPtr<IDEDevice> _primarySlave;
+    OwnPtr<IDEDevice> _secondaryMaster;
+    OwnPtr<IDEDevice> _secondarySlave;
+};

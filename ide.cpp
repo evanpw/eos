@@ -247,27 +247,27 @@ static void copyString(char* dest, uint16_t* src, size_t numBytes) {
     *d = '\0';
 }
 
-IDEDevice* detectDrive(IDEChannel& channel, DriveSelector drive) {
+OwnPtr<IDEDevice> detectDrive(IDEChannel& channel, DriveSelector drive) {
     channel.selectDrive(drive);
     channel.sendCommand(Identify);
 
     // If Status == 0, then the drive doesn't exist
     if (channel.readStatus() == 0) {
-        return nullptr;
+        return {};
     }
 
-    IDEDevice* device = nullptr;
+    OwnPtr<IDEDevice> device;
 
     // Otherwise, wait for command to finish or fail
     if (channel.waitForData()) {
         // Success: this is a regular ATA device
-        device = new ATADevice(channel, drive);
+        device.assign(new ATADevice(channel, drive));
     } else {
         // Failure: check the signature bytes to see whether this is an ATAPI
         // device
         if (channel.readSignature() != 0xEB140101) {
             println("ide::detectDrive: error while identifying drive");
-            return nullptr;
+            return {};
         }
 
         // If ATAPI, then use the IdentifyPacket command instead
@@ -275,10 +275,10 @@ IDEDevice* detectDrive(IDEChannel& channel, DriveSelector drive) {
 
         if (!channel.waitForData()) {
             println("ide::detectDrive: error while identifying ATAPI drive");
-            return nullptr;
+            return {};
         }
 
-        device = new ATAPIDevice(channel, drive);
+        device.assign(new ATAPIDevice(channel, drive));
     }
 
     uint16_t deviceInfo[SECTOR_SIZE / 2];
@@ -290,8 +290,7 @@ IDEDevice* detectDrive(IDEChannel& channel, DriveSelector drive) {
     // I don't intend to support CHS addressing, so fail if LBA isn't supported
     if (!checkBit(deviceInfo[49], 9)) {
         println("ide::detectDrive: drive does not support LBA addressing");
-        delete device;
-        return nullptr;
+        return {};
     }
 
     // Check for 48-bit LBA support
@@ -306,61 +305,51 @@ IDEDevice* detectDrive(IDEChannel& channel, DriveSelector drive) {
     return device;
 }
 
-IDEChannel* g_primary;
-IDEChannel* g_secondary;
-IDEDevice* g_hardDrive;
-IDEDevice* g_hardDrive2;
-
-void initIDE() {
-    PCIDevice* ideController =
+IDEController::IDEController() {
+    PCIDevice* pciDevice =
         System::pciDevices().findByClass(PCIDeviceClass::StorageIDE);
 
-    if (!ideController) {
+    if (!pciDevice) {
         println("No IDE controller found");
         return;
     }
 
     // Verify that the IDE controller is in compatibility mode
     // TODO: allow native mode (not supported by qemu)
-    uint8_t progIf = ideController->progIf();
+    uint8_t progIf = pciDevice->progIf();
     ASSERT((progIf & ((1 << 0) | (1 << 2))) == 0);
 
-    g_primary = new IDEChannel(0x1F0, 0x3F4);
-    g_secondary = new IDEChannel(0x170, 0x374);
+    _primary.assign(new IDEChannel(0x1F0, 0x3F4));
+    _secondary.assign(new IDEChannel(0x170, 0x374));
 
     // Turn off IRQs
-    g_primary->writeRegister(Control, 2);
-    g_secondary->writeRegister(Control, 2);
+    _primary->writeRegister(Control, 2);
+    _secondary->writeRegister(Control, 2);
 
     println("Detecting IDE drives");
 
     // Detect drives
-    IDEDevice* primaryMaster = detectDrive(*g_primary, DriveSelector::Master);
-    if (primaryMaster) {
-        println("Primary master: {}", primaryMaster->modelName);
-        g_hardDrive = primaryMaster;
-    } else {
-        g_hardDrive = nullptr;
+    _primaryMaster = detectDrive(*_primary, DriveSelector::Master);
+    if (_primaryMaster) {
+        println("Primary master: {}", _primaryMaster->modelName);
     }
 
-    IDEDevice* primarySlave = detectDrive(*g_primary, DriveSelector::Slave);
-    if (primarySlave) {
-        println("Primary slave: {}", primarySlave->modelName);
-        g_hardDrive2 = primarySlave;
-    } else {
-        g_hardDrive2 = nullptr;
+    _primarySlave = detectDrive(*_primary, DriveSelector::Slave);
+    if (_primarySlave) {
+        println("Primary slave: {}", _primarySlave->modelName);
     }
 
-    IDEDevice* secondaryMaster =
-        detectDrive(*g_secondary, DriveSelector::Master);
-    if (secondaryMaster) {
-        println("Secondary master: {}", secondaryMaster->modelName);
+    _secondaryMaster = detectDrive(*_secondary, DriveSelector::Master);
+    if (_secondaryMaster) {
+        println("Secondary master: {}", _secondaryMaster->modelName);
     }
 
-    IDEDevice* secondarySlave = detectDrive(*g_secondary, DriveSelector::Slave);
-    if (secondarySlave) {
-        println("Secondary slave: {}", secondarySlave->modelName);
+    _secondarySlave = detectDrive(*_secondary, DriveSelector::Slave);
+    if (_secondarySlave) {
+        println("Secondary slave: {}", _secondarySlave->modelName);
     }
 
     println("IDE controller initialized");
 }
+
+IDEController::~IDEController() = default;
