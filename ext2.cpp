@@ -282,18 +282,17 @@ OwnPtr<Inode> Ext2Filesystem::readInode(uint32_t ino) {
     return inode;
 }
 
-uint8_t* Ext2Filesystem::readFile(Inode& inode) {
+Buffer Ext2Filesystem::readFile(Inode& inode) {
     size_t numBlocks = ceilDiv(inode.size(), blockSize());
-    uint8_t* buffer = new uint8_t[numBlocks * blockSize()];
+    Buffer buffer(numBlocks * blockSize());
 
     size_t blocksRemaining = numBlocks;
-    uint8_t* dest = buffer;
+    uint8_t* dest = buffer.get();
 
     // Direct blocks
     for (size_t i = 0; i < 12 && blocksRemaining > 0; ++i) {
         if (!readBlock(dest, inode.i_block[i])) {
-            delete[] buffer;
-            return nullptr;
+            return {};
         }
 
         dest += blockSize();
@@ -306,18 +305,14 @@ uint8_t* Ext2Filesystem::readFile(Inode& inode) {
 
     // Indirect blocks
     size_t entriesPerBlock = blockSize() / sizeof(uint32_t);
-    uint32_t* indBlock = new uint32_t[entriesPerBlock];
-    if (!readBlock(indBlock, inode.i_block[12])) {
-        delete[] buffer;
-        delete[] indBlock;
-        return nullptr;
+    OwnPtr<uint32_t[]> indBlock(new uint32_t[entriesPerBlock]);
+    if (!readBlock(indBlock.get(), inode.i_block[12])) {
+        return {};
     }
 
     for (size_t i = 0; i < entriesPerBlock && blocksRemaining > 0; ++i) {
         if (!readBlock(dest, indBlock[i])) {
-            delete[] buffer;
-            delete[] indBlock;
-            return nullptr;
+            return {};
         }
 
         dest += blockSize();
@@ -352,14 +347,12 @@ bool Ext2Filesystem::readRange(void* dest, uint32_t blockId, uint32_t numBytes,
         offset -= skipSectors * SECTOR_SIZE;
     }
 
-    uint8_t* buffer = new uint8_t[SECTOR_SIZE * numSectors];
-    if (!_disk.readSectors(buffer, lba, numSectors)) {
-        delete[] buffer;
+    Buffer buffer(numSectors * SECTOR_SIZE);
+    if (!_disk.readSectors(buffer.get(), lba, numSectors)) {
         return false;
     }
 
-    memcpy(dest, buffer + offset, numBytes);
-    delete[] buffer;
+    memcpy(dest, &buffer[offset], numBytes);
     return true;
 }
 
@@ -385,7 +378,7 @@ bool Ext2Filesystem::init() {
         return false;
     }
 
-    uint8_t* rootDir = readFile(*rootInode);
+    Buffer rootDir = readFile(*rootInode);
     if (!rootDir) {
         println("ext2: failed to read root directory");
         return false;
@@ -397,9 +390,9 @@ bool Ext2Filesystem::init() {
     uint16_t offset = 0;
     while (offset < rootInode->size()) {
         DirectoryEntry dirEntry;
-        memcpy(&dirEntry, rootDir + offset, sizeof(dirEntry));
+        memcpy(&dirEntry, &rootDir[offset], sizeof(dirEntry));
 
-        memcpy(nameBuffer, rootDir + offset + sizeof(dirEntry),
+        memcpy(nameBuffer, &rootDir[offset + sizeof(dirEntry)],
                dirEntry.name_len);
         nameBuffer[dirEntry.name_len] = '\0';
 
@@ -412,26 +405,20 @@ bool Ext2Filesystem::init() {
 
     if (ino == 0) {
         println("ext2: file not found: 'dictionary.txt'");
-        delete[] rootDir;
         return false;
     }
 
     OwnPtr<Inode> inode = readInode(ino);
     if (!inode) {
         println("ext2: can't read inode for file 'dictionary.txt'");
-        delete[] rootDir;
         return false;
     }
 
-    uint8_t* fileData = readFile(*inode);
+    Buffer fileData = readFile(*inode);
     if (!fileData) {
-        delete[] rootDir;
         println("ext2: can't read file 'dictionary.txt'");
         return false;
     }
-
-    delete[] fileData;
-    delete[] rootDir;
 
     println("ext2 filesystem initialized");
     return true;

@@ -1,4 +1,5 @@
 #pragma once
+#include "estd/buffer.h"
 #include "estd/ownptr.h"
 #include "ide.h"
 
@@ -24,7 +25,7 @@ private:
     bool readSuperBlock();
     bool readBlockGroupDescriptorTable();
     OwnPtr<Inode> readInode(uint32_t ino);
-    uint8_t* readFile(Inode& inode);
+    Buffer readFile(Inode& inode);
 
     // Low-level interface
     bool readBlock(void* dest, uint32_t blockId);
