@@ -19,7 +19,7 @@ public:
         }
     }
 
-    ~Vector() { delete _data; }
+    ~Vector() { delete[] _data; }
 
     size_t size() const { return _size; }
     size_t capacity() const { return _capacity; }
@@ -59,11 +59,8 @@ public:
     }
 
     iterator begin() { return data(); }
-
     iterator end() { return data() + size(); }
-
     const_iterator cbegin() { return data(); }
-
     const_iterator cend() { return data() + size(); }
 
     // TODO: implement these

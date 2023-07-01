@@ -11,5 +11,5 @@ template <typename T>
 void swap(T& lhs, T& rhs) {
     T tmp = move(lhs);
     lhs = move(rhs);
-    rhs = move(lhs);
+    rhs = move(tmp);
 }
