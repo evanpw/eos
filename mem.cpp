@@ -151,7 +151,7 @@ FreePageRange* MemoryManager::buildFreePageList() {
         }
 
         // Align this range to page boundaries
-        base = PAGE_SIZE * ((base + PAGE_SIZE - 1) / PAGE_SIZE);
+        base = PAGE_SIZE * ceilDiv(base, PAGE_SIZE);
         end = PAGE_SIZE * (end / PAGE_SIZE);
         if (base >= end) {
             continue;

@@ -8,6 +8,7 @@
 #include "interrupts.h"
 #include "io.h"
 #include "keyboard.h"
+#include "klibc.h"
 #include "mem.h"
 #include "pci.h"
 #include "process.h"
@@ -57,7 +58,7 @@ void System::run() {
     size_t userImageSize = SECTOR_SIZE * userDiskSize;
 
     // Read userland from the disk into a fresh piece of page-aligned memory
-    uint64_t pagesNeeded = (userImageSize + PAGE_SIZE - 1) / PAGE_SIZE;
+    uint64_t pagesNeeded = ceilDiv(userImageSize, PAGE_SIZE);
     PhysicalAddress userDest = mm().pageAlloc(pagesNeeded);
     g_hardDrive->readSectors(mm().physicalToVirtual(userDest), userDiskOffset,
                              userDiskSize);
