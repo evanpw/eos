@@ -8,11 +8,11 @@
 #include "units.h"
 
 size_t Ext2FileSystem::blockSize() const {
-    return 1024UL << _superBlock->s_log_block_size;
+    return 1024UL << _superBlock->log_block_size;
 }
 size_t Ext2FileSystem::numBlockGroups() const {
-    return ceilDiv(_superBlock->s_blocks_count,
-                   _superBlock->s_blocks_per_group);
+    return ceilDiv(_superBlock->blocks_count,
+                   _superBlock->blocks_per_group);
 }
 size_t Ext2FileSystem::sectorsPerBlock() const {
     return blockSize() / SECTOR_SIZE;
@@ -26,35 +26,34 @@ bool Ext2FileSystem::readSuperBlock() {
         return false;
     }
 
-    if (_superBlock->s_magic != ext2::EXT2_SUPER_MAGIC) {
+    if (_superBlock->magic != ext2::SUPER_MAGIC) {
         println("ext2: superblock magic number is wrong: {:04X}",
-                _superBlock->s_magic);
+                _superBlock->magic);
         return false;
     }
 
-    if (_superBlock->s_rev_level != ext2::EXT2_DYNAMIC_REV) {
+    if (_superBlock->rev_level != ext2::DYNAMIC_REV) {
         println("ext2: unsupported major revision level: {}",
-                _superBlock->s_rev_level);
+                _superBlock->rev_level);
         return false;
     }
 
-    if (_superBlock->s_state != ext2::EXT2_VALID_FS) {
+    if (_superBlock->state != ext2::VALID_FS) {
         println("ext2: filesystem was not unmounted safely");
         return false;
     }
 
-    if (_superBlock->s_creator_os != ext2::EXT2_OS_LINUX) {
-        println("ext2: unsupported creator os: {}", _superBlock->s_creator_os);
+    if (_superBlock->creator_os != ext2::OS_LINUX) {
+        println("ext2: unsupported creator os: {}", _superBlock->creator_os);
         return false;
     }
 
-    if (_superBlock->s_first_ino <= 2) {
+    if (_superBlock->first_ino <= 2) {
         println("ext2: no reserved inode for root directory");
         return false;
     }
 
-    if (_superBlock->s_feature_incompat &
-        ~ext2::EXT2_FEATURE_INCOMPAT_FILETYPE) {
+    if (_superBlock->feature_incompat & ~ext2::FEATURE_INCOMPAT_FILETYPE) {
         println("ext2: unsupported incompatible features");
         return false;
     }
@@ -64,7 +63,7 @@ bool Ext2FileSystem::readSuperBlock() {
 
 bool Ext2FileSystem::readBlockGroupDescriptorTable() {
     // Starts on the first block following the superblock
-    size_t blockId = _superBlock->s_log_block_size == 0 ? 2 : 1;
+    size_t blockId = _superBlock->log_block_size == 0 ? 2 : 1;
 
     _blockGroups.assign(new ext2::BlockGroupDescriptor[numBlockGroups()]);
 
@@ -77,11 +76,11 @@ bool Ext2FileSystem::readBlockGroupDescriptorTable() {
 }
 
 OwnPtr<ext2::Inode> Ext2FileSystem::readInode(uint32_t ino) {
-    uint32_t blockGroup = (ino - 1) / _superBlock->s_inodes_per_group;
-    uint32_t index = (ino - 1) % _superBlock->s_inodes_per_group;
+    uint32_t blockGroup = (ino - 1) / _superBlock->inodes_per_group;
+    uint32_t index = (ino - 1) % _superBlock->inodes_per_group;
 
-    uint32_t blockId = _blockGroups[blockGroup].bg_inode_table;
-    uint32_t offset = index * _superBlock->s_inode_size;
+    uint32_t blockId = _blockGroups[blockGroup].inode_table;
+    uint32_t offset = index * _superBlock->inode_size;
 
     OwnPtr<ext2::Inode> inode(new ext2::Inode);
     if (!readRange(inode.get(), blockId, sizeof(ext2::Inode), offset)) {
@@ -101,7 +100,7 @@ bool Ext2FileSystem::readFile(uint8_t* dest, const ext2::Inode& inode) {
     for (size_t i = 0; i < 12; ++i) {
         ASSERT((bytesRemaining <= blockSize()) == (blocksRemaining == 1));
 
-        if (!readBlock(dest, inode.i_block[i], bytesRemaining)) {
+        if (!readBlock(dest, inode.block[i], bytesRemaining)) {
             return false;
         }
 
@@ -118,7 +117,7 @@ bool Ext2FileSystem::readFile(uint8_t* dest, const ext2::Inode& inode) {
     // Indirect blocks
     size_t entriesPerBlock = blockSize() / sizeof(uint32_t);
     OwnPtr<uint32_t[]> indBlock(new uint32_t[entriesPerBlock]);
-    if (!readBlock(indBlock.get(), inode.i_block[12])) {
+    if (!readBlock(indBlock.get(), inode.block[12])) {
         return false;
     }
 
@@ -202,13 +201,13 @@ bool Ext2FileSystem::init() {
         return false;
     }
 
-    _rootInode = readInode(ext2::EXT2_ROOT_INO);
+    _rootInode = readInode(ext2::ROOT_INO);
     if (!_rootInode) {
         println("ext2: error while reading root directory inode");
         return false;
     }
 
-    if ((_rootInode->i_mode & 0xF000) != ext2::EXT2_S_IFDIR) {
+    if ((_rootInode->mode & 0xF000) != ext2::S_IFDIR) {
         println("ext2: root directory is not a directory");
         return false;
     }
