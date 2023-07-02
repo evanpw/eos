@@ -1,9 +1,9 @@
 #include "system.h"
-
 #include "acpi.h"
 #include "boot.h"
 #include "estd/print.h"
-#include "ext2.h"
+#include "panic.h"
+#include "fs/ext2.h"
 #include "ide.h"
 #include "interrupts.h"
 #include "io.h"
@@ -46,28 +46,25 @@ void System::run() {
     Thread thread{process1};
     Thread::s_current = &thread;
 
-    // Read the 2nd sector of the disk to find the location and size of the
-    // userland image
-    IDEDevice& hardDrive = system._ideController->primaryMaster();
+    // Look up the userland executable on disk
+    auto inode = system._fs->lookup("user.bin");
+    ASSERT(inode);
 
-    uint16_t* diskMap = new uint16_t[256];
-    hardDrive.readSectors(diskMap, 1, 1);
-
-    uint16_t userDiskOffset = diskMap[2];
-    uint16_t userDiskSize = diskMap[3];
-    size_t userImageSize = SECTOR_SIZE * userDiskSize;
-
-    // Read userland from the disk into a fresh piece of page-aligned memory
-    uint64_t pagesNeeded = ceilDiv(userImageSize, PAGE_SIZE);
+    // Allocate a fresh piece of page-aligned physical memory to store it
+    uint64_t pagesNeeded = ceilDiv(inode->size(), PAGE_SIZE);
     PhysicalAddress userDest = mm().pageAlloc(pagesNeeded);
-    hardDrive.readSectors(mm().physicalToVirtual(userDest), userDiskOffset,
-                          userDiskSize);
+    uint8_t* ptr = mm().physicalToVirtual(userDest).ptr<uint8_t>();
+
+    // Read the executable from disk
+    if (!system._fs->readFile(ptr, *inode)) {
+        panic("failed to read user.bin");
+    }
 
     UserAddressSpace userAddressSpace =
         mm().kaddressSpace().makeUserAddressSpace();
 
     // Map the userland image at the user base
-    for (size_t i = 0; i < userImageSize; i += PAGE_SIZE) {
+    for (size_t i = 0; i < pagesNeeded; ++i) {
         userAddressSpace.mapPage(userAddressSpace.userMapBase() + i * PAGE_SIZE,
                                  userDest + i * PAGE_SIZE);
     }
@@ -98,6 +95,6 @@ System::System() {
     initACPI();
     Timer::init();
 
-    _fs = Ext2Filesystem::create(_ideController->primarySlave());
+    _fs = Ext2FileSystem::create(_ideController->primarySlave());
     ASSERT(_fs);
 }

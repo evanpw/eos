@@ -8,7 +8,7 @@ class KeyboardDevice;
 class Terminal;
 class PCIDevices;
 class IDEController;
-class Ext2Filesystem;
+class Ext2FileSystem;
 
 class System {
 public:
@@ -54,5 +54,5 @@ private:
     OwnPtr<Terminal> _terminal;
     OwnPtr<PCIDevices> _pciDevices;
     OwnPtr<IDEController> _ideController;
-    OwnPtr<Ext2Filesystem> _fs;
+    OwnPtr<Ext2FileSystem> _fs;
 };

@@ -102,6 +102,26 @@ struct __attribute__((packed)) TableHeader {
 
 static_assert(sizeof(TableHeader) == 36);
 
+struct __attribute__((packed)) HPETTable : public TableHeader {
+    uint8_t revisionId;
+    uint8_t numComparators : 5;
+    uint8_t counterSize : 1;
+    uint8_t reserved : 1;
+    uint8_t legacyReplacement : 1;
+    uint16_t vendorId;
+    uint8_t addressSpaceId;
+    uint8_t registerBitWidth;
+    uint8_t registerBitOffset;
+    uint8_t reserved2;
+    uint64_t baseAddress;
+    uint8_t hpetNumber;
+    uint16_t minTick;
+    uint8_t pageProtection : 4;
+    uint8_t oem : 4;
+};
+
+static_assert(sizeof(HPETTable) == 56);
+
 // Find the location of the RSDP
 RSDP* findRSDP() {
     // BIOS data area (BDA)
@@ -204,6 +224,25 @@ void parseMADT(TableHeader* madt) {
     println("I/O APIC address: {:X}", ioApicAddress.value);
 }
 
+// High Performance Event Timer Table
+void parseHPET(TableHeader* header) {
+    // https://www.intel.com/content/dam/www/public/us/en/documents/technical-specifications/software-developers-hpet-spec-1-0a.pdf
+    HPETTable* table = reinterpret_cast<HPETTable*>(header);
+    println("hpet: revisionId = {}", table->revisionId);
+    println("hpet: numComparators = {}", table->numComparators);
+    println("hpet: counterSize = {}", table->counterSize);
+    println("hpet: legacyReplacement = {}", table->legacyReplacement);
+    println("hpet: vendorId = {:04X}", table->vendorId);
+    println("hpet: addressSpaceId = {}", table->addressSpaceId);
+    println("hpet: registerBitWidth = {}", table->registerBitWidth);
+    println("hpet: registerBitOffset = {}", table->registerBitOffset);
+    println("hpet: baseAddress = {:X}", table->baseAddress);
+    println("hpet: hpetNumber = {}", table->hpetNumber);
+    println("hpet: minTick = {}", table->minTick);
+    println("hpet: pageProtection = {}", table->pageProtection);
+    println("hpet: oem = {}", table->oem);
+}
+
 bool parseACPITables() {
     RSDP* rsdp = findRSDP();
     if (!rsdp) {
@@ -228,12 +267,14 @@ bool parseACPITables() {
         TableHeader* table = TableHeader::tryCreate(pointers[i]);
         if (!table) continue;
 
-        // printTableHeader(table);
+        //printTableHeader(table);
 
         if (table->signature == makeSignature("FACP")) {
             parseFADT(table);
         } else if (table->signature == makeSignature("APIC")) {
             parseMADT(table);
+        } else if (table->signature == makeSignature("HPET")) {
+            parseHPET(table);
         }
     }
 
