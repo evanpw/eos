@@ -53,7 +53,8 @@ bool Ext2FileSystem::readSuperBlock() {
         return false;
     }
 
-    if (_superBlock->s_feature_incompat & ~ext2::EXT2_FEATURE_INCOMPAT_FILETYPE) {
+    if (_superBlock->s_feature_incompat &
+        ~ext2::EXT2_FEATURE_INCOMPAT_FILETYPE) {
         println("ext2: unsupported incompatible features");
         return false;
     }
@@ -154,7 +155,8 @@ bool Ext2FileSystem::readBlock(void* dest, uint32_t blockId) {
     return true;
 }
 
-bool Ext2FileSystem::readBlock(void* dest, uint32_t blockId, uint32_t maxBytes) {
+bool Ext2FileSystem::readBlock(void* dest, uint32_t blockId,
+                               uint32_t maxBytes) {
     if (maxBytes >= blockSize()) {
         return readBlock(dest, blockId);
     }

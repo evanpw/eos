@@ -193,4 +193,4 @@ struct __attribute__((packed)) DirectoryEntry {
 
 static_assert(sizeof(DirectoryEntry) == 8);
 
-} // namespace ext2
+}  // namespace ext2

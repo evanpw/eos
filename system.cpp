@@ -1,8 +1,8 @@
 #include "system.h"
+
 #include "acpi.h"
 #include "boot.h"
 #include "estd/print.h"
-#include "panic.h"
 #include "fs/ext2.h"
 #include "ide.h"
 #include "interrupts.h"
@@ -10,6 +10,7 @@
 #include "keyboard.h"
 #include "klibc.h"
 #include "mem.h"
+#include "panic.h"
 #include "pci.h"
 #include "process.h"
 #include "processor.h"

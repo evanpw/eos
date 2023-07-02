@@ -267,7 +267,7 @@ bool parseACPITables() {
         TableHeader* table = TableHeader::tryCreate(pointers[i]);
         if (!table) continue;
 
-        //printTableHeader(table);
+        // printTableHeader(table);
 
         if (table->signature == makeSignature("FACP")) {
             parseFADT(table);
