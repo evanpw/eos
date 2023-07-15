@@ -217,7 +217,7 @@ GDT:
 driveNumber:
     db 0
 
-; Disk address packet structure describing how to load the rest of the boot loader
+; Disk address packet structure describing how to load the kernel
 dap:
     db 0x10                    ; size of this structure (16 bytes)
     db 0                       ; always zero
@@ -229,8 +229,29 @@ dap:
     dd 1                       ; lower 32-bits of starting LBA
     dd 0                       ; upper 16-bits of starting LBA
 
-; Boot sector must be 512 bytes
-times 510 - ($ - $$) db 0
+; MBR partition table starts at offset 1B8h
+times 0x1B8 - ($ - $$) db 0
+
+partitionTable:
+.diskSignature:
+    dd 0
+    dw 0
+
+.partition1:
+    times 2 dq 0
+
+.partition2:
+    times 2 dq 0
+
+.partition3:
+    times 2 dq 0
+
+.partition4:
+    times 2 dq 0
+
+%if ($ - $$) != 510
+%error "bootloader is too large"
+%endif
 
 ; Boot sector must end with this magic number
 db 0x55
