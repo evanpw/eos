@@ -4,17 +4,13 @@ import struct
 
 boot_filename = sys.argv[1]
 kernel_filename = sys.argv[2]
-user_filename = sys.argv[3]
-diskimg_filename = sys.argv[4]
+diskimg_filename = sys.argv[3]
 
 with open(boot_filename, "rb") as fh:
     boot_data = fh.read()
 
 with open(kernel_filename, "rb") as fh:
     kernel_data = fh.read()
-
-with open(user_filename, "rb") as fh:
-    user_data = fh.read()
 
 def pad_to_sector_size(data):
     remainder = len(data) % 512
@@ -25,11 +21,9 @@ def pad_to_sector_size(data):
     return data + bytearray(padding)
 
 kernel_data = pad_to_sector_size(kernel_data)
-user_data = pad_to_sector_size(user_data)
 
 assert len(boot_data) == 512
 assert len(kernel_data) % 512 == 0
-assert len(user_data) % 512 == 0
 
 boot_offset = 0
 boot_size = 1
@@ -40,10 +34,7 @@ diskmap_size = 1
 kernel_offset = boot_size + diskmap_size
 kernel_size = len(kernel_data) // 512
 
-user_offset = boot_size + diskmap_size + kernel_size
-user_size = len(user_data) // 512
-
-diskmap_data = struct.pack("HHHH", kernel_offset, kernel_size, user_offset, user_size)
+diskmap_data = struct.pack("HH", kernel_offset, kernel_size)
 diskmap_data = pad_to_sector_size(diskmap_data)
 assert len(diskmap_data) == 512
 
@@ -51,4 +42,3 @@ with open(diskimg_filename, "wb") as fh:
     fh.write(boot_data)
     fh.write(diskmap_data)
     fh.write(kernel_data)
-    fh.write(user_data)

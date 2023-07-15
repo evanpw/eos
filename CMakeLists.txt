@@ -163,13 +163,11 @@ add_custom_command(
     DEPENDS
         ${CMAKE_BINARY_DIR}/boot.bin
         ${CMAKE_BINARY_DIR}/kernel.bin
-        ${CMAKE_BINARY_DIR}/user.bin
     COMMAND
         python
         ${CMAKE_SOURCE_DIR}/scripts/create_disk_image.py
         ${CMAKE_BINARY_DIR}/boot.bin
         ${CMAKE_BINARY_DIR}/kernel.bin
-        ${CMAKE_BINARY_DIR}/user.bin
         ${CMAKE_BINARY_DIR}/diskimg
 )
 
