@@ -11,8 +11,7 @@ size_t Ext2FileSystem::blockSize() const {
     return 1024UL << _superBlock->log_block_size;
 }
 size_t Ext2FileSystem::numBlockGroups() const {
-    return ceilDiv(_superBlock->blocks_count,
-                   _superBlock->blocks_per_group);
+    return ceilDiv(_superBlock->blocks_count, _superBlock->blocks_per_group);
 }
 size_t Ext2FileSystem::sectorsPerBlock() const {
     return blockSize() / SECTOR_SIZE;

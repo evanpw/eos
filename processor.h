@@ -11,16 +11,29 @@ struct __attribute__((packed)) IDTRegister {
     uint64_t addr;
 };
 
+struct __attribute__((packed)) GDTRegister {
+    uint16_t limit;
+    uint64_t addr;
+};
+
 // TODO: to support multiple cores, these static methods will have to be
 // instance methods
 struct Processor {
     static void init();
+    static void initDescriptors();
+    static void checkFeatures();
 
     static void halt() { asm volatile("hlt"); }
     static void pause() { asm volatile("pause"); }
 
     static void lidt(IDTRegister& idtr) {
         asm volatile("lidt %0" : : "m"(idtr));
+    }
+    static void lgdt(GDTRegister& gdtr) {
+        asm volatile("lgdt %0" : : "m"(gdtr));
+    }
+    static void ltr(uint16_t selector) {
+        asm volatile("ltr %0" : : "a"(selector));
     }
 
     static void enableInterrupts() { asm volatile("sti"); }

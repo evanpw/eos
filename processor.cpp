@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "boot.h"
 #include "estd/bits.h"
 #include "estd/print.h"
 #include "panic.h"
@@ -25,7 +26,127 @@ static CPUIDResult cpuid(uint32_t func) {
     return result;
 }
 
+struct __attribute__((packed)) SegmentDescriptor {
+    uint16_t limit0_16 = 0;
+    uint16_t base0_16 = 0;
+    uint8_t base16_24 = 0;
+    uint8_t type : 4 = 0;
+    uint8_t nonSystem : 1 = 0;
+    uint8_t dpl : 2 = 0;
+    uint8_t present : 1 = 0;
+    uint8_t limit16_20 : 4 = 0;
+    uint8_t reserved : 1 = 0;
+    uint8_t longMode : 1 = 0;
+    uint8_t db : 1 = 0;
+    uint8_t granularity : 1 = 0;
+    uint8_t base24_32 = 0;
+
+    static SegmentDescriptor null() { return SegmentDescriptor(); }
+
+    static SegmentDescriptor code(uint8_t dpl) {
+        SegmentDescriptor desc;
+        desc.type = 0b1000;  // executable
+        desc.nonSystem = 1;
+        desc.dpl = dpl;
+        desc.present = 1;
+        desc.longMode = 1;
+        return desc;
+    }
+
+    static SegmentDescriptor data(uint8_t dpl) {
+        SegmentDescriptor desc;
+        desc.type = 0b0010;  // writeable
+        desc.nonSystem = 1;
+        desc.dpl = dpl;
+        desc.present = 1;
+        return desc;
+    }
+
+    static SegmentDescriptor tss(PhysicalAddress base, uint32_t limit) {
+        SegmentDescriptor desc(bitSlice(base.value, 0, 32), limit);
+        desc.type = 0b1001;  // available 64-bit TSS
+        desc.present = 1;
+        return desc;
+    }
+
+    static SegmentDescriptor raw(uint64_t value) {
+        SegmentDescriptor desc;
+        memcpy(&desc, &value, 8);
+        return desc;
+    }
+
+    SegmentDescriptor() = default;
+
+    SegmentDescriptor(uint32_t base, uint32_t limit) {
+        base0_16 = bitSlice(base, 0, 16);
+        base16_24 = bitSlice(base, 16, 24);
+        base24_32 = bitSlice(base, 24, 32);
+        limit0_16 = bitSlice(limit, 0, 16);
+        limit16_20 = bitSlice(limit, 16, 20);
+    }
+};
+
+static_assert(sizeof(SegmentDescriptor) == 8);
+
+struct __attribute__((packed)) TaskStateSegment {
+    uint32_t reserved1;
+    uint64_t rsp0;
+    uint64_t rsp1;
+    uint64_t rsp2;
+    uint64_t reserved2;
+    uint64_t ist1;
+    uint64_t ist2;
+    uint64_t ist3;
+    uint64_t ist4;
+    uint64_t ist5;
+    uint64_t ist6;
+    uint64_t ist7;
+    uint64_t reserved3;
+    uint16_t reserved4;
+    uint16_t iopb;
+};
+
+static_assert(sizeof(TaskStateSegment) == 0x68);
+
+static GDTRegister gdtr;
+static SegmentDescriptor gdt[8];
+static TaskStateSegment tss;
+
+void Processor::initDescriptors() {
+    // Clear the tss (we don't use any of the features), and set the IOPB base
+    // address to the end of the TSS (disabled)
+    memset(&tss, 0, sizeof(tss));
+    tss.iopb = sizeof(tss);
+
+    // The first three entries must match the GDT from the bootloader, since we
+    // don't reload segment registers after the lgdt
+    gdt[0] = SegmentDescriptor::null();
+    gdt[1] = SegmentDescriptor::code(0);
+    gdt[2] = SegmentDescriptor::data(0);
+
+    gdt[3] = SegmentDescriptor::null();
+    gdt[4] = SegmentDescriptor::data(3);
+    gdt[5] = SegmentDescriptor::code(3);
+    PhysicalAddress tssAddr(reinterpret_cast<uint64_t>(&tss));
+    gdt[6] = SegmentDescriptor::tss(tssAddr, sizeof(TaskStateSegment) - 1);
+    gdt[7] = SegmentDescriptor::raw(bitSlice(tssAddr.value, 32));
+
+    // Load the GDT register
+    gdtr.addr =
+        reinterpret_cast<uint64_t>(&gdt[0]);  // must be a physical address
+    gdtr.limit = sizeof(gdt) - 1;
+    lgdt(gdtr);
+
+    // Load the task register (pointing to the TSS)
+    ltr(SELECTOR_TSS);
+}
+
 void Processor::init() {
+    initDescriptors();
+    checkFeatures();
+}
+
+void Processor::checkFeatures() {
     // Make sure that the processor supports the cpuid functions we need
     size_t maxFunc = cpuid(0).eax;
     ASSERT(maxFunc >= 1);
