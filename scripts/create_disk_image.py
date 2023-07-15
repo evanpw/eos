@@ -1,13 +1,13 @@
-import sys
+import atexit
 import os
+import shutil
 import struct
 import subprocess
-import shutil
+import sys
+import tempfile
 
-boot_bin = sys.argv[1]
-boot_elf = sys.argv[2]
-kernel_bin = sys.argv[3]
-output_filename = sys.argv[4]
+build_dir = sys.argv[1]
+output_filename = f"{build_dir}/diskimg"
 
 def capture(cmd):
     return subprocess.run(
@@ -29,25 +29,27 @@ def runcmd(cmd):
 with open(output_filename, "wb") as fh:
     fh.write(bytearray(32 * 1024 * 1024))
 
+# Change ownership to the non-root user which called this script
+uid = int(os.environ["SUDO_UID"])
+gid = int(os.environ["SUDO_GID"])
+shutil.chown(output_filename, user=uid, group=gid)
+
 # Mount it as a loopback device so we can touch individual partitions
-loop_filename = capture(f"sudo losetup --find --partscan --show {output_filename}").strip()
+loop_filename = capture(f"losetup --find --partscan --show {output_filename}").strip()
 
-try:
-    # Create a single ext2 partition, with 1MiB of empty space at the beginning of the
-    # image where we'll put the boot loader and kernel
-    runcmd(f'sudo parted -s "{loop_filename}" mklabel msdos mkpart primary ext2 1MiB 100% -a minimal set 1 boot on')
+# Create a single ext2 partition, with 1MiB of empty space at the beginning of the
+# image where we'll put the boot loader and kernel
+runcmd(f'parted -s "{loop_filename}" mklabel msdos mkpart primary ext2 1MiB 100% -a minimal set 1 boot on')
 
-    # Create the ext2 filesystem in the just-created partition
-    runcmd(f"sudo mke2fs {loop_filename}p1")
+# Create the ext2 filesystem in the just-created partition
+runcmd(f"mke2fs {loop_filename}p1")
 
-finally:
-    runcmd(f"sudo losetup -d {loop_filename}")
+atexit.register(lambda: runcmd(f"losetup -d {loop_filename}"))
 
-
-with open(boot_bin, "rb") as fh:
+with open(f"{build_dir}/boot.bin", "rb") as fh:
     boot_data = bytearray(fh.read())
 
-with open(kernel_bin, "rb") as fh:
+with open(f"{build_dir}/kernel.bin", "rb") as fh:
     kernel_data = fh.read()
 
 with open(output_filename, "rb") as fh:
@@ -71,7 +73,7 @@ assert len(boot_data) + len(kernel_data) < 1024 * 1024
 # Find the offset in the bootloader which holds the offset and size of the kernel
 dap_offset = None
 dap_size = None
-symbols = capture(f"nm {boot_elf}")
+symbols = capture(f"nm {build_dir}/boot.elf")
 for line in symbols.splitlines():
     address, kind, name = line.split()
     if name == "dap.offset":
@@ -95,3 +97,12 @@ with open(output_filename, "r+b") as fh:
     fh.seek(0)
     fh.write(boot_data)
     fh.write(kernel_data)
+
+# Mount the disk image and copy the user files to it
+with tempfile.TemporaryDirectory() as tmpdir:
+    runcmd(f"mount {loop_filename}p1 {tmpdir}")
+
+    try:
+        shutil.copyfile(f"{build_dir}/user.bin", "{tmpdir}")
+    finally:
+        runcmd(f"umount {tmpdir}")
