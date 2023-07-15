@@ -80,24 +80,10 @@ main:
     jne .e820loop
 
 .e820finished:
-    ; Load the disk map from the second sector of the disk
-    mov si, dap  ; data structure describing read
-    mov ah, 0x42 ; extended read
-    mov dl, byte [driveNumber] ; boot drive
-    int 0x13
-    jc error
-
-    ; Set up the dap to read the kernel into memory
-    mov si, KERNEL_START
-    mov ax, [si]
-    mov [dap.offset], ax
-    mov ax, [si + 2]
-    mov [dap.size], ax
-
     ; Load the kernel from disk
     mov si, dap  ; data structure describing read
     mov ah, 0x42 ; extended read
-    mov dl, 0x80 ; drive number 0
+    mov dl, byte [driveNumber] ; boot drive
     int 0x13
     jc error
 
@@ -217,16 +203,17 @@ GDT:
 driveNumber:
     db 0
 
-; Disk address packet structure describing how to load the kernel
+; Disk address packet structure describing how to load the kernel. The starting LBA
+; and size in sectors are filled in when the disk image is created
 dap:
     db 0x10                    ; size of this structure (16 bytes)
     db 0                       ; always zero
     .size:
-    dw 1                       ; number of sectors to transfer (each is 512 bytes)
+    dw 0                       ; number of sectors to transfer (each is 512 bytes)
     dw KERNEL_START            ; destination offset (right after boot sector)
     dw 0x0                     ; destination segment
     .offset:
-    dd 1                       ; lower 32-bits of starting LBA
+    dd 0                       ; lower 32-bits of starting LBA
     dd 0                       ; upper 16-bits of starting LBA
 
 ; MBR partition table starts at offset 1B8h

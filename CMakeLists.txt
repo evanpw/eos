@@ -162,11 +162,13 @@ add_custom_command(
     OUTPUT ${CMAKE_BINARY_DIR}/diskimg
     DEPENDS
         ${CMAKE_BINARY_DIR}/boot.bin
+        ${CMAKE_BINARY_DIR}/boot.elf
         ${CMAKE_BINARY_DIR}/kernel.bin
     COMMAND
         python
         ${CMAKE_SOURCE_DIR}/scripts/create_disk_image.py
         ${CMAKE_BINARY_DIR}/boot.bin
+        ${CMAKE_BINARY_DIR}/boot.elf
         ${CMAKE_BINARY_DIR}/kernel.bin
         ${CMAKE_BINARY_DIR}/diskimg
 )
