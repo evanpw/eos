@@ -9,14 +9,12 @@ import tempfile
 build_dir = sys.argv[1]
 output_filename = f"{build_dir}/diskimg"
 
+
 def capture(cmd):
     return subprocess.run(
-        cmd,
-        capture_output=True,
-        shell=True,
-        check=True,
-        text=True
+        cmd, capture_output=True, shell=True, check=True, text=True
     ).stdout
+
 
 def runcmd(cmd):
     return subprocess.run(
@@ -24,6 +22,7 @@ def runcmd(cmd):
         shell=True,
         check=True,
     )
+
 
 # Create a 32 MiB zeroed-out disk image
 with open(output_filename, "wb") as fh:
@@ -39,7 +38,9 @@ loop_filename = capture(f"losetup --find --partscan --show {output_filename}").s
 
 # Create a single ext2 partition, with 1MiB of empty space at the beginning of the
 # image where we'll put the boot loader and kernel
-runcmd(f'parted -s "{loop_filename}" mklabel msdos mkpart primary ext2 1MiB 100% -a minimal set 1 boot on')
+runcmd(
+    f'parted -s "{loop_filename}" mklabel msdos mkpart primary ext2 1MiB 100% -a minimal set 1 boot on'
+)
 
 # Create the ext2 filesystem in the just-created partition
 runcmd(f"mke2fs {loop_filename}p1")
@@ -54,6 +55,7 @@ with open(f"{build_dir}/kernel.bin", "rb") as fh:
 
 with open(output_filename, "rb") as fh:
     mbr_data = fh.read(512)
+
 
 def pad_to_sector_size(data):
     remainder = len(data) % 512
