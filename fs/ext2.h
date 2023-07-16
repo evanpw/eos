@@ -1,13 +1,13 @@
 #pragma once
+#include "disk.h"
 #include "estd/buffer.h"
 #include "estd/ownptr.h"
 #include "fs/ext2_defs.h"
-#include "ide.h"
 
 class Ext2FileSystem {
 public:
     // Create using a static method because creation can fail
-    static OwnPtr<Ext2FileSystem> create(IDEDevice& disk);
+    static OwnPtr<Ext2FileSystem> create(DiskDevice& disk);
     ~Ext2FileSystem();
 
     // High-level interface
@@ -15,7 +15,7 @@ public:
     bool readFile(uint8_t* dest, const ext2::Inode& inode);
 
 private:
-    Ext2FileSystem(IDEDevice& disk);
+    Ext2FileSystem(DiskDevice& disk);
     bool init();
 
     size_t blockSize() const;
@@ -33,7 +33,7 @@ private:
     bool readRange(void* dest, uint32_t blockId, uint32_t numBytes,
                    uint32_t offset = 0);
 
-    IDEDevice& _disk;
+    DiskDevice& _disk;
     OwnPtr<ext2::SuperBlock> _superBlock;
     OwnPtr<ext2::BlockGroupDescriptor[]> _blockGroups;
     OwnPtr<ext2::Inode> _rootInode;

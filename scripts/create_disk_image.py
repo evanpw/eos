@@ -93,7 +93,7 @@ boot_data[dap_size : dap_size + 2] = struct.pack("H", kernel_size)
 # Fill in the partition table from the original MBR sector
 boot_data[0x1B8:0x200] = mbr_data[0x1B8:0x200]
 
-with open(output_filename, "r+b") as fh:
+with open(loop_filename, "r+b") as fh:
     fh.seek(0)
     fh.write(boot_data)
     fh.write(kernel_data)
@@ -103,6 +103,6 @@ with tempfile.TemporaryDirectory() as tmpdir:
     runcmd(f"mount {loop_filename}p1 {tmpdir}")
 
     try:
-        shutil.copyfile(f"{build_dir}/user.bin", "{tmpdir}")
+        shutil.copy(f"{build_dir}/user.bin", tmpdir)
     finally:
         runcmd(f"umount {tmpdir}")

@@ -155,7 +155,6 @@ add_custom_command(
 
 ## Disk Image ##
 
-# image 1: boot loader + kernel.bin
 add_custom_target(build-disk-image ALL DEPENDS ${CMAKE_BINARY_DIR}/diskimg)
 
 add_custom_command(
@@ -169,15 +168,4 @@ add_custom_command(
         sudo python
         ${CMAKE_SOURCE_DIR}/scripts/create_disk_image.py
         ${CMAKE_BINARY_DIR}
-)
-
-# image 2: user.bin
-add_custom_target(build-disk-image-2 ALL DEPENDS ${CMAKE_BINARY_DIR}/diskimg2)
-
-add_custom_command(
-    OUTPUT ${CMAKE_BINARY_DIR}/diskimg2
-    DEPENDS
-         ${CMAKE_BINARY_DIR}/user.bin
-    COMMAND
-        ${CMAKE_SOURCE_DIR}/make_image.sh ${CMAKE_BINARY_DIR}
 )

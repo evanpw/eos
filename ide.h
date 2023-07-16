@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "disk.h"
 #include "estd/ownptr.h"
 #include "estd/print.h"
 
@@ -11,22 +12,26 @@ class IDEChannel;
 enum class DriveSelector;
 
 // A disk device connected to an IDE controller, either standard ATA or ATAPI
-struct IDEDevice {
+struct IDEDevice : public DiskDevice {
+    friend class IDEController;
+
+public:
     IDEDevice(IDEChannel& channel, DriveSelector drive)
-    : channel(channel), drive(drive) {}
+    : _channel(channel), _drive(drive) {}
 
     virtual ~IDEDevice() = default;
 
-    virtual bool readSectors(void* dest, uint64_t start, size_t count) = 0;
-
+    const char* modelName() const { return _modelName; }
+    size_t numSectors() const override { return _numSectors; }
     virtual bool isATAPI() const = 0;
 
-    IDEChannel& channel;
-    DriveSelector drive;
+protected:
+    IDEChannel& _channel;
+    DriveSelector _drive;
 
-    char modelName[41] = {0};
-    bool lba48 = false;
-    uint64_t numSectors = 0;
+    char _modelName[41] = {0};
+    bool _lba48 = false;
+    size_t _numSectors = 0;
 };
 
 // A standard (non-packet) ATA device
@@ -35,7 +40,6 @@ struct ATADevice : public IDEDevice {
     : IDEDevice(channel, drive) {}
 
     bool readSectors(void* dest, uint64_t start, size_t count) override;
-
     bool isATAPI() const override { return false; }
 };
 
@@ -48,7 +52,6 @@ struct ATAPIDevice : public IDEDevice {
         println("ATAPIDevice::readSectors not implemented");
         return false;
     }
-
     bool isATAPI() const override { return true; }
 };
 
@@ -57,12 +60,31 @@ public:
     IDEController();
     ~IDEController();
 
-    IDEDevice& primaryMaster() const { return *_primaryMaster; }
-    IDEDevice& primarySlave() const { return *_primarySlave; }
-    IDEDevice& secondaryMaster() const { return *_secondaryMaster; }
-    IDEDevice& secondarySlave() const { return *_secondarySlave; }
+    DiskDevice& rootPartition() const {
+        ASSERT(_rootPartition);
+        return *_rootPartition;
+    }
+    IDEDevice& primaryMaster() const {
+        ASSERT(_primaryMaster);
+        return *_primaryMaster;
+    }
+    IDEDevice& primarySlave() const {
+        ASSERT(_primarySlave);
+        return *_primarySlave;
+    }
+    IDEDevice& secondaryMaster() const {
+        ASSERT(_secondaryMaster);
+        return *_secondaryMaster;
+    }
+    IDEDevice& secondarySlave() const {
+        ASSERT(_secondarySlave);
+        return *_secondarySlave;
+    }
 
 private:
+    OwnPtr<IDEDevice> detectDrive(IDEChannel& channel, DriveSelector drive);
+    void detectPartitions(IDEDevice& device);
+
     OwnPtr<IDEChannel> _primary;
     OwnPtr<IDEChannel> _secondary;
 
@@ -70,4 +92,6 @@ private:
     OwnPtr<IDEDevice> _primarySlave;
     OwnPtr<IDEDevice> _secondaryMaster;
     OwnPtr<IDEDevice> _secondarySlave;
+
+    OwnPtr<DiskPartitionDevice> _rootPartition;
 };

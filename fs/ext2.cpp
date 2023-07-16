@@ -2,7 +2,7 @@
 
 #include <string.h>
 
-#include "ide.h"
+#include "estd/print.h"
 #include "klibc.h"
 #include "panic.h"
 #include "units.h"
@@ -249,7 +249,7 @@ OwnPtr<ext2::Inode> Ext2FileSystem::lookup(const char* path) {
     return readInode(ino);
 }
 
-OwnPtr<Ext2FileSystem> Ext2FileSystem::create(IDEDevice& disk) {
+OwnPtr<Ext2FileSystem> Ext2FileSystem::create(DiskDevice& disk) {
     OwnPtr<Ext2FileSystem> fs(new Ext2FileSystem(disk));
 
     if (!fs->init()) {
@@ -259,5 +259,5 @@ OwnPtr<Ext2FileSystem> Ext2FileSystem::create(IDEDevice& disk) {
     return fs;
 }
 
-Ext2FileSystem::Ext2FileSystem(IDEDevice& disk) : _disk(disk) {}
+Ext2FileSystem::Ext2FileSystem(DiskDevice& disk) : _disk(disk) {}
 Ext2FileSystem::~Ext2FileSystem() = default;

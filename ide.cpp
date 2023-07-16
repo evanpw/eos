@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "boot.h"
+#include "estd/buffer.h"
 #include "estd/print.h"
 #include "io.h"
 #include "pci.h"
@@ -197,34 +198,34 @@ void IDEChannel::sendCommand(CommandCode command) {
 
 bool ATADevice::readSectors(void* dest, uint64_t start, size_t count) {
     // TODO: add support for LBA28
-    ASSERT(lba48 && channel.isIdle());
+    ASSERT(_lba48 && _channel.isIdle());
 
     // Enable LBA addressing
-    channel.selectDrive(drive, true);
+    _channel.selectDrive(_drive, true);
 
     // Write high bytes of parameters
-    channel.writeRegister(SectorCount, highBits(count, 8));
-    channel.writeRegister(LBA0, bitRange(start, 24, 8));
-    channel.writeRegister(LBA1, bitRange(start, 32, 8));
-    channel.writeRegister(LBA2, bitRange(start, 40, 8));
+    _channel.writeRegister(SectorCount, highBits(count, 8));
+    _channel.writeRegister(LBA0, bitRange(start, 24, 8));
+    _channel.writeRegister(LBA1, bitRange(start, 32, 8));
+    _channel.writeRegister(LBA2, bitRange(start, 40, 8));
 
     // Write low bytes of parameters
-    channel.writeRegister(SectorCount, lowBits(count, 8));
-    channel.writeRegister(LBA0, bitRange(start, 0, 8));
-    channel.writeRegister(LBA1, bitRange(start, 8, 8));
-    channel.writeRegister(LBA2, bitRange(start, 16, 8));
+    _channel.writeRegister(SectorCount, lowBits(count, 8));
+    _channel.writeRegister(LBA0, bitRange(start, 0, 8));
+    _channel.writeRegister(LBA1, bitRange(start, 8, 8));
+    _channel.writeRegister(LBA2, bitRange(start, 16, 8));
 
     // Send the command
-    channel.sendCommand(ReadPIOExt);
+    _channel.sendCommand(ReadPIOExt);
 
     // Each sector is read separately
     uint8_t* ptr = static_cast<uint8_t*>(dest);
     for (size_t sector = 0; sector < count; ++sector) {
-        if (!channel.waitForData()) {
+        if (!_channel.waitForData()) {
             return false;
         }
 
-        channel.readSector(ptr);
+        _channel.readSector(ptr);
         ptr += SECTOR_SIZE;
     }
 
@@ -247,7 +248,8 @@ static void copyString(char* dest, uint16_t* src, size_t numBytes) {
     *d = '\0';
 }
 
-OwnPtr<IDEDevice> detectDrive(IDEChannel& channel, DriveSelector drive) {
+OwnPtr<IDEDevice> IDEController::detectDrive(IDEChannel& channel,
+                                             DriveSelector drive) {
     channel.selectDrive(drive);
     channel.sendCommand(Identify);
 
@@ -285,7 +287,7 @@ OwnPtr<IDEDevice> detectDrive(IDEChannel& channel, DriveSelector drive) {
     channel.readSector(deviceInfo);
 
     // Get model name as a 40-byte ascii string
-    copyString(device->modelName, &deviceInfo[27], 40);
+    copyString(device->_modelName, &deviceInfo[27], 40);
 
     // I don't intend to support CHS addressing, so fail if LBA isn't supported
     if (!checkBit(deviceInfo[49], 9)) {
@@ -295,14 +297,55 @@ OwnPtr<IDEDevice> detectDrive(IDEChannel& channel, DriveSelector drive) {
 
     // Check for 48-bit LBA support
     if (checkBit(deviceInfo[83], 10)) {
-        device->lba48 = true;
-        memcpy(&device->numSectors, &deviceInfo[100], 8);
+        device->_lba48 = true;
+        memcpy(&device->_numSectors, &deviceInfo[100], 8);
     } else {
-        device->lba48 = false;
-        memcpy(&device->numSectors, &deviceInfo[60], 4);
+        device->_lba48 = false;
+        memcpy(&device->_numSectors, &deviceInfo[60], 4);
     }
 
     return device;
+}
+
+struct __attribute__((packed)) PartitionEntry {
+    uint8_t status;
+    uint8_t startHead;
+    uint8_t startSector : 6;
+    uint8_t startCylinderHigh : 2;
+    uint8_t startCylinderLow;
+    uint8_t partitionType;
+    uint8_t endHead;
+    uint8_t endSector : 6;
+    uint8_t endCylinderHigh : 2;
+    uint8_t endCylinderLow;
+    uint32_t lbaStart;
+    uint32_t numSectors;
+};
+
+static_assert(sizeof(PartitionEntry) == 16);
+
+void IDEController::detectPartitions(IDEDevice& device) {
+    // TODO: support ATAPI devices (though they usually don't have partitions)
+    if (device.isATAPI()) return;
+
+    Buffer firstSector(SECTOR_SIZE);
+    if (!device.readSectors(firstSector.get(), 0, 1)) {
+        println("can't read first sector of disk");
+        return;
+    }
+
+    PartitionEntry partitionTable[4];
+    memcpy(&partitionTable[0], &firstSector[0x1BE], sizeof(partitionTable));
+
+    for (size_t i = 0; i < 4; ++i) {
+        auto& entry = partitionTable[i];
+        if (entry.partitionType == 0) continue;
+
+        // TODO: support multiple partitions across drives
+        ASSERT(!_rootPartition);
+        _rootPartition = OwnPtr(
+            new DiskPartitionDevice(device, entry.lbaStart, entry.numSectors));
+    }
 }
 
 IDEController::IDEController() {
@@ -331,22 +374,26 @@ IDEController::IDEController() {
     // Detect drives
     _primaryMaster = detectDrive(*_primary, DriveSelector::Master);
     if (_primaryMaster) {
-        println("Primary master: {}", _primaryMaster->modelName);
+        println("Primary master: {}", _primaryMaster->modelName());
+        detectPartitions(*_primaryMaster);
     }
 
     _primarySlave = detectDrive(*_primary, DriveSelector::Slave);
     if (_primarySlave) {
-        println("Primary slave: {}", _primarySlave->modelName);
+        println("Primary slave: {}", _primarySlave->modelName());
+        detectPartitions(*_primarySlave);
     }
 
     _secondaryMaster = detectDrive(*_secondary, DriveSelector::Master);
     if (_secondaryMaster) {
-        println("Secondary master: {}", _secondaryMaster->modelName);
+        println("Secondary master: {}", _secondaryMaster->modelName());
+        detectPartitions(*_secondaryMaster);
     }
 
     _secondarySlave = detectDrive(*_secondary, DriveSelector::Slave);
     if (_secondarySlave) {
-        println("Secondary slave: {}", _secondarySlave->modelName);
+        println("Secondary slave: {}", _secondarySlave->modelName());
+        detectPartitions(*_secondarySlave);
     }
 
     println("IDE controller initialized");

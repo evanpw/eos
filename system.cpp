@@ -96,6 +96,6 @@ System::System() {
     initACPI();
     Timer::init();
 
-    _fs = Ext2FileSystem::create(_ideController->primarySlave());
+    _fs = Ext2FileSystem::create(_ideController->rootPartition());
     ASSERT(_fs);
 }
