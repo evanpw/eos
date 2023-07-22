@@ -21,6 +21,11 @@
 #include "thread.h"
 #include "timer.h"
 
+// Context switches only occur in kernel mode (during a syscall or an interrupt)
+// We save the usermode state when entering kernel mode (syscall or interrupt),
+// so that's where we return to. Segment registers aren't used, so we don't
+// actually need to save them
+
 [[noreturn]] static void jumpToUser(uint64_t rip, uint64_t rsp) {
     // TODO: be more careful about interrupts
     asm volatile(
@@ -48,7 +53,7 @@ void System::run() {
     Thread::s_current = &thread;
 
     // Look up the userland executable on disk
-    auto inode = system._fs->lookup("user.bin");
+    auto inode = system._fs->lookup("shell.bin");
     ASSERT(inode);
 
     // Allocate a fresh piece of page-aligned physical memory to store it
@@ -58,7 +63,7 @@ void System::run() {
 
     // Read the executable from disk
     if (!system._fs->readFile(ptr, *inode)) {
-        panic("failed to read user.bin");
+        panic("failed to read shell.bin");
     }
 
     UserAddressSpace userAddressSpace =
@@ -73,6 +78,14 @@ void System::run() {
     // Allocate a virtual memory area for the usermode stack
     VirtualAddress userStackBottom = userAddressSpace.vmalloc(4);
     VirtualAddress userStackTop = userStackBottom + 4 * PAGE_SIZE;
+
+    // And setup a kernel stack for this process (used by interrupts that occur
+    // while in ring3)
+    PhysicalAddress kernelStackBottomPhys = mm().pageAlloc(4);
+    VirtualAddress kernelStackBottom =
+        mm().physicalToVirtual(kernelStackBottomPhys);
+    VirtualAddress kernelStackTop = kernelStackBottom + 4 * PAGE_SIZE;
+    Processor::tss().rsp0 = kernelStackTop.value;
 
     println("Entering ring3");
     Processor::loadCR3(userAddressSpace.pml4());

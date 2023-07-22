@@ -105,6 +105,6 @@ with tempfile.TemporaryDirectory() as tmpdir:
     runcmd(f"mount {loop_filename}p1 {tmpdir}")
 
     try:
-        shutil.copy(f"{build_dir}/user.bin", tmpdir)
+        shutil.copy(f"{build_dir}/shell.bin", tmpdir)
     finally:
         runcmd(f"umount {tmpdir}")

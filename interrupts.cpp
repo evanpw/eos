@@ -49,14 +49,12 @@ InterruptDescriptor* g_idt = nullptr;
 IDTRegister g_idtr;
 
 void handleIRQ(uint8_t irq, InterruptFrame* frame) {
-    if (irq != 0) {
-        println("IRQ {}", irq);
-        println("rip: 0x{:X}", frame->rip);
-        println("cs: 0x{:X}", frame->cs);
-        println("rflags: 0x{:X}", frame->rflags);
-        println("rsp: 0x{:X}", frame->rsp);
-        println("ss: 0x{:X}", frame->ss);
-    }
+    println("IRQ {}", irq);
+    println("rip: 0x{:X}", frame->rip);
+    println("cs: 0x{:X}", frame->cs);
+    println("rflags: 0x{:X}", frame->rflags);
+    println("rsp: 0x{:X}", frame->rsp);
+    println("ss: 0x{:X}", frame->ss);
 
     // Send end-of-interrupt (EOI) signal to the PIC(s)
     if (irq >= 8) {

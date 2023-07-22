@@ -88,35 +88,15 @@ struct __attribute__((packed)) SegmentDescriptor {
 
 static_assert(sizeof(SegmentDescriptor) == 8);
 
-struct __attribute__((packed)) TaskStateSegment {
-    uint32_t reserved1;
-    uint64_t rsp0;
-    uint64_t rsp1;
-    uint64_t rsp2;
-    uint64_t reserved2;
-    uint64_t ist1;
-    uint64_t ist2;
-    uint64_t ist3;
-    uint64_t ist4;
-    uint64_t ist5;
-    uint64_t ist6;
-    uint64_t ist7;
-    uint64_t reserved3;
-    uint16_t reserved4;
-    uint16_t iopb;
-};
-
-static_assert(sizeof(TaskStateSegment) == 0x68);
-
 static GDTRegister gdtr;
 static SegmentDescriptor gdt[8];
-static TaskStateSegment tss;
+TaskStateSegment Processor::s_tss;
 
 void Processor::initDescriptors() {
-    // Clear the tss (we don't use any of the features), and set the IOPB base
-    // address to the end of the TSS (disabled)
-    memset(&tss, 0, sizeof(tss));
-    tss.iopb = sizeof(tss);
+    // Clear the tss, and set the IOPB base address to the end of the TSS
+    // (disabled)
+    memset(&s_tss, 0, sizeof(s_tss));
+    s_tss.iopb = sizeof(s_tss);
 
     // The first three entries must match the GDT from the bootloader, since we
     // don't reload segment registers after the lgdt
@@ -127,7 +107,7 @@ void Processor::initDescriptors() {
     gdt[3] = SegmentDescriptor::null();
     gdt[4] = SegmentDescriptor::data(3);
     gdt[5] = SegmentDescriptor::code(3);
-    PhysicalAddress tssAddr(reinterpret_cast<uint64_t>(&tss));
+    PhysicalAddress tssAddr(reinterpret_cast<uint64_t>(&s_tss));
     gdt[6] = SegmentDescriptor::tss(tssAddr, sizeof(TaskStateSegment) - 1);
     gdt[7] = SegmentDescriptor::raw(bitSlice(tssAddr.value, 32));
 

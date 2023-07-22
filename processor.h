@@ -16,9 +16,30 @@ struct __attribute__((packed)) GDTRegister {
     uint64_t addr;
 };
 
+struct __attribute__((packed)) TaskStateSegment {
+    uint32_t reserved1;
+    uint64_t rsp0;
+    uint64_t rsp1;
+    uint64_t rsp2;
+    uint64_t reserved2;
+    uint64_t ist1;
+    uint64_t ist2;
+    uint64_t ist3;
+    uint64_t ist4;
+    uint64_t ist5;
+    uint64_t ist6;
+    uint64_t ist7;
+    uint64_t reserved3;
+    uint16_t reserved4;
+    uint16_t iopb;
+};
+
+static_assert(sizeof(TaskStateSegment) == 0x68);
+
 // TODO: to support multiple cores, these static methods will have to be
 // instance methods
-struct Processor {
+class Processor {
+public:
     static void init();
     static void initDescriptors();
     static void checkFeatures();
@@ -90,4 +111,9 @@ struct Processor {
 
         asm volatile("wrmsr" : : "c"(msr), "a"(low), "d"(high));
     }
+
+    static TaskStateSegment& tss() { return s_tss; }
+
+private:
+    static TaskStateSegment s_tss;
 };

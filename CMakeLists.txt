@@ -91,15 +91,15 @@ set(LIBC_SOURCES
 )
 
 set(USER_SOURCES
-    user.cpp
+    user/shell.cpp
     ${LIBC_SOURCES}
     ${ESTD_SOURCES}
 )
 
-add_executable(user.elf ${USER_SOURCES})
+add_executable(shell.elf ${USER_SOURCES})
 
 target_compile_options(
-    user.elf
+    shell.elf
     PRIVATE
     -ffreestanding
     -mno-red-zone
@@ -109,16 +109,16 @@ target_compile_options(
     -mcmodel=large
 )
 
-target_link_options(user.elf PRIVATE -T ${CMAKE_SOURCE_DIR}/user.ld -nostdlib -lgcc)
-target_include_directories(user.elf PRIVATE ${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/libc/include)
+target_link_options(shell.elf PRIVATE -T ${CMAKE_SOURCE_DIR}/user.ld -nostdlib -lgcc)
+target_include_directories(shell.elf PRIVATE ${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/libc/include)
 
-# Convert user.elf to flat binary
+# Convert shell.elf to flat binary
 add_custom_command(
-    OUTPUT ${CMAKE_BINARY_DIR}/user.bin
-    DEPENDS user.elf
+    OUTPUT ${CMAKE_BINARY_DIR}/shell.bin
+    DEPENDS shell.elf
     COMMAND ${CMAKE_OBJCOPY}
-        -O binary ${CMAKE_BINARY_DIR}/user.elf
-        ${CMAKE_BINARY_DIR}/user.bin
+        -O binary ${CMAKE_BINARY_DIR}/shell.elf
+        ${CMAKE_BINARY_DIR}/shell.bin
         --set-section-flags .bss=alloc,load,contents
 )
 
@@ -163,7 +163,7 @@ add_custom_command(
         ${CMAKE_BINARY_DIR}/boot.bin
         ${CMAKE_BINARY_DIR}/boot.elf
         ${CMAKE_BINARY_DIR}/kernel.bin
-        ${CMAKE_BINARY_DIR}/user.bin
+        ${CMAKE_BINARY_DIR}/shell.bin
     COMMAND
         sudo python
         ${CMAKE_SOURCE_DIR}/scripts/create_disk_image.py
