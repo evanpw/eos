@@ -114,10 +114,9 @@ void handleException(uint8_t vector, const char* name, InterruptFrame* frame) {
         handleException(idx, name, frame, errorCode);                  \
     }
 
-#define EXCEPTION_HANDLER(idx, name)               \
-    void __attribute__((interrupt))                \
-    exceptionHandler##idx(InterruptFrame* frame) { \
-        handleException(idx, name, frame);         \
+#define EXCEPTION_HANDLER(idx, name)                                               \
+    void __attribute__((interrupt)) exceptionHandler##idx(InterruptFrame* frame) { \
+        handleException(idx, name, frame);                                         \
     }
 
 EXCEPTION_HANDLER(0, "Division Error")
@@ -153,9 +152,9 @@ EXCEPTION_HANDLER_WITH_CODE(29, "VMM Communication Exception")
 EXCEPTION_HANDLER_WITH_CODE(30, "Security Exception")
 EXCEPTION_HANDLER(31, "Reserved")
 
-#define REGISTER_IRQ(idx)                          \
-    g_idt[IRQ_OFFSET + idx] = InterruptDescriptor( \
-        (uint64_t)irqHandler##idx, ISR_PRESENT | ISR_TRAP_GATE);
+#define REGISTER_IRQ(idx)     \
+    g_idt[IRQ_OFFSET + idx] = \
+        InterruptDescriptor((uint64_t)irqHandler##idx, ISR_PRESENT | ISR_TRAP_GATE);
 
 void configurePIC() {
     // ICW1: Edge triggered, call address interval 8, cascade mode, expect ICw4

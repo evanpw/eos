@@ -18,8 +18,7 @@ struct CPUIDResult {
 static CPUIDResult cpuid(uint32_t func) {
     CPUIDResult result;
     asm volatile("cpuid"
-                 : "=a"(result.eax), "=b"(result.ebx), "=c"(result.ecx),
-                   "=d"(result.edx)
+                 : "=a"(result.eax), "=b"(result.ebx), "=c"(result.ecx), "=d"(result.edx)
                  : "a"(func)
                  :);
 
@@ -112,8 +111,7 @@ void Processor::initDescriptors() {
     gdt[7] = SegmentDescriptor::raw(bitSlice(tssAddr.value, 32));
 
     // Load the GDT register
-    gdtr.addr =
-        reinterpret_cast<uint64_t>(&gdt[0]);  // must be a physical address
+    gdtr.addr = reinterpret_cast<uint64_t>(&gdt[0]);  // must be a physical address
     gdtr.limit = sizeof(gdt) - 1;
     lgdt(gdtr);
 

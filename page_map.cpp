@@ -27,8 +27,7 @@ void KernelAddressSpace::buildLinearMemoryMap(uint64_t physicalMemoryRange) {
         int pageSize;
         if (current % GiB == 0 && physicalMemoryRange - current >= GiB) {
             pageSize = 2;
-        } else if (current % (2 * MiB) == 0 &&
-                   physicalMemoryRange - current >= 2 * MiB) {
+        } else if (current % (2 * MiB) == 0 && physicalMemoryRange - current >= 2 * MiB) {
             pageSize = 1;
         } else {
             pageSize = 0;
@@ -41,8 +40,7 @@ void KernelAddressSpace::buildLinearMemoryMap(uint64_t physicalMemoryRange) {
     }
 }
 
-void KernelAddressSpace::mapPageImpl(PhysicalAddress pml4,
-                                     VirtualAddress virtAddr,
+void KernelAddressSpace::mapPageImpl(PhysicalAddress pml4, VirtualAddress virtAddr,
                                      PhysicalAddress physAddr, int pageSize,
                                      uint64_t flags) {
     // pageSize = 0: 4KiB pages
@@ -76,8 +74,7 @@ void KernelAddressSpace::mapPageImpl(PhysicalAddress pml4,
 
             // Point the correct entry in the PML4 to the new PDP and mark it
             // present and writable
-            entry = PageMapEntry(pmlNextPhysAddr,
-                                 PAGE_PRESENT | PAGE_WRITABLE | flags);
+            entry = PageMapEntry(pmlNextPhysAddr, PAGE_PRESENT | PAGE_WRITABLE | flags);
             pml[index] = entry;
         } else {
             ASSERT(entry.hasFlags(PAGE_PRESENT | PAGE_WRITABLE | flags));
@@ -119,8 +116,8 @@ UserAddressSpace KernelAddressSpace::makeUserAddressSpace() {
     return UserAddressSpace(*this, upml4);
 }
 
-void UserAddressSpace::mapPage(VirtualAddress virtAddr,
-                               PhysicalAddress physAddr, int pageSize) {
+void UserAddressSpace::mapPage(VirtualAddress virtAddr, PhysicalAddress physAddr,
+                               int pageSize) {
     _kaddr.mapPageImpl(_pml4, virtAddr, physAddr, pageSize, PAGE_USER);
 }
 

@@ -36,9 +36,7 @@ public:
         Arg,
     };
 
-    static TermArg* makeConst(uint64_t value) {
-        return new TermArg(Constant, value);
-    }
+    static TermArg* makeConst(uint64_t value) { return new TermArg(Constant, value); }
 
     static TermArg* makeArg(uint64_t value) { return new TermArg(Arg, value); }
 

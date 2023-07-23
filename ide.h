@@ -36,8 +36,7 @@ protected:
 
 // A standard (non-packet) ATA device
 struct ATADevice : public IDEDevice {
-    ATADevice(IDEChannel& channel, DriveSelector drive)
-    : IDEDevice(channel, drive) {}
+    ATADevice(IDEChannel& channel, DriveSelector drive) : IDEDevice(channel, drive) {}
 
     bool readSectors(void* dest, uint64_t start, size_t count) override;
     bool isATAPI() const override { return false; }
@@ -45,8 +44,7 @@ struct ATADevice : public IDEDevice {
 
 // An ATAPI (ATA packet interface) device, usually an optical drive
 struct ATAPIDevice : public IDEDevice {
-    ATAPIDevice(IDEChannel& channel, DriveSelector drive)
-    : IDEDevice(channel, drive) {}
+    ATAPIDevice(IDEChannel& channel, DriveSelector drive) : IDEDevice(channel, drive) {}
 
     bool readSectors(void*, uint64_t, size_t) override {
         println("ATAPIDevice::readSectors not implemented");

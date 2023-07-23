@@ -19,25 +19,13 @@ struct PhysicalAddress {
         return *this;
     }
 
-    int64_t operator-(const PhysicalAddress& rhs) const {
-        return value - rhs.value;
-    }
+    int64_t operator-(const PhysicalAddress& rhs) const { return value - rhs.value; }
 
-    bool operator<(const PhysicalAddress& rhs) const {
-        return value < rhs.value;
-    }
-    bool operator<=(const PhysicalAddress& rhs) const {
-        return value <= rhs.value;
-    }
-    bool operator>(const PhysicalAddress& rhs) const {
-        return value > rhs.value;
-    }
-    bool operator>=(const PhysicalAddress& rhs) const {
-        return value >= rhs.value;
-    }
-    bool operator==(const PhysicalAddress& rhs) const {
-        return value == rhs.value;
-    }
+    bool operator<(const PhysicalAddress& rhs) const { return value < rhs.value; }
+    bool operator<=(const PhysicalAddress& rhs) const { return value <= rhs.value; }
+    bool operator>(const PhysicalAddress& rhs) const { return value > rhs.value; }
+    bool operator>=(const PhysicalAddress& rhs) const { return value >= rhs.value; }
+    bool operator==(const PhysicalAddress& rhs) const { return value == rhs.value; }
 
     uint64_t pageBase(int pageSize = 0) const {
         ASSERT(pageSize >= 0 && pageSize <= 2);
@@ -56,9 +44,7 @@ struct PhysicalAddress {
 struct VirtualAddress {
     VirtualAddress(uint64_t value) : value(value) {}
 
-    VirtualAddress operator+(size_t delta) const {
-        return VirtualAddress(value + delta);
-    }
+    VirtualAddress operator+(size_t delta) const { return VirtualAddress(value + delta); }
 
     VirtualAddress& operator+=(size_t delta) {
         // TODO: check for overflow

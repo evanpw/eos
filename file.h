@@ -20,8 +20,6 @@ struct File {
 
     virtual OwnPtr<OpenFileDescription> open();
     virtual void close(){};
-    virtual ssize_t read(OpenFileDescription& fd, void* buffer,
-                         size_t count) = 0;
-    virtual ssize_t write(OpenFileDescription& fd, const void* buffer,
-                          size_t count) = 0;
+    virtual ssize_t read(OpenFileDescription& fd, void* buffer, size_t count) = 0;
+    virtual ssize_t write(OpenFileDescription& fd, const void* buffer, size_t count) = 0;
 };

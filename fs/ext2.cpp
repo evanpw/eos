@@ -7,15 +7,11 @@
 #include "panic.h"
 #include "units.h"
 
-size_t Ext2FileSystem::blockSize() const {
-    return 1024UL << _superBlock->log_block_size;
-}
+size_t Ext2FileSystem::blockSize() const { return 1024UL << _superBlock->log_block_size; }
 size_t Ext2FileSystem::numBlockGroups() const {
     return ceilDiv(_superBlock->blocks_count, _superBlock->blocks_per_group);
 }
-size_t Ext2FileSystem::sectorsPerBlock() const {
-    return blockSize() / SECTOR_SIZE;
-}
+size_t Ext2FileSystem::sectorsPerBlock() const { return blockSize() / SECTOR_SIZE; }
 
 bool Ext2FileSystem::readSuperBlock() {
     // The ext2 superblock is always 1024 bytes (2 sectors) at LBA 2 (offset
@@ -26,14 +22,12 @@ bool Ext2FileSystem::readSuperBlock() {
     }
 
     if (_superBlock->magic != ext2::SUPER_MAGIC) {
-        println("ext2: superblock magic number is wrong: {:04X}",
-                _superBlock->magic);
+        println("ext2: superblock magic number is wrong: {:04X}", _superBlock->magic);
         return false;
     }
 
     if (_superBlock->rev_level != ext2::DYNAMIC_REV) {
-        println("ext2: unsupported major revision level: {}",
-                _superBlock->rev_level);
+        println("ext2: unsupported major revision level: {}", _superBlock->rev_level);
         return false;
     }
 
@@ -153,8 +147,7 @@ bool Ext2FileSystem::readBlock(void* dest, uint32_t blockId) {
     return true;
 }
 
-bool Ext2FileSystem::readBlock(void* dest, uint32_t blockId,
-                               uint32_t maxBytes) {
+bool Ext2FileSystem::readBlock(void* dest, uint32_t blockId, uint32_t maxBytes) {
     if (maxBytes >= blockSize()) {
         return readBlock(dest, blockId);
     }
@@ -230,8 +223,7 @@ OwnPtr<ext2::Inode> Ext2FileSystem::lookup(const char* path) {
         ext2::DirectoryEntry dirEntry;
         memcpy(&dirEntry, &_rootDir[offset], sizeof(dirEntry));
 
-        memcpy(nameBuffer, &_rootDir[offset + sizeof(dirEntry)],
-               dirEntry.name_len);
+        memcpy(nameBuffer, &_rootDir[offset + sizeof(dirEntry)], dirEntry.name_len);
         nameBuffer[dirEntry.name_len] = '\0';
 
         if (strncmp(nameBuffer, path, dirEntry.name_len + 1) == 0) {

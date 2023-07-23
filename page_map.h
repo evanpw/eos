@@ -44,11 +44,10 @@ public:
     KernelAddressSpace(MemoryManager& mm) : _mm(mm) {}
 
     void mapPageImpl(PhysicalAddress pml4, VirtualAddress virtAddr,
-                     PhysicalAddress physAddr, int pageSize = 0,
-                     uint64_t flags = 0);
+                     PhysicalAddress physAddr, int pageSize = 0, uint64_t flags = 0);
 
-    void mapPage(VirtualAddress virtAddr, PhysicalAddress physAddr,
-                 int pageSize = 0, uint64_t flags = 0) {
+    void mapPage(VirtualAddress virtAddr, PhysicalAddress physAddr, int pageSize = 0,
+                 uint64_t flags = 0) {
         mapPageImpl(_pml4, virtAddr, physAddr, pageSize, flags);
     }
 
@@ -70,8 +69,7 @@ private:
 
 class UserAddressSpace {
 public:
-    void mapPage(VirtualAddress virtAddr, PhysicalAddress physAddr,
-                 int pageSize = 0);
+    void mapPage(VirtualAddress virtAddr, PhysicalAddress physAddr, int pageSize = 0);
 
     PhysicalAddress pml4() const { return _pml4; }
 

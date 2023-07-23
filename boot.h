@@ -6,8 +6,7 @@
 constexpr uint64_t KERNEL_PML4 = 0x7C000;
 
 struct E820Entry;
-static uint32_t* const E820_NUM_ENTRIES_PTR =
-    reinterpret_cast<uint32_t*>(0x1000);
+static uint32_t* const E820_NUM_ENTRIES_PTR = reinterpret_cast<uint32_t*>(0x1000);
 static E820Entry* const E820_TABLE = reinterpret_cast<E820Entry*>(0x1004);
 
 enum SegmentSelector : uint16_t {

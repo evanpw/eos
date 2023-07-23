@@ -47,15 +47,9 @@ public:
     static void halt() { asm volatile("hlt"); }
     static void pause() { asm volatile("pause"); }
 
-    static void lidt(IDTRegister& idtr) {
-        asm volatile("lidt %0" : : "m"(idtr));
-    }
-    static void lgdt(GDTRegister& gdtr) {
-        asm volatile("lgdt %0" : : "m"(gdtr));
-    }
-    static void ltr(uint16_t selector) {
-        asm volatile("ltr %0" : : "a"(selector));
-    }
+    static void lidt(IDTRegister& idtr) { asm volatile("lidt %0" : : "m"(idtr)); }
+    static void lgdt(GDTRegister& gdtr) { asm volatile("lgdt %0" : : "m"(gdtr)); }
+    static void ltr(uint16_t selector) { asm volatile("ltr %0" : : "a"(selector)); }
 
     static void enableInterrupts() { asm volatile("sti"); }
     static void disableInterrupts() { asm volatile("cli"); }

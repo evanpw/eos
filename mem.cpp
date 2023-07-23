@@ -197,8 +197,7 @@ size_t MemoryManager::freePageCount() const {
 
     FreePageRange* current = _freePageList;
     while (current) {
-        ASSERT(current->start.pageOffset() == 0 &&
-               current->end.pageOffset() == 0);
+        ASSERT(current->start.pageOffset() == 0 && current->end.pageOffset() == 0);
         freePages += (current->end - current->start) / PAGE_SIZE;
         current = current->next;
     }
@@ -245,8 +244,7 @@ void* MemoryManager::kmalloc(size_t size) {
             }
 
             // If the next block is also free, combine them
-            *header =
-                BlockHeader::freeBlock(header->size() + nextHeader->size());
+            *header = BlockHeader::freeBlock(header->size() + nextHeader->size());
 
             // Continue until we reach the end of the heap or a used block
         }
@@ -291,8 +289,7 @@ void MemoryManager::showHeap() const {
     while (ptr < _heap + HEAP_SIZE) {
         // TODO: use memcpy
         const BlockHeader* header = reinterpret_cast<const BlockHeader*>(ptr);
-        println("addr={:X}, size={}, free={}", ptr, header->size(),
-                header->isFree());
+        println("addr={:X}, size={}, free={}", ptr, header->size(), header->isFree());
 
         ptr += header->size();
     }

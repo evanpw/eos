@@ -30,8 +30,7 @@ private:
     // Low-level interface
     bool readBlock(void* dest, uint32_t blockId);
     bool readBlock(void* dest, uint32_t blockId, uint32_t maxBytes);
-    bool readRange(void* dest, uint32_t blockId, uint32_t numBytes,
-                   uint32_t offset = 0);
+    bool readRange(void* dest, uint32_t blockId, uint32_t numBytes, uint32_t offset = 0);
 
     DiskDevice& _disk;
     OwnPtr<ext2::SuperBlock> _superBlock;

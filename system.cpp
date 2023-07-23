@@ -32,9 +32,8 @@
 //
 //
 // Case 1: timer interrupt while running in ring3: immediately switch
-// Case 2: timer interrupt while running in ring0: switch when returning to
-// ring3 Case 3: voluntary preemption while running a syscall: immediately
-// switch
+// Case 2: timer interrupt while running in ring0: switch when returning to ring3
+// Case 3: voluntary preemption while running a syscall: immediately switch
 
 [[noreturn]] static void jumpToUser(uint64_t rip, uint64_t rsp) {
     // TODO: be more careful about interrupts
@@ -76,8 +75,7 @@ void System::run() {
         panic("failed to read shell.bin");
     }
 
-    UserAddressSpace userAddressSpace =
-        mm().kaddressSpace().makeUserAddressSpace();
+    UserAddressSpace userAddressSpace = mm().kaddressSpace().makeUserAddressSpace();
 
     // Map the userland image at the user base
     for (size_t i = 0; i < pagesNeeded; ++i) {

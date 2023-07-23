@@ -42,9 +42,7 @@ public:
     uint8_t cacheLineSize() const { return readConfigByte(0x0C); }
     uint8_t latencyTimer() const { return readConfigByte(0x0D); }
     uint8_t headerType() const { return lowBits(readConfigByte(0x0E), 7); }
-    bool multifunction() const {
-        return highBits(readConfigByte(0x0E), 1) != 0;
-    }
+    bool multifunction() const { return highBits(readConfigByte(0x0E), 1) != 0; }
     uint8_t bist() const { return readConfigByte(0x0F); }
 
     // Applicable to headerType 0x00 (General Device)

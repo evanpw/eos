@@ -507,8 +507,8 @@ void Terminal::onKeyEvent(const KeyboardEvent& event) {
             }
         }
 
-        bool shifted = _keyboard.isPressed(KeyCode::LShift) |
-                       _keyboard.isPressed(KeyCode::RShift);
+        bool shifted =
+            _keyboard.isPressed(KeyCode::LShift) | _keyboard.isPressed(KeyCode::RShift);
         char c = shifted ? keyCodeToAsciiShifted(event.key)
                          : keyCodeToAsciiUnshifted(event.key);
         if (c != '\0') {
@@ -587,8 +587,7 @@ ssize_t Terminal::read(OpenFileDescription&, void* buffer, size_t count) {
     return bytesRead;
 }
 
-ssize_t Terminal::write(OpenFileDescription&, const void* buffer,
-                        size_t count) {
+ssize_t Terminal::write(OpenFileDescription&, const void* buffer, size_t count) {
     // TODO: check fd mode
     // TODO: output processing (NL/CR)
     const char* src = static_cast<const char*>(buffer);

@@ -14,8 +14,8 @@
 #include "thread.h"
 #include "timer.h"
 
-using SyscallHandler = int64_t (*)(uint64_t, uint64_t, uint64_t, uint64_t,
-                                   uint64_t, uint64_t);
+using SyscallHandler = int64_t (*)(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t,
+                                   uint64_t);
 
 ssize_t sys_read(int fd, void* buffer, size_t count) {
     Process& process = Thread::current().process;

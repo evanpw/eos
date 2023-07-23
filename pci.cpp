@@ -9,8 +9,7 @@ static constexpr uint16_t PCI_CONFIG_ADDRESS = 0xCF8;
 static constexpr uint16_t PCI_CONFIG_DATA = 0xCFC;
 
 struct __attribute__((packed)) PCIConfigAddress {
-    PCIConfigAddress(uint8_t bus, uint8_t device, uint8_t function,
-                     uint8_t offset)
+    PCIConfigAddress(uint8_t bus, uint8_t device, uint8_t function, uint8_t offset)
     : offset(offset),
       function(function),
       device(device),
@@ -82,34 +81,26 @@ void PCIDevices::checkFunction(uint8_t bus, uint8_t device, uint8_t function) {
 
     if (pciDevice->classSubclass() == (uint16_t)PCIDeviceClass::StorageIDE) {
         println("IDE controller");
-    } else if (pciDevice->classSubclass() ==
-               (uint16_t)PCIDeviceClass::BridgeHost) {
+    } else if (pciDevice->classSubclass() == (uint16_t)PCIDeviceClass::BridgeHost) {
         println("Host bridge");
-    } else if (pciDevice->classSubclass() ==
-               (uint16_t)PCIDeviceClass::BridgeISA) {
+    } else if (pciDevice->classSubclass() == (uint16_t)PCIDeviceClass::BridgeISA) {
         println("ISA bridge");
-    } else if (pciDevice->classSubclass() ==
-               (uint16_t)PCIDeviceClass::DisplayVGA) {
+    } else if (pciDevice->classSubclass() == (uint16_t)PCIDeviceClass::DisplayVGA) {
         println("VGA compatible controller");
-    } else if (pciDevice->classSubclass() ==
-               (uint16_t)PCIDeviceClass::NetworkEthernet) {
+    } else if (pciDevice->classSubclass() == (uint16_t)PCIDeviceClass::NetworkEthernet) {
         println("Ethernet controller");
-    } else if (pciDevice->classSubclass() ==
-               (uint16_t)PCIDeviceClass::BridgeOther) {
+    } else if (pciDevice->classSubclass() == (uint16_t)PCIDeviceClass::BridgeOther) {
         println("Bridge");
-    } else if (pciDevice->classSubclass() ==
-               (uint16_t)PCIDeviceClass::StorageSATA) {
+    } else if (pciDevice->classSubclass() == (uint16_t)PCIDeviceClass::StorageSATA) {
         print("SATA controller");
         if (pciDevice->progIf() == 0x01) {
             println(" (AHCI)");
         } else {
             println("");
         }
-    } else if (pciDevice->classSubclass() ==
-               (uint16_t)PCIDeviceClass::SerialSMBus) {
+    } else if (pciDevice->classSubclass() == (uint16_t)PCIDeviceClass::SerialSMBus) {
         println("SMBus controller");
-    } else if (pciDevice->classSubclass() ==
-               (uint16_t)PCIDeviceClass::SerialUSB) {
+    } else if (pciDevice->classSubclass() == (uint16_t)PCIDeviceClass::SerialUSB) {
         print("USB host controller");
         if (pciDevice->progIf() == 0x00) {
             println(" (UHCI)");
@@ -122,11 +113,9 @@ void PCIDevices::checkFunction(uint8_t bus, uint8_t device, uint8_t function) {
         } else {
             println("");
         }
-    } else if (pciDevice->classSubclass() ==
-               (uint16_t)PCIDeviceClass::MultimediaAudio) {
+    } else if (pciDevice->classSubclass() == (uint16_t)PCIDeviceClass::MultimediaAudio) {
         println("Audio device");
-    } else if (pciDevice->classSubclass() ==
-               (uint16_t)PCIDeviceClass::BridgePCI) {
+    } else if (pciDevice->classSubclass() == (uint16_t)PCIDeviceClass::BridgePCI) {
         println("PCI bridge");
         scanBus(pciDevice->secondaryBus());
     } else {

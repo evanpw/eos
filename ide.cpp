@@ -116,9 +116,7 @@ IDEChannel::IDEChannel(uint16_t commandBlock, uint16_t controlBlock) {
 
 uint8_t IDEChannel::readRegister(Register reg) { return inb(_ports[reg]); }
 
-void IDEChannel::writeRegister(Register reg, uint8_t value) {
-    outb(_ports[reg], value);
-}
+void IDEChannel::writeRegister(Register reg, uint8_t value) { outb(_ports[reg], value); }
 
 StatusFlags IDEChannel::readStatus() { return readRegister(Status); }
 
@@ -130,8 +128,8 @@ uint32_t IDEChannel::readSignature() {
     uint8_t byte2 = readRegister(LBA1);
     uint8_t byte3 = readRegister(LBA2);
 
-    return (uint32_t(byte3) << 24) | (uint32_t(byte2) << 16) |
-           (uint32_t(byte1) << 8) | byte0;
+    return (uint32_t(byte3) << 24) | (uint32_t(byte2) << 16) | (uint32_t(byte1) << 8) |
+           byte0;
 }
 
 uint16_t IDEChannel::readData() {
@@ -248,8 +246,7 @@ static void copyString(char* dest, uint16_t* src, size_t numBytes) {
     *d = '\0';
 }
 
-OwnPtr<IDEDevice> IDEController::detectDrive(IDEChannel& channel,
-                                             DriveSelector drive) {
+OwnPtr<IDEDevice> IDEController::detectDrive(IDEChannel& channel, DriveSelector drive) {
     channel.selectDrive(drive);
     channel.sendCommand(Identify);
 
@@ -343,14 +340,13 @@ void IDEController::detectPartitions(IDEDevice& device) {
 
         // TODO: support multiple partitions across drives
         ASSERT(!_rootPartition);
-        _rootPartition = OwnPtr(
-            new DiskPartitionDevice(device, entry.lbaStart, entry.numSectors));
+        _rootPartition =
+            OwnPtr(new DiskPartitionDevice(device, entry.lbaStart, entry.numSectors));
     }
 }
 
 IDEController::IDEController() {
-    PCIDevice* pciDevice =
-        System::pciDevices().findByClass(PCIDeviceClass::StorageIDE);
+    PCIDevice* pciDevice = System::pciDevices().findByClass(PCIDeviceClass::StorageIDE);
 
     if (!pciDevice) {
         println("No IDE controller found");
