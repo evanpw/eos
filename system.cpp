@@ -25,6 +25,16 @@
 // We save the usermode state when entering kernel mode (syscall or interrupt),
 // so that's where we return to. Segment registers aren't used, so we don't
 // actually need to save them
+//
+// If our kernel is not preemptable, then we can only switch tasks when exiting
+// the kernel, or when the kernel voluntarily gives up control (like a blocking
+// syscall)
+//
+//
+// Case 1: timer interrupt while running in ring3: immediately switch
+// Case 2: timer interrupt while running in ring0: switch when returning to
+// ring3 Case 3: voluntary preemption while running a syscall: immediately
+// switch
 
 [[noreturn]] static void jumpToUser(uint64_t rip, uint64_t rsp) {
     // TODO: be more careful about interrupts
@@ -78,14 +88,6 @@ void System::run() {
     // Allocate a virtual memory area for the usermode stack
     VirtualAddress userStackBottom = userAddressSpace.vmalloc(4);
     VirtualAddress userStackTop = userStackBottom + 4 * PAGE_SIZE;
-
-    // And setup a kernel stack for this process (used by interrupts that occur
-    // while in ring3)
-    PhysicalAddress kernelStackBottomPhys = mm().pageAlloc(4);
-    VirtualAddress kernelStackBottom =
-        mm().physicalToVirtual(kernelStackBottomPhys);
-    VirtualAddress kernelStackTop = kernelStackBottom + 4 * PAGE_SIZE;
-    Processor::tss().rsp0 = kernelStackTop.value;
 
     println("Entering ring3");
     Processor::loadCR3(userAddressSpace.pml4());
