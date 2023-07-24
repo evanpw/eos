@@ -13,6 +13,7 @@
 #include "processor.h"
 #include "thread.h"
 #include "timer.h"
+#include "trap.h"
 
 using SyscallHandler = int64_t (*)(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t,
                                    uint64_t);
@@ -65,7 +66,18 @@ int sys_sleep(int ticks) {
 SyscallHandler syscallTable[MAX_SYSCALL_NO + 1];
 
 // Defined in syscall_entry.S
-extern "C" void syscallEntry();
+extern "C" void syscallEntryAsm();
+
+// Called by syscallEntryAsm
+extern "C" void syscallEntry(TrapRegisters& regs) {
+    if (regs.rax > MAX_SYSCALL_NO) {
+        regs.rax = -1;
+        return;
+    }
+
+    regs.rax =
+        syscallTable[regs.rax](regs.rdi, regs.rsi, regs.rdx, regs.r10, regs.r8, regs.r9);
+}
 
 // Model-Specific Registers (MSRs)
 static constexpr uint64_t IA32_EFER = 0xC0000080;
@@ -83,7 +95,7 @@ void initSyscalls() {
     Processor::wrmsr(IA32_STAR, concatBits((uint32_t)0x00180008, lowStar));
 
     // Set up syscall to jump to syscallEntry
-    Processor::wrmsr(IA32_LSTAR, (uint64_t)&syscallEntry);
+    Processor::wrmsr(IA32_LSTAR, (uint64_t)&syscallEntryAsm);
 
     // Create table of syscall handlers
     syscallTable[SYS_read] = bit_cast<SyscallHandler>(sys_read);

@@ -2,6 +2,4 @@
 // handles the user -> kernel entry point
 #pragma once
 
-extern "C" [[gnu::naked]] void syscallEntry();
-
 void initSyscalls();

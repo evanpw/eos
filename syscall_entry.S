@@ -1,40 +1,65 @@
-// External definitions
-#include "api/syscalls.h"
-.global syscallTable
-
 .global syscallEntry
-syscallEntry:
-    // Save all callee-clobbered registers
-    push %rcx
-    push %rdx
-    push %rsi
-    push %rdi
-    push %r8
-    push %r9
-    push %r10
-    push %r11
 
-    // Check for out-of-range syscall #
-    cmp MAX_SYSCALL_NO, %rax
-    jna .makeCall
-    mov $-1, %rax
-    jmp .return
+// Defines the syscall entry point to the kernel. Saves registers and routes the syscall
+// to the appropriate handler
+.global syscallEntryAsm
+syscallEntryAsm:
+    // TODO: swap to kernel stack and save user stack in non-global location
+    mov %rsp, (saveStack)
 
-    // Look up the syscall handler and call it
-.makeCall:
-    mov %r10, %rcx  // syscall uses r10 for arg4 while C uses rcx
-    call *syscallTable(, %rax, 8)
+    // Construct a TrapRegisters struct on the stack
+    pushq $0x20        // ss (TODO: make this have the right DPL)
+    pushq (saveStack)  // rspPrev
+    pushq %r11         // rflags
+    pushq $0x28        // cs (TODO: make this have the right DPL)
+    pushq %rcx         // rip
+    pushq $0           // errorCode
+    pushq %rax
+    pushq %rcx
+    pushq %rdx
+    pushq %rbx
+    pushq %rbp
+    pushq %rsp
+    pushq %rsi
+    pushq %rdi
+    pushq %r8
+    pushq %r9
+    pushq %r10
+    pushq %r11
+    pushq %r12
+    pushq %r13
+    pushq %r14
+    pushq %r15
 
-    // Restore all callee-clobbered registers
+    // Pass a pointer to TrapRegisters as the only argument
+    mov %rsp, %rdi
+    call syscallEntry
+
+    // Return value is placed into TrapRegisters->rax by syscallEntry
 .return:
-    pop %r11
-    pop %r10
-    pop %r9
-    pop %r8
-    pop %rdi
-    pop %rsi
-    pop %rdx
-    pop %rcx
+    popq %r15
+    popq %r14
+    popq %r13
+    popq %r12
+    popq %r11
+    popq %r10
+    popq %r9
+    popq %r8
+    popq %rdi
+    popq %rsi
+    add $8, %rsp
+    popq %rbp
+    popq %rbx
+    popq %rdx
+    popq %rcx
+    popq %rax
+    add $8, %rsp // errorCode
+    popq %rcx   // rip
+    add $8, %rsp // cs
+    popq %r11   // rflags
+    popq %rsp   // rspPrev (this also skips ss)
 
-    // Loads rip from rcx and rflags from r11
     sysretq
+
+saveStack:
+    .long 0
