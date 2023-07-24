@@ -13,7 +13,7 @@ set(CMAKE_C_FLAGS_STANDARD "-O -g" CACHE STRING "" FORCE)
 set(CMAKE_EXE_LINKER_FLAGS_STANDARD "-O -g" CACHE STRING "" FORCE)
 MARK_AS_ADVANCED(CMAKE_CXX_FLAGS_STANDARD CMAKE_C_FLAGS_STANDARD CMAKE_EXE_LINKER_FLAGS_STANDARD)
 
-project(eos LANGUAGES CXX ASM_NASM)
+project(eos LANGUAGES CXX ASM_NASM ASM)
 
 
 # Share between kernel and userland
@@ -48,6 +48,7 @@ set(KERNEL_SOURCES
     terminal.cpp
     thread.cpp
     timer.cpp
+    syscall_entry.S
     ${ESTD_SOURCES}
 )
 

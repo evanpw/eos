@@ -64,50 +64,8 @@ int sys_sleep(int ticks) {
 // We don't have static initialization, so this is initialized at runtime
 SyscallHandler syscallTable[MAX_SYSCALL_NO + 1];
 
-extern "C" [[gnu::naked]] void syscallEntry() {
-    // TODO: switch to kernel stack
-    // TODO: be careful about interrupts
-    asm volatile(
-        // Save all callee-clobbered registers
-        "push %%rcx\n"
-        "push %%rdx\n"
-        "push %%rsi\n"
-        "push %%rdi\n"
-        "push %%r8\n"
-        "push %%r9\n"
-        "push %%r10\n"
-        "push %%r11\n"
-
-        // Check for out-of-range syscall #
-        "cmp %[MAX_SYSCALL_NO], %%rax\n"
-        "jna 1f\n"
-        "mov $-1, %%rax\n"
-        "jmp 2f\n"
-
-        // Look up the syscall handler and call it
-        "1:\n"
-        "mov %%r10, %%rcx\n"  // syscall uses r10 for arg4 while C uses rcx
-        "call *syscallTable(, %%rax, 8)\n"
-
-        // Restore all callee-clobbered registers
-        "2:\n"
-        "pop %%r11\n"
-        "pop %%r10\n"
-        "pop %%r9\n"
-        "pop %%r8\n"
-        "pop %%rdi\n"
-        "pop %%rsi\n"
-        "pop %%rdx\n"
-        "pop %%rcx\n"
-
-        // Loads rip from rcx and rflags from r11
-        "sysretq\n"
-        :
-        : [MAX_SYSCALL_NO] "i"(MAX_SYSCALL_NO)
-        : "memory");
-
-    __builtin_unreachable();
-}
+// Defined in syscall_entry.S
+extern "C" void syscallEntry();
 
 // Model-Specific Registers (MSRs)
 static constexpr uint64_t IA32_EFER = 0xC0000080;
