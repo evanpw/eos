@@ -34,6 +34,13 @@
 // Case 1: timer interrupt while running in ring3: immediately switch
 // Case 2: timer interrupt while running in ring0: switch when returning to ring3
 // Case 3: voluntary preemption while running a syscall: immediately switch
+//
+// Because a thread can enter the kernel via a syscall and exit via an IRQ (or
+// vice-versa), we need to save state in a uniform trap frame on every kernel entry that
+// is agnostic between those two cases
+//
+// The call that switches context only needs to save/restore callee-saved registers, since
+// it's a function call and C++ will save the caller-saved registers for us on the stack
 
 [[noreturn]] static void jumpToUser(uint64_t rip, uint64_t rsp) {
     // TODO: be more careful about interrupts
