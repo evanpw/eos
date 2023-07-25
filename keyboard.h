@@ -1,8 +1,9 @@
 // Keyboard drive
 #pragma once
 #include "interrupts.h"
+#include "trap.h"
 
-void __attribute__((interrupt)) irqHandler1(InterruptFrame* frame);
+void irqHandler1(TrapRegisters& regs);
 
 enum class KeyCode : uint8_t {
     // Identity-mapped keycodes
@@ -139,7 +140,7 @@ private:
     friend class System;
     KeyboardDevice();
 
-    friend void __attribute__((interrupt)) irqHandler1(InterruptFrame* frame);
+    friend void irqHandler1(TrapRegisters& regs);
     void handleKey(uint8_t scanCode);
 
     bool _lastE0 = false;

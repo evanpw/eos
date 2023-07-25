@@ -6,8 +6,13 @@
 
 uint64_t Timer::s_tickCount;
 
+void Timer::init() {
+    s_tickCount = 0;
+    registerIrqHandler(0, irqHandler0);
+}
+
 // Timer IRQ
-void __attribute__((interrupt)) irqHandler0(InterruptFrame*) {
+void irqHandler0(TrapRegisters&) {
     Timer::increment();
     outb(PIC1_COMMAND, EOI);
 }

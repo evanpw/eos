@@ -4,6 +4,7 @@
 
 #include "estd/bits.h"
 #include "processor.h"
+#include "trap.h"
 
 // I/O ports for communicating with the PIC
 enum : uint16_t {
@@ -42,4 +43,8 @@ struct __attribute__((packed)) InterruptFrame {
     uint64_t ss;
 };
 
+using IRQHandler = void (*)(TrapRegisters&);
+
 void installInterrupts();
+void registerIrqHandler(uint8_t idx, IRQHandler handler);
+void startInterrupts();

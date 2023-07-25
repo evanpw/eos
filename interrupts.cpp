@@ -11,6 +11,7 @@
 #include "processor.h"
 #include "system.h"
 #include "timer.h"
+#include "trap.h"
 
 InterruptDescriptor::InterruptDescriptor(uint64_t addr, uint8_t flags)
 : addr0(bitSlice(addr, 0, 16)),
@@ -48,13 +49,13 @@ static constexpr uint8_t IRQ_OFFSET = 0x20;
 InterruptDescriptor* g_idt = nullptr;
 IDTRegister g_idtr;
 
-void handleIRQ(uint8_t irq, InterruptFrame* frame) {
+void handleIRQ(uint8_t irq, TrapRegisters& regs) {
     println("IRQ {}", irq);
-    println("rip: 0x{:X}", frame->rip);
-    println("cs: 0x{:X}", frame->cs);
-    println("rflags: 0x{:X}", frame->rflags);
-    println("rsp: 0x{:X}", frame->rsp);
-    println("ss: 0x{:X}", frame->ss);
+    println("rip: 0x{:X}", regs.rip);
+    println("cs: 0x{:X}", regs.cs);
+    println("rflags: 0x{:X}", regs.rflags);
+    println("rsp: 0x{:X}", regs.rsp);
+    println("ss: 0x{:X}", regs.ss);
 
     // Send end-of-interrupt (EOI) signal to the PIC(s)
     if (irq >= 8) {
@@ -64,27 +65,33 @@ void handleIRQ(uint8_t irq, InterruptFrame* frame) {
     outb(PIC1_COMMAND, 0x20);
 }
 
-#define IRQ_HANDLER(idx)                                                     \
-    void __attribute__((interrupt)) irqHandler##idx(InterruptFrame* frame) { \
-        handleIRQ(idx, frame);                                               \
-    }
+static IRQHandler irqHandlers[16];
 
-// IRQ_HANDLER(0)
-// IRQ_HANDLER(1)
-IRQ_HANDLER(2)
-IRQ_HANDLER(3)
-IRQ_HANDLER(4)
-IRQ_HANDLER(5)
-IRQ_HANDLER(6)
-IRQ_HANDLER(7)
-IRQ_HANDLER(8)
-IRQ_HANDLER(9)
-IRQ_HANDLER(10)
-IRQ_HANDLER(11)
-IRQ_HANDLER(12)
-IRQ_HANDLER(13)
-IRQ_HANDLER(14)
-IRQ_HANDLER(15)
+void registerIrqHandler(uint8_t idx, IRQHandler handler) {
+    ASSERT(irqHandlers[idx] == nullptr);
+    irqHandlers[idx] = handler;
+}
+
+// Called by the assembly-language IRQ entry points defined in syscall_entry.S
+extern "C" void irqEntry(uint8_t idx, TrapRegisters& regs) {
+    if (irqHandlers[idx] != nullptr) {
+        irqHandlers[idx](regs);
+    } else {
+        println("IRQ {}", idx);
+        println("rip: 0x{:X}", regs.rip);
+        println("cs: 0x{:X}", regs.cs);
+        println("rflags: 0x{:X}", regs.rflags);
+        println("rsp: 0x{:X}", regs.rsp);
+        println("ss: 0x{:X}", regs.ss);
+
+        // Send end-of-interrupt (EOI) signal to the PIC(s)
+        if (idx >= 8) {
+            outb(PIC2_COMMAND, 0x20);
+        }
+
+        outb(PIC1_COMMAND, 0x20);
+    }
+}
 
 void handleException(uint8_t vector, const char* name, InterruptFrame* frame,
                      uint64_t errorCode) {
@@ -152,9 +159,8 @@ EXCEPTION_HANDLER_WITH_CODE(29, "VMM Communication Exception")
 EXCEPTION_HANDLER_WITH_CODE(30, "Security Exception")
 EXCEPTION_HANDLER(31, "Reserved")
 
-#define REGISTER_IRQ(idx)     \
-    g_idt[IRQ_OFFSET + idx] = \
-        InterruptDescriptor((uint64_t)irqHandler##idx, ISR_PRESENT | ISR_TRAP_GATE);
+// Defined in syscall_entry.S
+extern "C" uint64_t irqEntriesAsm[];
 
 void configurePIC() {
     // ICW1: Edge triggered, call address interval 8, cascade mode, expect ICw4
@@ -181,23 +187,12 @@ void configurePIC() {
     outb(PIC1_DATA, 0xFF - (1 << 2));  // leave IRQ2 enabled for cascading
     outb(PIC2_DATA, 0xFF);
 
-    // Set up interrupt descriptors for each IRQ handler
-    REGISTER_IRQ(0);
-    REGISTER_IRQ(1);
-    REGISTER_IRQ(2);
-    REGISTER_IRQ(3);
-    REGISTER_IRQ(4);
-    REGISTER_IRQ(5);
-    REGISTER_IRQ(6);
-    REGISTER_IRQ(7);
-    REGISTER_IRQ(8);
-    REGISTER_IRQ(9);
-    REGISTER_IRQ(10);
-    REGISTER_IRQ(11);
-    REGISTER_IRQ(12);
-    REGISTER_IRQ(13);
-    REGISTER_IRQ(14);
-    REGISTER_IRQ(15);
+    // Set up (empty) handlers and interrupt descriptors for each IRQ
+    for (size_t idx = 0; idx < 16; ++idx) {
+        g_idt[IRQ_OFFSET + idx] =
+            InterruptDescriptor(irqEntriesAsm[idx], ISR_PRESENT | ISR_TRAP_GATE);
+        irqHandlers[idx] = nullptr;
+    }
 }
 
 #define REGISTER_EXCEPTION(idx)                                       \
@@ -252,11 +247,13 @@ void installInterrupts() {
     Processor::tss().rsp0 = kernelStackTop.value;
 
     Processor::lidt(g_idtr);
+    println("Interrupts initialized");
+}
+
+void startInterrupts() {
     Processor::enableInterrupts();
 
     // Unmask all IRQs
     outb(PIC1_DATA, 0x00);
     outb(PIC2_DATA, 0x00);
-
-    println("Interrupts initialized");
 }

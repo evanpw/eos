@@ -14,7 +14,7 @@ enum : uint16_t {
 };
 
 // PS/2 Keyboard IRQ
-void __attribute__((interrupt)) irqHandler1(InterruptFrame*) {
+void irqHandler1(TrapRegisters&) {
     if (inb(PS2_STATUS) & 1) {
         uint8_t byte = inb(PS2_DATA);
         System::keyboard().handleKey(byte);
@@ -34,6 +34,8 @@ KeyboardDevice::KeyboardDevice() {
     for (size_t i = 0; i < (size_t)KeyCode::Max; ++i) {
         _keyState[i] = false;
     }
+
+    registerIrqHandler(1, irqHandler1);
 
     println("Keyboard initialized");
 }

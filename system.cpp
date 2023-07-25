@@ -106,15 +106,16 @@ System::System() {
     _instance = this;
 
     Processor::init();
+    installInterrupts();
     _screen.assign(new Screen);
     _keyboard.assign(new KeyboardDevice);
     _terminal.assign(new Terminal(*_keyboard, *_screen));
-    installInterrupts();
     initSyscalls();
     _pciDevices.assign(new PCIDevices);
     _ideController.assign(new IDEController);
     initACPI();
     Timer::init();
+    startInterrupts();
 
     _fs = Ext2FileSystem::create(_ideController->rootPartition());
     ASSERT(_fs);
