@@ -77,37 +77,36 @@ extern "C" void irqEntry(uint8_t idx, TrapRegisters& regs) {
     }
 }
 
-void handleException(uint8_t vector, const char* name, InterruptFrame* frame,
+void handleException(uint8_t vector, const char* name, TrapRegisters& regs,
                      uint64_t errorCode) {
     println("CPU EXCEPTION {} ({})", vector, name);
     println("errorCode: 0x{:X}", errorCode);
-    println("rip: 0x{:X}", frame->rip);
-    println("cs: 0x{:X}", frame->cs);
-    println("rflags: 0x{:X}", frame->rflags);
-    println("rsp: 0x{:X}", frame->rsp);
-    println("ss: 0x{:X}", frame->ss);
+    println("rip: 0x{:X}", regs.rip);
+    println("cs: 0x{:X}", regs.cs);
+    println("rflags: 0x{:X}", regs.rflags);
+    println("rsp: 0x{:X}", regs.rsp);
+    println("ss: 0x{:X}", regs.ss);
     halt();
 }
 
-void handleException(uint8_t vector, const char* name, InterruptFrame* frame) {
+void handleException(uint8_t vector, const char* name, TrapRegisters& regs) {
     println("CPU EXCEPTION {} ({})", vector, name);
-    println("rip: 0x{:X}", frame->rip);
-    println("cs: 0x{:X}", frame->cs);
-    println("rflags: 0x{:X}", frame->rflags);
-    println("rsp: 0x{:X}", frame->rsp);
-    println("ss: 0x{:X}", frame->ss);
+    println("rip: 0x{:X}", regs.rip);
+    println("cs: 0x{:X}", regs.cs);
+    println("rflags: 0x{:X}", regs.rflags);
+    println("rsp: 0x{:X}", regs.rsp);
+    println("ss: 0x{:X}", regs.ss);
     halt();
 }
 
 #define EXCEPTION_HANDLER_WITH_CODE(idx, name)                         \
-    void __attribute__((interrupt))                                    \
-    exceptionHandler##idx(InterruptFrame* frame, uint64_t errorCode) { \
-        handleException(idx, name, frame, errorCode);                  \
+    extern "C" void exceptionHandler##idx(TrapRegisters& regs) { \
+        handleException(idx, name, regs, regs.errorCode);                  \
     }
 
-#define EXCEPTION_HANDLER(idx, name)                                               \
-    void __attribute__((interrupt)) exceptionHandler##idx(InterruptFrame* frame) { \
-        handleException(idx, name, frame);                                         \
+#define EXCEPTION_HANDLER(idx, name)                         \
+    extern "C" void exceptionHandler##idx(TrapRegisters& regs) { \
+        handleException(idx, name, regs);                  \
     }
 
 EXCEPTION_HANDLER(0, "Division Error")
@@ -145,6 +144,7 @@ EXCEPTION_HANDLER(31, "Reserved")
 
 // Defined in entry.S
 extern "C" uint64_t irqEntriesAsm[];
+extern "C" uint64_t exceptionEntriesAsm[];
 
 void configurePIC() {
     // ICW1: Edge triggered, call address interval 8, cascade mode, expect ICw4
@@ -179,45 +179,12 @@ void configurePIC() {
     }
 }
 
-#define REGISTER_EXCEPTION(idx)                                       \
-    g_idt[idx] = InterruptDescriptor((uint64_t)exceptionHandler##idx, \
-                                     ISR_PRESENT | ISR_TRAP_GATE)
-
 void installInterrupts() {
     g_idt = new InterruptDescriptor[256];
 
-    REGISTER_EXCEPTION(0);
-    REGISTER_EXCEPTION(1);
-    REGISTER_EXCEPTION(2);
-    REGISTER_EXCEPTION(3);
-    REGISTER_EXCEPTION(4);
-    REGISTER_EXCEPTION(5);
-    REGISTER_EXCEPTION(6);
-    REGISTER_EXCEPTION(7);
-    REGISTER_EXCEPTION(8);
-    REGISTER_EXCEPTION(9);
-    REGISTER_EXCEPTION(10);
-    REGISTER_EXCEPTION(11);
-    REGISTER_EXCEPTION(12);
-    REGISTER_EXCEPTION(13);
-    REGISTER_EXCEPTION(14);
-    REGISTER_EXCEPTION(15);
-    REGISTER_EXCEPTION(16);
-    REGISTER_EXCEPTION(17);
-    REGISTER_EXCEPTION(18);
-    REGISTER_EXCEPTION(19);
-    REGISTER_EXCEPTION(20);
-    REGISTER_EXCEPTION(21);
-    REGISTER_EXCEPTION(22);
-    REGISTER_EXCEPTION(23);
-    REGISTER_EXCEPTION(24);
-    REGISTER_EXCEPTION(25);
-    REGISTER_EXCEPTION(26);
-    REGISTER_EXCEPTION(27);
-    REGISTER_EXCEPTION(28);
-    REGISTER_EXCEPTION(29);
-    REGISTER_EXCEPTION(30);
-    REGISTER_EXCEPTION(31);
+    for (size_t idx = 0; idx < 32; ++idx) {
+        g_idt[idx] = InterruptDescriptor(exceptionEntriesAsm[idx], ISR_PRESENT | ISR_TRAP_GATE);
+    }
 
     configurePIC();
     g_idtr.addr = (uint64_t)&g_idt[0];

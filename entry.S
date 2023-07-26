@@ -71,7 +71,7 @@ syscallEntryAsm:
 // Defines the irq entry point to the kernel. Saves registers (beyond those saved by
 // hardware), and then passes the interrupt vector and the TrapRegisters struct to the
 // C++ entry point
-.macro makeIrqEntryAsm idx
+.macro makeIrqEntry idx
 irqEntryAsm\idx:
     // Construct a TrapRegisters struct on the stack. The ss, rsp, rflags, cs, and rip
     // registers are already saved by hardware
@@ -92,7 +92,7 @@ irqEntryAsm\idx:
 // Construct the entry points for all 16 IRQs
 .set idx,0
 .rept 16
-    makeIrqEntryAsm %idx
+    makeIrqEntry %idx
     .set idx,idx+1
 .endr
 
@@ -106,5 +106,82 @@ irqEntriesAsm:
     .set idx,0
     .rept 16
         irqLabel %idx
+        .set idx,idx+1
+    .endr
+
+// Creates ISR entry point for an exception that does not have an error code
+.macro makeExceptionEntry idx
+.global exceptionHandler\idx
+exceptionEntryAsm\idx:
+    pushq $0 // errorCode
+    PUSH_GENERAL_REGS
+
+    // Pass the TrapRegisters struct as the only argument to the C++ handler
+    mov %rsp, %rdi
+    call exceptionHandler\idx
+
+    POP_GENERAL_REGS
+    add $8, %rsp // errorCode
+
+    iretq
+.endm
+
+// Creates ISR entry point for an exception that _does_ have an error code
+.macro makeExceptionEntryWithCode idx
+.global exceptionHandler\idx
+exceptionEntryAsm\idx:
+    PUSH_GENERAL_REGS
+
+    // Pass the TrapRegisters struct as the only argument to the C++ handler
+    mov %rsp, %rdi
+    call exceptionHandler\idx
+
+    POP_GENERAL_REGS
+    iretq
+.endm
+
+makeExceptionEntry 0
+makeExceptionEntry 1
+makeExceptionEntry 2
+makeExceptionEntry 3
+makeExceptionEntry 4
+makeExceptionEntry 5
+makeExceptionEntry 6
+makeExceptionEntry 7
+makeExceptionEntryWithCode 8
+makeExceptionEntry 9
+makeExceptionEntryWithCode 10
+makeExceptionEntryWithCode 11
+makeExceptionEntryWithCode 12
+makeExceptionEntryWithCode 13
+makeExceptionEntryWithCode 14
+makeExceptionEntry 15
+makeExceptionEntry 16
+makeExceptionEntryWithCode 17
+makeExceptionEntry 18
+makeExceptionEntry 19
+makeExceptionEntry 20
+makeExceptionEntryWithCode 21
+makeExceptionEntry 22
+makeExceptionEntry 23
+makeExceptionEntry 24
+makeExceptionEntry 25
+makeExceptionEntry 26
+makeExceptionEntry 27
+makeExceptionEntry 28
+makeExceptionEntryWithCode 29
+makeExceptionEntryWithCode 30
+makeExceptionEntry 31
+
+// Construct a table of function pointers to the exception entry points
+.macro exceptionLabel idx
+    .quad exceptionEntryAsm\idx
+.endm
+
+.global exceptionEntriesAsm
+exceptionEntriesAsm:
+    .set idx,0
+    .rept 32
+        exceptionLabel %idx
         .set idx,idx+1
     .endr
