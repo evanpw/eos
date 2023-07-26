@@ -49,22 +49,6 @@ static constexpr uint8_t IRQ_OFFSET = 0x20;
 InterruptDescriptor* g_idt = nullptr;
 IDTRegister g_idtr;
 
-void handleIRQ(uint8_t irq, TrapRegisters& regs) {
-    println("IRQ {}", irq);
-    println("rip: 0x{:X}", regs.rip);
-    println("cs: 0x{:X}", regs.cs);
-    println("rflags: 0x{:X}", regs.rflags);
-    println("rsp: 0x{:X}", regs.rsp);
-    println("ss: 0x{:X}", regs.ss);
-
-    // Send end-of-interrupt (EOI) signal to the PIC(s)
-    if (irq >= 8) {
-        outb(PIC2_COMMAND, 0x20);
-    }
-
-    outb(PIC1_COMMAND, 0x20);
-}
-
 static IRQHandler irqHandlers[16];
 
 void registerIrqHandler(uint8_t idx, IRQHandler handler) {
