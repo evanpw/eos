@@ -48,7 +48,7 @@ set(KERNEL_SOURCES
     terminal.cpp
     thread.cpp
     timer.cpp
-    syscall_entry.S
+    entry.S
     ${ESTD_SOURCES}
 )
 

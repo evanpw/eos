@@ -72,7 +72,7 @@ void registerIrqHandler(uint8_t idx, IRQHandler handler) {
     irqHandlers[idx] = handler;
 }
 
-// Called by the assembly-language IRQ entry points defined in syscall_entry.S
+// Called by the assembly-language IRQ entry points defined in entry.S
 extern "C" void irqEntry(uint8_t idx, TrapRegisters& regs) {
     if (irqHandlers[idx] != nullptr) {
         irqHandlers[idx](regs);
@@ -159,7 +159,7 @@ EXCEPTION_HANDLER_WITH_CODE(29, "VMM Communication Exception")
 EXCEPTION_HANDLER_WITH_CODE(30, "Security Exception")
 EXCEPTION_HANDLER(31, "Reserved")
 
-// Defined in syscall_entry.S
+// Defined in entry.S
 extern "C" uint64_t irqEntriesAsm[];
 
 void configurePIC() {

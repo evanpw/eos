@@ -65,7 +65,7 @@ int sys_sleep(int ticks) {
 // We don't have static initialization, so this is initialized at runtime
 SyscallHandler syscallTable[MAX_SYSCALL_NO + 1];
 
-// Defined in syscall_entry.S
+// Defined in entry.S
 extern "C" void syscallEntryAsm();
 
 // Called by syscallEntryAsm
