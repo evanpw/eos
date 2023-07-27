@@ -99,14 +99,14 @@ void handleException(uint8_t vector, const char* name, TrapRegisters& regs) {
     halt();
 }
 
-#define EXCEPTION_HANDLER_WITH_CODE(idx, name)                         \
+#define EXCEPTION_HANDLER_WITH_CODE(idx, name)                   \
     extern "C" void exceptionHandler##idx(TrapRegisters& regs) { \
-        handleException(idx, name, regs, regs.errorCode);                  \
+        handleException(idx, name, regs, regs.errorCode);        \
     }
 
-#define EXCEPTION_HANDLER(idx, name)                         \
+#define EXCEPTION_HANDLER(idx, name)                             \
     extern "C" void exceptionHandler##idx(TrapRegisters& regs) { \
-        handleException(idx, name, regs);                  \
+        handleException(idx, name, regs);                        \
     }
 
 EXCEPTION_HANDLER(0, "Division Error")
@@ -183,7 +183,8 @@ void installInterrupts() {
     g_idt = new InterruptDescriptor[256];
 
     for (size_t idx = 0; idx < 32; ++idx) {
-        g_idt[idx] = InterruptDescriptor(exceptionEntriesAsm[idx], ISR_PRESENT | ISR_TRAP_GATE);
+        g_idt[idx] =
+            InterruptDescriptor(exceptionEntriesAsm[idx], ISR_PRESENT | ISR_TRAP_GATE);
     }
 
     configurePIC();
@@ -198,13 +199,11 @@ void installInterrupts() {
     Processor::tss().rsp0 = kernelStackTop.value;
 
     Processor::lidt(g_idtr);
-    println("Interrupts initialized");
-}
-
-void startInterrupts() {
     Processor::enableInterrupts();
 
     // Unmask all IRQs
     outb(PIC1_DATA, 0x00);
     outb(PIC2_DATA, 0x00);
+
+    println("Interrupts initialized");
 }

@@ -115,7 +115,6 @@ System::System() {
     _ideController.assign(new IDEController);
     initACPI();
     Timer::init();
-    startInterrupts();
 
     _fs = Ext2FileSystem::create(_ideController->rootPartition());
     ASSERT(_fs);

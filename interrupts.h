@@ -47,4 +47,3 @@ using IRQHandler = void (*)(TrapRegisters&);
 
 void installInterrupts();
 void registerIrqHandler(uint8_t idx, IRQHandler handler);
-void startInterrupts();
