@@ -2,6 +2,49 @@
 
 #include "errno.h"
 #include "file.h"
+#include "fs/ext2.h"
+#include "klibc.h"
+#include "page_map.h"
+#include "panic.h"
+#include "system.h"
+#include "terminal.h"
+#include "thread.h"
+
+pid_t Process::s_nextPid = 1;
+
+Process::Process(const char* filename) {
+    pid = s_nextPid++;
+    open(System::terminal());  // stdin
+    open(System::terminal());  // stdout
+    open(System::terminal());  // stderr
+
+    // Look up the executable on disk
+    auto inode = System::fs().lookup(filename);
+    ASSERT(inode);
+
+    // Allocate a fresh piece of page-aligned physical memory to store it
+    uint64_t pagesNeeded = ceilDiv(inode->size(), PAGE_SIZE);
+    PhysicalAddress userDest = System::mm().pageAlloc(pagesNeeded);
+    uint8_t* ptr = System::mm().physicalToVirtual(userDest).ptr<uint8_t>();
+
+    // Read the executable from disk
+    if (!System::fs().readFile(ptr, *inode)) {
+        panic("failed to read file");
+    }
+
+    addressSpace = System::mm().kaddressSpace().makeUserAddressSpace();
+
+    // Map the userland image at the user base
+    for (size_t i = 0; i < pagesNeeded; ++i) {
+        addressSpace->mapPage(addressSpace->userMapBase() + i * PAGE_SIZE,
+                              userDest + i * PAGE_SIZE);
+    }
+
+    VirtualAddress entryPoint = addressSpace->userMapBase();
+    thread = OwnPtr<Thread>(new Thread(*this, entryPoint));
+}
+
+Process::~Process() = default;
 
 int Process::open(File& file) {
     // Find next available fd

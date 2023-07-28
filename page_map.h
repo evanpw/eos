@@ -6,6 +6,7 @@
 #include "address.h"
 #include "boot.h"
 #include "estd/bits.h"
+#include "estd/ownptr.h"
 #include "units.h"
 
 struct PageMapEntry {
@@ -53,7 +54,7 @@ public:
 
     VirtualAddress physicalToVirtual(PhysicalAddress physAddr);
 
-    UserAddressSpace makeUserAddressSpace();
+    OwnPtr<UserAddressSpace> makeUserAddressSpace();
 
 private:
     MemoryManager& _mm;

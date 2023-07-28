@@ -36,6 +36,11 @@ public:
         return *(instance()._pciDevices);
     }
 
+    static Ext2FileSystem& fs() {
+        ASSERT(instance()._fs);
+        return *(instance()._fs);
+    }
+
 private:
     System();
 

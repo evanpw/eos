@@ -7,7 +7,7 @@
 #include "estd/bits.h"
 
 struct PhysicalAddress {
-    PhysicalAddress(uint64_t value) : value(value) {}
+    PhysicalAddress(uint64_t value = 0) : value(value) {}
 
     PhysicalAddress operator+(size_t delta) const {
         return PhysicalAddress(value + delta);
@@ -42,7 +42,7 @@ struct PhysicalAddress {
 };
 
 struct VirtualAddress {
-    VirtualAddress(uint64_t value) : value(value) {}
+    VirtualAddress(uint64_t value = 0) : value(value) {}
 
     VirtualAddress operator+(size_t delta) const { return VirtualAddress(value + delta); }
 

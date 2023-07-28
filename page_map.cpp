@@ -99,7 +99,7 @@ void KernelAddressSpace::mapPageImpl(PhysicalAddress pml4, VirtualAddress virtAd
     pml[index] = entry;
 }
 
-UserAddressSpace KernelAddressSpace::makeUserAddressSpace() {
+OwnPtr<UserAddressSpace> KernelAddressSpace::makeUserAddressSpace() {
     // Create a fresh empty PML4
     PhysicalAddress upml4 = _mm.pageAlloc();
 
@@ -113,7 +113,7 @@ UserAddressSpace KernelAddressSpace::makeUserAddressSpace() {
         ASSERT(uptr[i] == 0);
     }
 
-    return UserAddressSpace(*this, upml4);
+    return OwnPtr<UserAddressSpace>(new UserAddressSpace(*this, upml4));
 }
 
 void UserAddressSpace::mapPage(VirtualAddress virtAddr, PhysicalAddress physAddr,

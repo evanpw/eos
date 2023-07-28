@@ -49,51 +49,12 @@ extern "C" [[noreturn]] void switchToUserMode(TrapRegisters* regs);
 void System::run() {
     System system;
 
-    Process process1{1};
-    process1.open(*system._terminal);  // stdin
-    process1.open(*system._terminal);  // stdout
-    process1.open(*system._terminal);  // stderr
-
-    Thread thread{process1};
-    Thread::s_current = &thread;
-
-    // Look up the userland executable on disk
-    auto inode = system._fs->lookup("shell.bin");
-    ASSERT(inode);
-
-    // Allocate a fresh piece of page-aligned physical memory to store it
-    uint64_t pagesNeeded = ceilDiv(inode->size(), PAGE_SIZE);
-    PhysicalAddress userDest = mm().pageAlloc(pagesNeeded);
-    uint8_t* ptr = mm().physicalToVirtual(userDest).ptr<uint8_t>();
-
-    // Read the executable from disk
-    if (!system._fs->readFile(ptr, *inode)) {
-        panic("failed to read shell.bin");
-    }
-
-    UserAddressSpace userAddressSpace = mm().kaddressSpace().makeUserAddressSpace();
-
-    // Map the userland image at the user base
-    for (size_t i = 0; i < pagesNeeded; ++i) {
-        userAddressSpace.mapPage(userAddressSpace.userMapBase() + i * PAGE_SIZE,
-                                 userDest + i * PAGE_SIZE);
-    }
-
-    // Allocate a virtual memory area for the usermode stack
-    VirtualAddress userStackBottom = userAddressSpace.vmalloc(4);
-    VirtualAddress userStackTop = userStackBottom + 4 * PAGE_SIZE;
-
-    TrapRegisters userRegs;
-    memset(&userRegs, 0, sizeof(userRegs));
-    userRegs.rip = userAddressSpace.userMapBase().value;
-    userRegs.rspPrev = userStackTop.value;
-    userRegs.rflags = 0x202;  // IF + reserved bit
-    userRegs.ss = SELECTOR_DATA3;
-    userRegs.cs = SELECTOR_CODE3;
+    Process process1("shell.bin");
 
     println("Entering ring3");
-    Processor::loadCR3(userAddressSpace.pml4());
-    switchToUserMode(&userRegs);
+    Thread::s_current = process1.thread.get();
+    Processor::loadCR3(process1.addressSpace->pml4());
+    switchToUserMode(&process1.thread->regs);
 }
 
 System* System::_instance = nullptr;
