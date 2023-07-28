@@ -12,7 +12,7 @@ static E820Entry* const E820_TABLE = reinterpret_cast<E820Entry*>(0x1004);
 enum SegmentSelector : uint16_t {
     SELECTOR_CODE0 = 0x08,
     SELECTOR_DATA0 = 0x10,
-    SELECTOR_DATA3 = 0x20,
-    SELECTOR_CODE3 = 0x28,
+    SELECTOR_DATA3 = 0x20 | 3,
+    SELECTOR_CODE3 = 0x28 | 3,
     SELECTOR_TSS = 0x30,
 };

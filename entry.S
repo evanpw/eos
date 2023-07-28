@@ -68,6 +68,22 @@ syscallEntryAsm:
 
     sysretq
 
+// Returns from a non-existent syscall. Used to jump to the first usermode process
+.global switchToUserMode
+switchToUserMode:
+    // This function will never return, so we can treat the TrapRegisters argument as
+    // the stack
+    mov %rdi, %rsp
+
+    POP_GENERAL_REGS
+    add $8, %rsp // errorCode
+    popq %rcx   // rip
+    add $8, %rsp // cs
+    popq %r11   // rflags
+    popq %rsp   // rspPrev (this also skips ss)
+
+    sysretq
+
 // Defines the irq entry point to the kernel. Saves registers (beyond those saved by
 // hardware), and then passes the interrupt vector and the TrapRegisters struct to the
 // C++ entry point

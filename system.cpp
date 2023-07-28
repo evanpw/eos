@@ -20,6 +20,7 @@
 #include "terminal.h"
 #include "thread.h"
 #include "timer.h"
+#include "trap.h"
 
 // Context switches only occur in kernel mode (during a syscall or an interrupt)
 // We save the usermode state when entering kernel mode (syscall or interrupt),
@@ -42,20 +43,8 @@
 // The call that switches context only needs to save/restore callee-saved registers, since
 // it's a function call and C++ will save the caller-saved registers for us on the stack
 
-[[noreturn]] static void jumpToUser(uint64_t rip, uint64_t rsp) {
-    // TODO: be more careful about interrupts
-    asm volatile(
-        "movq %0, %%rsp\n"
-        "movq %1, %%rcx\n"
-        // Turn off everything except reserved bit 1 and interrupts
-        "movq $0x202, %%r11\n"
-        "sysretq\n"
-        :
-        : "r"(rsp), "r"(rip)
-        : "rcx", "r11", "memory");
-
-    __builtin_unreachable();
-}
+// Defined in entry.S
+extern "C" [[noreturn]] void switchToUserMode(TrapRegisters* regs);
 
 void System::run() {
     System system;
@@ -94,9 +83,17 @@ void System::run() {
     VirtualAddress userStackBottom = userAddressSpace.vmalloc(4);
     VirtualAddress userStackTop = userStackBottom + 4 * PAGE_SIZE;
 
+    TrapRegisters userRegs;
+    memset(&userRegs, 0, sizeof(userRegs));
+    userRegs.rip = userAddressSpace.userMapBase().value;
+    userRegs.rspPrev = userStackTop.value;
+    userRegs.rflags = 0x202;  // IF + reserved bit
+    userRegs.ss = SELECTOR_DATA3;
+    userRegs.cs = SELECTOR_CODE3;
+
     println("Entering ring3");
     Processor::loadCR3(userAddressSpace.pml4());
-    jumpToUser(userAddressSpace.userMapBase().value, userStackTop.value);
+    switchToUserMode(&userRegs);
 }
 
 System* System::_instance = nullptr;
