@@ -42,6 +42,9 @@
 //
 // The call that switches context only needs to save/restore callee-saved registers, since
 // it's a function call and C++ will save the caller-saved registers for us on the stack
+//
+// When a thread is in kernel mode, the top of its kernel stack should always be a
+// TrapRegisters stack so that it knows how to return to user mode
 
 // Defined in entry.S
 extern "C" [[noreturn]] void switchToUserMode(TrapRegisters* regs);
