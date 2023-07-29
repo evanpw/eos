@@ -1,4 +1,5 @@
 import atexit
+import glob
 import os
 import shutil
 import struct
@@ -105,6 +106,7 @@ with tempfile.TemporaryDirectory() as tmpdir:
     runcmd(f"mount {loop_filename}p1 {tmpdir}")
 
     try:
-        shutil.copy(f"{build_dir}/shell.bin", tmpdir)
+        for filename in glob.glob(f"{build_dir}/user/*.bin"):
+            shutil.copy(filename, tmpdir)
     finally:
         runcmd(f"umount {tmpdir}")

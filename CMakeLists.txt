@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.20)
 
 set(CMAKE_TOOLCHAIN_FILE ${CMAKE_SOURCE_DIR}/x86_64-elf.cmake)
 
@@ -18,9 +18,9 @@ project(eos LANGUAGES CXX ASM_NASM ASM)
 
 # Share between kernel and userland
 set(ESTD_SOURCES
-    estd/assertions.cpp
-    estd/new.cpp
-    estd/print.cpp
+    ${CMAKE_SOURCE_DIR}/estd/assertions.cpp
+    ${CMAKE_SOURCE_DIR}/estd/new.cpp
+    ${CMAKE_SOURCE_DIR}/estd/print.cpp
 )
 
 
@@ -68,7 +68,7 @@ target_compile_options(
 )
 
 target_link_options(kernel.elf PRIVATE -T ${CMAKE_SOURCE_DIR}/kernel.ld -nostdlib -lgcc LINKER:--no-warn-rwx-segments)
-target_include_directories(kernel.elf PRIVATE ${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/libc/include)
+target_include_directories(kernel.elf PRIVATE ${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/user/libc/include)
 
 # Convert kernel.elf to flat binary
 add_custom_command(
@@ -82,46 +82,7 @@ add_custom_command(
 
 
 ## Userland ##
-
-set(LIBC_SOURCES
-    libc/stdio.cpp
-    libc/stdlib.cpp
-    libc/string.cpp
-    libc/syscall.cpp
-    libc/unistd.cpp
-)
-
-set(USER_SOURCES
-    user/shell.cpp
-    ${LIBC_SOURCES}
-    ${ESTD_SOURCES}
-)
-
-add_executable(shell.elf ${USER_SOURCES})
-
-target_compile_options(
-    shell.elf
-    PRIVATE
-    -ffreestanding
-    -mno-red-zone
-    -fno-rtti
-    -fno-exceptions
-    -mgeneral-regs-only
-    -mcmodel=large
-)
-
-target_link_options(shell.elf PRIVATE -T ${CMAKE_SOURCE_DIR}/user.ld -nostdlib -lgcc)
-target_include_directories(shell.elf PRIVATE ${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/libc/include)
-
-# Convert shell.elf to flat binary
-add_custom_command(
-    OUTPUT ${CMAKE_BINARY_DIR}/shell.bin
-    DEPENDS shell.elf
-    COMMAND ${CMAKE_OBJCOPY}
-        -O binary ${CMAKE_BINARY_DIR}/shell.elf
-        ${CMAKE_BINARY_DIR}/shell.bin
-        --set-section-flags .bss=alloc,load,contents
-)
+add_subdirectory(user)
 
 
 ## Boot Sector ##
@@ -164,7 +125,7 @@ add_custom_command(
         ${CMAKE_BINARY_DIR}/boot.bin
         ${CMAKE_BINARY_DIR}/boot.elf
         ${CMAKE_BINARY_DIR}/kernel.bin
-        ${CMAKE_BINARY_DIR}/shell.bin
+        userland
     COMMAND
         sudo python
         ${CMAKE_SOURCE_DIR}/scripts/create_disk_image.py
