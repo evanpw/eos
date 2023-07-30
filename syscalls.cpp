@@ -19,7 +19,7 @@ using SyscallHandler = int64_t (*)(uint64_t, uint64_t, uint64_t, uint64_t, uint6
                                    uint64_t);
 
 ssize_t sys_read(int fd, void* buffer, size_t count) {
-    Process& process = Thread::current().process;
+    Process& process = *currentThread->process;
 
     if (fd < 0 || fd >= RLIMIT_NOFILE || !process.openFiles[fd]) {
         return -EBADF;
@@ -31,7 +31,7 @@ ssize_t sys_read(int fd, void* buffer, size_t count) {
 }
 
 ssize_t sys_write(int fd, const void* buffer, size_t count) {
-    Process& process = Thread::current().process;
+    Process& process = *currentThread->process;
 
     if (fd < 0 || fd >= RLIMIT_NOFILE || !process.openFiles[fd]) {
         return -EBADF;
@@ -43,7 +43,7 @@ ssize_t sys_write(int fd, const void* buffer, size_t count) {
 }
 
 pid_t sys_getpid() {
-    Process& process = Thread::current().process;
+    Process& process = *currentThread->process;
     return process.pid;
 }
 

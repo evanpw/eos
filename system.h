@@ -9,6 +9,7 @@ class Terminal;
 class PCIDevices;
 class IDEController;
 class Ext2FileSystem;
+class Scheduler;
 
 class System {
 public:
@@ -41,6 +42,11 @@ public:
         return *(instance()._fs);
     }
 
+    static Scheduler& scheduler() {
+        ASSERT(instance()._scheduler);
+        return *(instance()._scheduler);
+    }
+
 private:
     System();
 
@@ -60,4 +66,5 @@ private:
     OwnPtr<PCIDevices> _pciDevices;
     OwnPtr<IDEController> _ideController;
     OwnPtr<Ext2FileSystem> _fs;
+    OwnPtr<Scheduler> _scheduler;
 };

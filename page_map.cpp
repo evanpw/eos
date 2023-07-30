@@ -121,17 +121,16 @@ void UserAddressSpace::mapPage(VirtualAddress virtAddr, PhysicalAddress physAddr
     _kaddr.mapPageImpl(_pml4, virtAddr, physAddr, pageSize, PAGE_USER);
 }
 
-VirtualAddress UserAddressSpace::vmalloc(size_t pageCount) {
-    // TODO: the physical pages don't need to be contiguous
-    // TODO: we don't need to back the page with physical memory yet
-    PhysicalAddress physAddr = System::mm().pageAlloc(pageCount);
-    VirtualAddress virtAddr = _nextUserAddress;
-
+void UserAddressSpace::mapPages(VirtualAddress virtAddr, PhysicalAddress physAddr,
+                                size_t count) {
     // TODO: for large allocations we can use larger pages
-    for (size_t i = 0; i < pageCount; ++i) {
-        mapPage(_nextUserAddress, physAddr + i * PAGE_SIZE);
-        _nextUserAddress += PAGE_SIZE;
+    for (size_t i = 0; i < count; ++i) {
+        mapPage(virtAddr + i * PAGE_SIZE, physAddr + i * PAGE_SIZE);
     }
+}
 
+VirtualAddress UserAddressSpace::vmalloc(size_t pageCount) {
+    VirtualAddress virtAddr = _nextUserAddress;
+    _nextUserAddress += pageCount * PAGE_SIZE;
     return virtAddr;
 }

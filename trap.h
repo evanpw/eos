@@ -39,3 +39,5 @@ struct __attribute__((packed)) TrapRegisters {
     uint64_t rspPrev;
     uint64_t ss;
 };
+
+static_assert(sizeof(TrapRegisters) % sizeof(uint64_t) == 0);

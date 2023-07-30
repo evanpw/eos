@@ -44,10 +44,14 @@
 // to the appropriate handler
 .global syscallEntryAsm
 syscallEntryAsm:
+    // Save the user-mode stack temporarily, and load the kernel stack
+    // TODO: be careful about interrupts here
+    mov %rsp, [userStack] // TODO: this should be per-CPU
+    mov [currentKernelStack], %rsp
+
     // Construct a TrapRegisters struct on the stack
     pushq $0x23        // ss
-    pushq %rsp         // rspPrev
-    addq $8, (%rsp)
+    pushq [userStack]  // rspPrev
     pushq %r11         // rflags
     pushq $0x2B        // cs
     pushq %rcx         // rip
@@ -61,28 +65,28 @@ syscallEntryAsm:
     // Return value is placed into TrapRegisters->rax by syscallEntry
     POP_GENERAL_REGS
     add $8, %rsp // errorCode
-    popq %rcx   // rip
+    popq %rcx    // rip
     add $8, %rsp // cs
-    popq %r11   // rflags
-    popq %rsp   // rspPrev (this also skips ss)
+    popq %r11    // rflags
+    popq %rsp    // rspPrev (this also skips ss)
 
     sysretq
 
-// Returns from a non-existent syscall. Used to jump to the first usermode process
+// Enters a user mode thread for the first time, as if returning from a syscall
 .global switchToUserMode
 switchToUserMode:
-    // This function will never return, so we can treat the TrapRegisters argument as
-    // the stack
-    mov %rdi, %rsp
-
     POP_GENERAL_REGS
     add $8, %rsp // errorCode
-    popq %rcx   // rip
+    popq %rcx    // rip
     add $8, %rsp // cs
-    popq %r11   // rflags
-    popq %rsp   // rspPrev (this also skips ss)
+    popq %r11    // rflags
+    popq %rsp    // rspPrev (this also skips ss)
 
     sysretq
+
+// TODO: make this a per-CPU variable, and protect it by disabling interrupts
+userStack:
+    .quad 0
 
 // Defines the irq entry point to the kernel. Saves registers (beyond those saved by
 // hardware), and then passes the interrupt vector and the TrapRegisters struct to the

@@ -44,11 +44,22 @@ struct PhysicalAddress {
 struct VirtualAddress {
     VirtualAddress(uint64_t value = 0) : value(value) {}
 
-    VirtualAddress operator+(size_t delta) const { return VirtualAddress(value + delta); }
+    VirtualAddress operator+(int64_t delta) const {
+        return VirtualAddress(value + delta);
+    }
+    VirtualAddress operator-(int64_t delta) const {
+        return VirtualAddress(value - delta);
+    }
 
-    VirtualAddress& operator+=(size_t delta) {
+    VirtualAddress& operator+=(int64_t delta) {
         // TODO: check for overflow
         value += delta;
+        return *this;
+    }
+
+    VirtualAddress& operator-=(int64_t delta) {
+        // TODO: check for overflow
+        value -= delta;
         return *this;
     }
 

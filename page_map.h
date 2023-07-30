@@ -71,6 +71,7 @@ private:
 class UserAddressSpace {
 public:
     void mapPage(VirtualAddress virtAddr, PhysicalAddress physAddr, int pageSize = 0);
+    void mapPages(VirtualAddress virtAddr, PhysicalAddress physAddr, size_t count);
 
     PhysicalAddress pml4() const { return _pml4; }
 

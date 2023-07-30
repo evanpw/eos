@@ -32,16 +32,12 @@ Process::Process(const char* filename) {
         panic("failed to read file");
     }
 
+    // Create user address space and map the executable image into it
     addressSpace = System::mm().kaddressSpace().makeUserAddressSpace();
-
-    // Map the userland image at the user base
-    for (size_t i = 0; i < pagesNeeded; ++i) {
-        addressSpace->mapPage(addressSpace->userMapBase() + i * PAGE_SIZE,
-                              userDest + i * PAGE_SIZE);
-    }
-
     VirtualAddress entryPoint = addressSpace->userMapBase();
-    thread = OwnPtr<Thread>(new Thread(*this, entryPoint));
+    addressSpace->mapPages(entryPoint, userDest, pagesNeeded);
+
+    thread = OwnPtr<Thread>(new Thread(this, entryPoint));
 }
 
 Process::~Process() = default;

@@ -14,6 +14,7 @@
 #include "pci.h"
 #include "process.h"
 #include "processor.h"
+#include "scheduler.h"
 #include "screen.h"
 #include "string.h"
 #include "syscalls.h"
@@ -46,18 +47,17 @@
 // When a thread is in kernel mode, the top of its kernel stack should always be a
 // TrapRegisters stack so that it knows how to return to user mode
 
-// Defined in entry.S
-extern "C" [[noreturn]] void switchToUserMode(TrapRegisters* regs);
-
 void System::run() {
     System system;
 
     Process process1("shell.bin");
+    system._scheduler->threads.push_back(process1.thread.get());
+    Process process2("spam.bin");
+    system._scheduler->threads.push_back(process2.thread.get());
 
     println("Entering ring3");
-    Thread::s_current = process1.thread.get();
-    Processor::loadCR3(process1.addressSpace->pml4());
-    switchToUserMode(&process1.thread->regs);
+    system._scheduler->start(process2.thread.get());
+    __builtin_unreachable();
 }
 
 System* System::_instance = nullptr;
@@ -75,6 +75,7 @@ System::System() {
     _pciDevices.assign(new PCIDevices);
     _ideController.assign(new IDEController);
     initACPI();
+    _scheduler.assign(new Scheduler);
     Timer::init();
 
     _fs = Ext2FileSystem::create(_ideController->rootPartition());

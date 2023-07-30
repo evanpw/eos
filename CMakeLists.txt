@@ -42,6 +42,7 @@ set(KERNEL_SOURCES
     pci.cpp
     process.cpp
     processor.cpp
+    scheduler.cpp
     screen.cpp
     syscalls.cpp
     system.cpp

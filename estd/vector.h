@@ -25,6 +25,7 @@ public:
     size_t capacity() const { return _capacity; }
     T* data() { return _data; }
     const T* data() const { return _data; }
+    bool empty() const { return _size == 0; }
 
     void reserve(size_t newCapacity) {
         if (newCapacity < _capacity) return;
@@ -49,12 +50,12 @@ public:
     }
 
     const T& operator[](size_t index) const {
-        ASSERT(index < _capacity);
+        ASSERT(index < _size);
         return _data[index];
     }
 
     T& operator[](size_t index) {
-        ASSERT(index < _capacity);
+        ASSERT(index < _size);
         return _data[index];
     }
 

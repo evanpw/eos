@@ -185,6 +185,6 @@ void installInterrupts() {
     Processor::tss().rsp0 = kernelStackTop.value;
 
     Processor::lidt(g_idtr);
-    Processor::enableInterrupts();
+    // Processor::enableInterrupts();
     println("Interrupts initialized");
 }
