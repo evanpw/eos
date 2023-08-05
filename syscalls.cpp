@@ -83,6 +83,7 @@ extern "C" void syscallEntry(TrapRegisters& regs) {
 static constexpr uint64_t IA32_EFER = 0xC0000080;
 static constexpr uint64_t IA32_STAR = 0xC0000081;
 static constexpr uint64_t IA32_LSTAR = 0xC0000082;
+static constexpr uint64_t IA32_FMASK = 0xC0000084;
 
 void initSyscalls() {
     // Set syscall enable bit of the IA32_EFER MSR
@@ -96,6 +97,9 @@ void initSyscalls() {
 
     // Set up syscall to jump to syscallEntry
     Processor::wrmsr(IA32_LSTAR, (uint64_t)&syscallEntryAsm);
+
+    // Disable interrupts on syscall entry
+    Processor::wrmsr(IA32_FMASK, 0x200);
 
     // Create table of syscall handlers
     syscallTable[SYS_read] = bit_cast<SyscallHandler>(sys_read);

@@ -44,14 +44,18 @@
 // to the appropriate handler
 .global syscallEntryAsm
 syscallEntryAsm:
+    // Interrupts are disabled here, because if an interrupt occurs, it will use the user
+    // stack (we're in ring0 now, so the stack isn't automatically switched). We'll enable
+    // them again after switching stacks and saving the user stack pointer
+
     // Save the user-mode stack temporarily, and load the kernel stack
-    // TODO: be careful about interrupts here
     mov %rsp, [userStack] // TODO: this should be per-CPU
     mov [currentKernelStack], %rsp
 
     // Construct a TrapRegisters struct on the stack
     pushq $0x23        // ss
     pushq [userStack]  // rspPrev
+    sti
     pushq %r11         // rflags
     pushq $0x2B        // cs
     pushq %rcx         // rip
@@ -72,6 +76,9 @@ syscallEntryAsm:
 
     sysretq
 
+userStack:
+    .quad 0
+
 // Enters a user mode thread for the first time, as if returning from a syscall
 .global switchToUserMode
 switchToUserMode:
@@ -83,10 +90,6 @@ switchToUserMode:
     popq %rsp    // rspPrev (this also skips ss)
 
     sysretq
-
-// TODO: make this a per-CPU variable, and protect it by disabling interrupts
-userStack:
-    .quad 0
 
 // Defines the irq entry point to the kernel. Saves registers (beyond those saved by
 // hardware), and then passes the interrupt vector and the TrapRegisters struct to the
