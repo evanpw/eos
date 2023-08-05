@@ -14,20 +14,6 @@ extern "C" void enterContextImpl(Thread* toThread) {
     // TODO: save / restore FPU state
 }
 
-// Figure out how to put an initial thread in a state that can be switched to using
-// switchContext.
-// Needs:
-// * thread->rsp set to a stack
-// * initial stack has r15, r14, r13, r12, rbx, rbp values on it, followed by an
-//   address to continue execution from
-// * What address? Needs to enter user mode at the appropriate entry point, so
-//   switchToUserMode, except that it needs to have the stack already set up rather
-//   than passed in as an argument
-//
-//  Think of switchContext as a function call which may take a long time to return, but
-//  otherwise acts like a normal function. Needs to preserve callee-saved registers, FPU
-//  state, address space, etc., but does not need to preserve all registers
-
 extern "C" [[noreturn]] void __attribute__((naked)) enterContext(Thread* toThread) {
     asm volatile(
         "mov %[toRsp], %%rsp\n"
@@ -61,7 +47,6 @@ void __attribute__((naked)) switchContext(Thread* toThread, Thread* fromThread) 
 }
 
 void Scheduler::start(Thread* initialThread) {
-    Processor::disableInterrupts();
     running = true;
     enterContext(initialThread);
 }
