@@ -4,3 +4,4 @@
 
 using pid_t = int32_t;
 using ssize_t = int64_t;
+using off_t = int64_t;

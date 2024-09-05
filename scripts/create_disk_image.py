@@ -7,7 +7,8 @@ import subprocess
 import sys
 import tempfile
 
-build_dir = sys.argv[1]
+src_dir = sys.argv[1]
+build_dir = sys.argv[2]
 output_filename = f"{build_dir}/diskimg"
 
 
@@ -108,5 +109,7 @@ with tempfile.TemporaryDirectory() as tmpdir:
     try:
         for filename in glob.glob(f"{build_dir}/user/*.bin"):
             shutil.copy(filename, tmpdir)
+
+        shutil.copy(f"{src_dir}/version.txt", tmpdir)
     finally:
         runcmd(f"umount {tmpdir}")

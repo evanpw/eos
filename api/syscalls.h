@@ -6,5 +6,6 @@ static constexpr size_t SYS_write = 1;
 static constexpr size_t SYS_getpid = 2;
 static constexpr size_t SYS_exit = 3;
 static constexpr size_t SYS_sleep = 4;
+static constexpr size_t SYS_open = 5;
 
 static constexpr size_t MAX_SYSCALL_NO = 4;

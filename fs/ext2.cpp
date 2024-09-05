@@ -2,6 +2,7 @@
 
 #include <string.h>
 
+#include "errno.h"
 #include "estd/print.h"
 #include "klibc.h"
 #include "panic.h"
@@ -83,7 +84,7 @@ OwnPtr<ext2::Inode> Ext2FileSystem::readInode(uint32_t ino) {
     return inode;
 }
 
-bool Ext2FileSystem::readFile(uint8_t* dest, const ext2::Inode& inode) {
+bool Ext2FileSystem::readFullFile(const ext2::Inode& inode, uint8_t* dest) {
     size_t numBlocks = ceilDiv(inode.size(), blockSize());
 
     size_t blocksRemaining = numBlocks;
@@ -134,6 +135,25 @@ bool Ext2FileSystem::readFile(uint8_t* dest, const ext2::Inode& inode) {
     // TODO: support doubly-indirect and triply-indirect blocks
     println("ext2: doubly- and triply-indirect blocks are unsupported");
     return false;
+}
+
+ssize_t Ext2FileSystem::readFromFile(const ext2::Inode& inode, uint8_t* dest,
+                                     uint32_t size, uint32_t offset) {
+    // Clip the read at the end of the file
+    if (offset > inode.size()) {
+        return 0;
+    } else if (size > inode.size() - offset) {
+        size = inode.size() - offset;
+    }
+
+    // TODO: this is insanely inefficient, should read only what's needed
+    size_t numBlocks = ceilDiv(inode.size(), blockSize());
+
+    Buffer buffer(numBlocks * blockSize());
+    if (!readFullFile(inode, buffer.get())) return -EIO;
+
+    memcpy(dest, &buffer[offset], size);
+    return size;
 }
 
 bool Ext2FileSystem::readBlock(void* dest, uint32_t blockId) {
@@ -205,7 +225,8 @@ bool Ext2FileSystem::init() {
     }
 
     _rootDir = Buffer(_rootInode->size());
-    if (!readFile(_rootDir.get(), *_rootInode)) {
+    ASSERT(_rootInode->size() % blockSize() == 0);
+    if (!readFullFile(*_rootInode, _rootDir.get())) {
         println("ext2: failed to read root directory");
         return false;
     }

@@ -62,6 +62,10 @@ int sys_sleep(int ticks) {
     return 0;
 }
 
+int sys_open(const char* path, int oflag) {
+    // TODO: handle file access mode
+}
+
 // We don't have static initialization, so this is initialized at runtime
 SyscallHandler syscallTable[MAX_SYSCALL_NO + 1];
 

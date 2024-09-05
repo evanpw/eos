@@ -31,6 +31,7 @@ set(KERNEL_SOURCES
     aml.cpp
     file.cpp
     fs/ext2.cpp
+    fs/ext2_file.cpp
     ide.cpp
     interrupts.cpp
     keyboard.cpp
@@ -130,5 +131,6 @@ add_custom_command(
     COMMAND
         sudo python
         ${CMAKE_SOURCE_DIR}/scripts/create_disk_image.py
+        ${CMAKE_SOURCE_DIR}
         ${CMAKE_BINARY_DIR}
 )

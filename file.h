@@ -10,6 +10,7 @@ struct File;
 // The kernel data structure that a usermode file descriptor points to
 struct OpenFileDescription {
     File& file;
+    off_t offset = 0;
 };
 
 // Something that supports open/close and read / write. Could be a device, a

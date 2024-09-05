@@ -22,8 +22,8 @@ InterruptDescriptor::InterruptDescriptor(uint64_t addr, uint8_t flags)
 
 // Interrupt descriptor flags
 static constexpr uint8_t ISR_PRESENT = 0x80;
-static constexpr uint8_t ISR_INTERRUPT_GATE = 0x0F;
-static constexpr uint8_t ISR_TRAP_GATE = 0x0E;
+static constexpr uint8_t ISR_INTERRUPT_GATE = 0x0E;
+static constexpr uint8_t ISR_TRAP_GATE = 0x0F;
 
 // PIC initialization command words (ICWs)
 // Reference: https://pdos.csail.mit.edu/6.828/2017/readings/hardware/8259A.pdf
@@ -138,7 +138,7 @@ extern "C" uint64_t irqEntriesAsm[];
 extern "C" uint64_t exceptionEntriesAsm[];
 
 void configurePIC() {
-    // ICW1: Edge triggered, call address interval 8, cascade mode, expect ICw4
+    // ICW1: Edge triggered, call address interval 8, cascade mode, expect ICW4
     outb(PIC1_COMMAND, ICW1_INIT | ICW1_ICW4);
     outb(PIC2_COMMAND, ICW1_INIT | ICW1_ICW4);
 
@@ -161,7 +161,7 @@ void configurePIC() {
     // Set up (empty) handlers and interrupt descriptors for each IRQ
     for (size_t idx = 0; idx < 16; ++idx) {
         g_idt[IRQ_OFFSET + idx] =
-            InterruptDescriptor(irqEntriesAsm[idx], ISR_PRESENT | ISR_TRAP_GATE);
+            InterruptDescriptor(irqEntriesAsm[idx], ISR_PRESENT | ISR_INTERRUPT_GATE);
     }
 }
 
@@ -169,8 +169,8 @@ void installInterrupts() {
     g_idt = new InterruptDescriptor[256];
 
     for (size_t idx = 0; idx < 32; ++idx) {
-        g_idt[idx] =
-            InterruptDescriptor(exceptionEntriesAsm[idx], ISR_PRESENT | ISR_TRAP_GATE);
+        g_idt[idx] = InterruptDescriptor(exceptionEntriesAsm[idx],
+                                         ISR_PRESENT | ISR_INTERRUPT_GATE);
     }
 
     configurePIC();

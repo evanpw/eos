@@ -3,3 +3,4 @@
 
 #define EMFILE 1  // Too many open files
 #define EBADF 2   // Invalid file descriptor
+#define EIO 5     // I/O error

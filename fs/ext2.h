@@ -3,6 +3,7 @@
 #include "estd/buffer.h"
 #include "estd/ownptr.h"
 #include "fs/ext2_defs.h"
+#include "sys/types.h"
 
 class Ext2FileSystem {
 public:
@@ -12,7 +13,9 @@ public:
 
     // High-level interface
     OwnPtr<ext2::Inode> lookup(const char* path);
-    bool readFile(uint8_t* dest, const ext2::Inode& inode);
+    bool readFullFile(const ext2::Inode& inode, uint8_t* dest);
+    ssize_t readFromFile(const ext2::Inode& inode, uint8_t* dest, uint32_t size,
+                         uint32_t offset = 0);
 
 private:
     Ext2FileSystem(DiskDevice& disk);

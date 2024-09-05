@@ -28,7 +28,7 @@ Process::Process(const char* filename) {
     uint8_t* ptr = System::mm().physicalToVirtual(userDest).ptr<uint8_t>();
 
     // Read the executable from disk
-    if (!System::fs().readFile(ptr, *inode)) {
+    if (!System::fs().readFullFile(*inode, ptr)) {
         panic("failed to read file");
     }
 
