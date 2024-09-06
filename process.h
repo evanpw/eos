@@ -21,7 +21,7 @@ struct Process {
     OwnPtr<UserAddressSpace> addressSpace;
     OwnPtr<Thread> thread;
 
-    int open(File& file);
+    int open(const SharedPtr<File>& file);
     int close(int fd);
 
     static pid_t s_nextPid;

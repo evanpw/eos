@@ -57,3 +57,8 @@ System::System() {
     _fs = Ext2FileSystem::create(_ideController->rootPartition());
     ASSERT(_fs);
 }
+
+SharedPtr<Terminal> System::terminal() {
+    ASSERT(instance()._terminal);
+    return instance()._terminal;
+}

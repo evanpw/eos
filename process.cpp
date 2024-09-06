@@ -42,11 +42,11 @@ Process::Process(const char* filename) {
 
 Process::~Process() = default;
 
-int Process::open(File& file) {
+int Process::open(const SharedPtr<File>& file) {
     // Find next available fd
     for (size_t i = 0; i < RLIMIT_NOFILE; ++i) {
         if (!openFiles[i]) {
-            openFiles[i] = file.open();
+            openFiles[i] = OpenFileDescription::create(file);
             return i;
         }
     }

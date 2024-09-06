@@ -1,0 +1,8 @@
+// https://pubs.opengroup.org/onlinepubs/009695399/basedefs/fcntl.h.html
+#pragma once
+
+extern "C" {
+
+int open(const char* path, int oflag);
+
+}

@@ -5,11 +5,14 @@
 #include "keyboard.h"
 #include "screen.h"
 #include "spinlock.h"
+#include "panic.h"
 
 static constexpr size_t TERMINAL_INPUT_BUFFER_SIZE = 1024;
 
 class Terminal : public File, public KeyboardListener {
 public:
+    ~Terminal() { panic("terminal removed"); }
+
     // From KeyboardListener
     void onKeyEvent(const KeyboardEvent& event) override;
 

@@ -4,13 +4,16 @@
 #include <sys/types.h>
 
 #include "estd/ownptr.h"
+#include "estd/sharedptr.h"
 
 struct File;
 
 // The kernel data structure that a usermode file descriptor points to
 struct OpenFileDescription {
-    File& file;
+    SharedPtr<File> file;
     off_t offset = 0;
+
+    static OwnPtr<OpenFileDescription> create(const SharedPtr<File>& file);
 };
 
 // Something that supports open/close and read / write. Could be a device, a
@@ -19,7 +22,6 @@ struct OpenFileDescription {
 struct File {
     virtual ~File() = default;
 
-    virtual OwnPtr<OpenFileDescription> open();
     virtual void close(){};
     virtual ssize_t read(OpenFileDescription& fd, void* buffer, size_t count) = 0;
     virtual ssize_t write(OpenFileDescription& fd, const void* buffer, size_t count) = 0;

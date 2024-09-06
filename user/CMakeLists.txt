@@ -24,6 +24,7 @@ include_directories(
 
 add_library(
     libc
+    libc/fcntl.cpp
     libc/stdio.cpp
     libc/stdlib.cpp
     libc/string.cpp

@@ -1,16 +1,19 @@
 #include <unistd.h>
+#include <fcntl.h>
 
 #include "estd/print.h"
 
 extern "C" void main() __attribute__((section(".entry")));
 
 void main() {
-    const char* msg = "Hello World!\n";
-    write(1, msg, 13);
+    char buffer[64];
+
+    int fd = open("version.txt", 0);
+    ssize_t bytesRead = read(fd, buffer, 64);
+    write(1, buffer, bytesRead);
 
     println("pid={}", getpid());
 
-    char buffer[64];
     while (true) {
         while (read(0, buffer, 64) == 0) {
         }

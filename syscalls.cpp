@@ -13,7 +13,9 @@
 #include "processor.h"
 #include "thread.h"
 #include "timer.h"
+#include "system.h"
 #include "trap.h"
+#include "fs/ext2_file.h"
 
 using SyscallHandler = int64_t (*)(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t,
                                    uint64_t);
@@ -26,7 +28,7 @@ ssize_t sys_read(int fd, void* buffer, size_t count) {
     }
 
     OpenFileDescription& description = *process.openFiles[fd];
-    File& file = description.file;
+    File& file = *description.file;
     return file.read(description, buffer, count);
 }
 
@@ -38,7 +40,7 @@ ssize_t sys_write(int fd, const void* buffer, size_t count) {
     }
 
     OpenFileDescription& description = *process.openFiles[fd];
-    File& file = description.file;
+    File& file = *description.file;
     return file.write(description, buffer, count);
 }
 
@@ -63,7 +65,17 @@ int sys_sleep(int ticks) {
 }
 
 int sys_open(const char* path, int oflag) {
-    // TODO: handle file access mode
+    // TODO: handle flags correctly
+    Process& process = *currentThread->process;
+
+    auto inode = System::fs().lookup(path);
+    if (!inode) {
+        // TODO: set errno
+        return -1;
+    }
+
+    SharedPtr<Ext2File> file(new Ext2File(System::fs(), move(inode)));
+    return process.open(file);
 }
 
 // We don't have static initialization, so this is initialized at runtime
@@ -111,6 +123,7 @@ void initSyscalls() {
     syscallTable[SYS_getpid] = bit_cast<SyscallHandler>(sys_getpid);
     syscallTable[SYS_exit] = bit_cast<SyscallHandler>(sys_exit);
     syscallTable[SYS_sleep] = bit_cast<SyscallHandler>(sys_sleep);
+    syscallTable[SYS_open] = bit_cast<SyscallHandler>(sys_open);
 
     println("Syscalls initialized");
 }

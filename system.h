@@ -1,6 +1,7 @@
 // Holder class for initializing and accessing various components of the kernel
 #pragma once
 #include "estd/ownptr.h"
+#include "estd/sharedptr.h"
 #include "mem.h"
 
 class Screen;
@@ -27,10 +28,7 @@ public:
         return *(instance()._keyboard);
     }
 
-    static Terminal& terminal() {
-        ASSERT(instance()._terminal);
-        return *(instance()._terminal);
-    }
+    static SharedPtr<Terminal> terminal();
 
     static PCIDevices& pciDevices() {
         ASSERT(instance()._pciDevices);
@@ -62,7 +60,7 @@ private:
 
     OwnPtr<Screen> _screen;
     OwnPtr<KeyboardDevice> _keyboard;
-    OwnPtr<Terminal> _terminal;
+    SharedPtr<Terminal> _terminal;
     OwnPtr<PCIDevices> _pciDevices;
     OwnPtr<IDEController> _ideController;
     OwnPtr<Ext2FileSystem> _fs;
