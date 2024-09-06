@@ -11,6 +11,7 @@ void main() {
     int fd = open("version.txt", 0);
     ssize_t bytesRead = read(fd, buffer, 64);
     write(1, buffer, bytesRead);
+    close(fd);
 
     println("pid={}", getpid());
 

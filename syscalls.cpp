@@ -77,6 +77,11 @@ int sys_open(const char* path, int oflag) {
     return process.open(file);
 }
 
+int sys_close(int fd) {
+    Process& process = *currentThread->process;
+    return process.close(fd);
+}
+
 // We don't have static initialization, so this is initialized at runtime
 SyscallHandler syscallTable[MAX_SYSCALL_NO + 1];
 
@@ -123,6 +128,7 @@ void initSyscalls() {
     syscallTable[SYS_exit] = bit_cast<SyscallHandler>(sys_exit);
     syscallTable[SYS_sleep] = bit_cast<SyscallHandler>(sys_sleep);
     syscallTable[SYS_open] = bit_cast<SyscallHandler>(sys_open);
+    syscallTable[SYS_close] = bit_cast<SyscallHandler>(sys_close);
 
     println("Syscalls initialized");
 }

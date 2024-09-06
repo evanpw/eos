@@ -4,4 +4,5 @@
 extern "C" {
 
 int open(const char* path, int oflag);
+int close(int fd);
 }

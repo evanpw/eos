@@ -13,3 +13,7 @@ int open(const char* path, int oflag) {
 
     return result;
 }
+
+int close(int fd) {
+    return __syscall(SYS_close, fd);
+}
