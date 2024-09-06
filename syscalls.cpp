@@ -70,8 +70,7 @@ int sys_open(const char* path, int oflag) {
 
     auto inode = System::fs().lookup(path);
     if (!inode) {
-        // TODO: set errno
-        return -1;
+        return -ENOENT;
     }
 
     SharedPtr<Ext2File> file(new Ext2File(System::fs(), move(inode)));

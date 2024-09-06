@@ -1,6 +1,10 @@
 // https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/errno.h.html
 #pragma once
 
-#define EMFILE 1  // Too many open files
-#define EBADF 2   // Invalid file descriptor
-#define EIO 5     // I/O error
+#define	ENOENT  2   // No such file or directory
+#define EIO     5   // I/O error
+#define EBADF   9   // Invalid file descriptor
+#define EMFILE  24  // Too many open files
+
+// TODO: should be thread-local?
+extern "C" int errno;
