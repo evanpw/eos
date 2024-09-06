@@ -4,7 +4,8 @@
 
 template <typename T>
 class SharedPtr {
-    template <typename U> friend class SharedPtr;
+    template <typename U>
+    friend class SharedPtr;
 
 public:
     SharedPtr() : _ptr(nullptr), _refCount(nullptr) {}

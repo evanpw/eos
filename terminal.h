@@ -3,9 +3,9 @@
 #include "estd/ring_buffer.h"
 #include "file.h"
 #include "keyboard.h"
+#include "panic.h"
 #include "screen.h"
 #include "spinlock.h"
-#include "panic.h"
 
 static constexpr size_t TERMINAL_INPUT_BUFFER_SIZE = 1024;
 
