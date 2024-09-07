@@ -519,6 +519,12 @@ void Terminal::onKeyEvent(const KeyboardEvent& event) {
 void Terminal::handleChar(char c) {
     // Start or continuance of an escape sequence
     if (!_outputBuffer.empty()) {
+        // If the escape sequence is too long, it's invalid
+        if (_outputBuffer.full()) {
+            _outputBuffer.clear();
+            return;
+        }
+
         _outputBuffer.pushBack(c);
         handleEscapeSequence();
         return;
@@ -546,6 +552,18 @@ bool Terminal::parseEscapeSequence() {
         if (++idx == _outputBuffer.size()) return false;
 
         char c = _outputBuffer[idx];
+
+        // Look for an optional numerical argument
+        // TODO: support multiple args
+        int arg = 0;
+        while (c >= '0' && c <= '9') {
+            // TODO: check for overflow
+            arg = (arg * 10) + (c - '0');
+
+            if (++idx == _outputBuffer.size()) return false;
+            c = _outputBuffer[idx];
+        }
+
         switch (c) {
             case 'J':
                 _screen.clear(_bg);
@@ -553,6 +571,47 @@ bool Terminal::parseEscapeSequence() {
                 _y = 0;
                 _screen.setCursor(_x, _y);
                 return true;
+
+            case 'm': {
+                if (arg == 0) {
+                    _fg = Screen::LightGrey;
+                    _bg = Screen::Black;
+                } else if (arg == 30) {
+                    _fg = Screen::Black;
+                } else if (arg == 31) {
+                    _fg = Screen::Red;
+                } else if (arg == 32) {
+                    _fg = Screen::Green;
+                } else if (arg == 33) {
+                    _fg = Screen::Brown;
+                } else if (arg == 34) {
+                    _fg = Screen::Blue;
+                } else if (arg == 35) {
+                    _fg = Screen::Magenta;
+                } else if (arg == 36) {
+                    _fg = Screen::Cyan;
+                } else if (arg == 37) {
+                    _fg = Screen::LightGrey;
+                } else if (arg == 40) {
+                    _bg = Screen::Black;
+                } else if (arg == 41) {
+                    _bg = Screen::Red;
+                } else if (arg == 42) {
+                    _bg = Screen::Green;
+                } else if (arg == 43) {
+                    _bg = Screen::Brown;
+                } else if (arg == 44) {
+                    _bg = Screen::Blue;
+                } else if (arg == 45) {
+                    _bg = Screen::Magenta;
+                } else if (arg == 46) {
+                    _bg = Screen::Cyan;
+                } else if (arg == 47) {
+                    _bg = Screen::LightGrey;
+                }
+
+                return true;
+            }
 
             default:
                 // Bad escape sequence, ignore it and clear the buffer
