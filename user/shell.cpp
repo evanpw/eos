@@ -10,7 +10,7 @@ void main() {
 
     int fd = open("version.txt", 0);
     ssize_t bytesRead = read(fd, buffer, 64);
-    write(1, "\033[31m\033[42m", 10);
+    write(1, "\033[31;42m", 8);
     write(1, buffer, bytesRead);
     write(1, "\033[m", 3);
     close(fd);
