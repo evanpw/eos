@@ -533,8 +533,8 @@ void Terminal::echo(char c) {
         _x = 0;
         ++_y;
         if (_y == _screen.height()) {
-            // TODO: scroll
-            _y = 0;
+            _screen.scrollUp();
+            --_y;
         }
     }
 
@@ -545,8 +545,8 @@ void Terminal::newline() {
     _x = 0;
     ++_y;
     if (_y == _screen.height()) {
-        // TODO: scroll
-        _y = 0;
+        _screen.scrollUp();
+        --_y;
     }
 
     _screen.setCursor(_x, _y);
@@ -561,8 +561,7 @@ void Terminal::backspace() {
         if (_y > 0) {
             --_y;
         } else {
-            // TODO: scroll
-            _y = _screen.height() - 1;
+            return;
         }
     }
 

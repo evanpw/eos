@@ -52,3 +52,17 @@ void Screen::setCursor(size_t x, size_t y) {
     writeVGARegister(CURSOR_ADDRESS_LSB, bitSlice(position, 0, 8));
     writeVGARegister(CURSOR_ADDRESS_MSB, bitSlice(position, 8, 16));
 }
+
+void Screen::scrollUp() {
+    // Copy everything up one line
+    for (size_t y = 1; y < _height; ++y) {
+        for (size_t x = 0; x < _width; ++x) {
+            _vram[(y - 1) * _width + x] = _vram[y * _width + x];
+        }
+    }
+
+    // Clear the bottom line
+    for (size_t x = 0; x < _width; ++x) {
+        putChar(x, _height - 1, ' ', Black, Black);
+    }
+}

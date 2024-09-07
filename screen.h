@@ -31,6 +31,7 @@ public:
     void clear(Color bg = Black);
     void putChar(size_t x, size_t y, char c, Color bg, Color fg);
     void setCursor(size_t x, size_t y);
+    void scrollUp();
 
 private:
     friend class System;
