@@ -15,9 +15,7 @@ public:
         _data[_size++] = value;
     }
 
-    void clear() {
-        _size = 0;
-    }
+    void clear() { _size = 0; }
 
     size_t size() const { return _size; }
     bool empty() const { return _size == 0; }

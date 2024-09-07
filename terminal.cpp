@@ -1,7 +1,7 @@
 #include "terminal.h"
 
-#include "estd/vector.h"
 #include "estd/print.h"
+#include "estd/vector.h"
 #include "io.h"
 
 Terminal::Terminal(KeyboardDevice& keyboard, Screen& screen)

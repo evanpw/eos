@@ -1,5 +1,6 @@
 #pragma once
 #include <stddef.h>
+
 #include "estd/assertions.h"
 
 template <typename T, size_t N>
