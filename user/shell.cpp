@@ -10,15 +10,15 @@ void main() {
 
     int fd = open("version.txt", 0);
     ssize_t bytesRead = read(fd, buffer, 64);
-    write(1, "\033[31;42m", 8);
-    write(1, buffer, bytesRead);
-    write(1, "\033[m", 3);
+    write(STDOUT_FILENO, "\033[31;42m", 8);
+    write(STDOUT_FILENO, buffer, bytesRead);
+    write(STDOUT_FILENO, "\033[m", 3);
     close(fd);
 
     println("pid={}", getpid());
 
     while (true) {
-        while (read(0, buffer, 64) == 0) {
+        while (read(STDIN_FILENO, buffer, 64) == 0) {
         }
 
         if (buffer[0] == 'c') {
