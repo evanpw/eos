@@ -553,7 +553,7 @@ bool Terminal::parseEscapeSequence() {
         if (++idx == _outputBuffer.size()) return false;
         char c = _outputBuffer[idx];
 
-        // Look for an optional numerical argument
+        // Look for optional numerical arguments
         Vector<int> args;
         if (c >= '0' && c <= '9') {
             while (true) {
