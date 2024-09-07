@@ -19,7 +19,9 @@ void main() {
         while (read(0, buffer, 64) == 0) {
         }
 
-        if (buffer[0] == 'y') {
+        if (buffer[0] == 'c') {
+            write(1, "\033[J", 3);
+        } else if (buffer[0] == 'y') {
             write(1, "\byes\n", 5);
         } else {
             write(1, "\bno\n", 4);

@@ -219,6 +219,8 @@ const char* keyCodeToString(KeyCode keyCode) {
 
 char keyCodeToAsciiUnshifted(KeyCode keyCode) {
     switch (keyCode) {
+        case KeyCode::Escape:
+            return '\033';
         case KeyCode::One:
             return '1';
         case KeyCode::Two:
@@ -356,6 +358,8 @@ char keyCodeToAsciiUnshifted(KeyCode keyCode) {
 
 char keyCodeToAsciiShifted(KeyCode keyCode) {
     switch (keyCode) {
+        case KeyCode::Escape:
+            return '\033';
         case KeyCode::One:
             return '!';
         case KeyCode::Two:
@@ -492,27 +496,71 @@ char keyCodeToAsciiShifted(KeyCode keyCode) {
 }
 
 void Terminal::onKeyEvent(const KeyboardEvent& event) {
+    SpinlockLocker locker(_lock);
+
     // println("Terminal::onKeyEvent: keycode={:X}, key={}, pressed={}",
     //        (uint8_t)event.key, keyCodeToString(event.key), event.pressed);
 
     if (event.pressed) {
-        SpinlockLocker locker(_lock);
-
-        if (event.key == KeyCode::Backspace) {
-            if (_inputBuffer) {
-                _inputBuffer.popBack();
-                echo('\b');
-            }
-        }
+        // TODO: input-buffer editing
 
         bool shifted =
             _keyboard.isPressed(KeyCode::LShift) | _keyboard.isPressed(KeyCode::RShift);
         char c = shifted ? keyCodeToAsciiShifted(event.key)
                          : keyCodeToAsciiUnshifted(event.key);
+
         if (c != '\0') {
             _inputBuffer.push(c);
-            echo(c);
+            handleChar(c);
         }
+    }
+}
+
+void Terminal::handleChar(char c) {
+    // Start or continuance of an escape sequence
+    if (!_outputBuffer.empty()) {
+        _outputBuffer.pushBack(c);
+        handleEscapeSequence();
+        return;
+    } else if (c == '\033') {
+        _outputBuffer.pushBack(c);
+        return;
+    }
+
+    // Ordinary printable character
+    echo(c);
+}
+
+void Terminal::handleEscapeSequence() {
+    if (parseEscapeSequence()) {
+        _outputBuffer.clear();
+    }
+}
+
+bool Terminal::parseEscapeSequence() {
+    ASSERT(_outputBuffer.size() >= 2 && _outputBuffer[0] == '\033');
+
+    size_t idx = 1;
+    if (_outputBuffer[idx] == '[') {
+        // CSI sequences
+        if (++idx == _outputBuffer.size()) return false;
+
+        char c = _outputBuffer[idx];
+        switch (c) {
+            case 'J':
+                _screen.clear(_bg);
+                _x = 0;
+                _y = 0;
+                _screen.setCursor(_x, _y);
+                return true;
+
+            default:
+                // Bad escape sequence, ignore it and clear the buffer
+                return true;
+        }
+    } else {
+        // Bad escape sequence, ignore it and clear the buffer
+        return true;
     }
 }
 
@@ -525,7 +573,7 @@ void Terminal::echo(char c) {
         return;
     }
 
-    _screen.putChar(_x, _y, c, Screen::Black, Screen::LightGrey);
+    _screen.putChar(_x, _y, c, _bg, _fg);
 
     // Advance cursor
     ++_x;
@@ -570,12 +618,13 @@ void Terminal::backspace() {
 }
 
 ssize_t Terminal::read(OpenFileDescription&, void* buffer, size_t count) {
+    SpinlockLocker locker(_lock);
+
     // TODO: check fd mode
     // TODO: blocking, canonical mode
     size_t bytesRead = 0;
     char* dest = static_cast<char*>(buffer);
 
-    SpinlockLocker locker(_lock);
     while (_inputBuffer && bytesRead < count) {
         *dest++ = _inputBuffer.pop();
         ++bytesRead;
@@ -585,12 +634,14 @@ ssize_t Terminal::read(OpenFileDescription&, void* buffer, size_t count) {
 }
 
 ssize_t Terminal::write(OpenFileDescription&, const void* buffer, size_t count) {
+    SpinlockLocker locker(_lock);
+
     // TODO: check fd mode
     // TODO: output processing (NL/CR)
     const char* src = static_cast<const char*>(buffer);
 
     for (size_t i = 0; i < count; ++i) {
-        echo(*src++);
+        handleChar(*src++);
     }
 
     return count;

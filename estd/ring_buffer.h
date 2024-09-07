@@ -1,6 +1,6 @@
 #pragma once
-#include "estd/print.h"
-#include "io.h"
+#include <stddef.h>
+#include "estd/assertions.h"
 
 template <typename T, size_t N>
 class RingBuffer {

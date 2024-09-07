@@ -1,6 +1,7 @@
 // TTY driver combining the keyboard and the screen
 #pragma once
 #include "estd/ring_buffer.h"
+#include "estd/small_vector.h"
 #include "file.h"
 #include "keyboard.h"
 #include "panic.h"
@@ -8,11 +9,10 @@
 #include "spinlock.h"
 
 static constexpr size_t TERMINAL_INPUT_BUFFER_SIZE = 1024;
+static constexpr size_t TERMINAL_OUTPUT_BUFFER_SIZE = 64;
 
 class Terminal : public File, public KeyboardListener {
 public:
-    ~Terminal() { panic("terminal removed"); }
-
     // From KeyboardListener
     void onKeyEvent(const KeyboardEvent& event) override;
 
@@ -24,6 +24,9 @@ private:
     friend class System;
     Terminal(KeyboardDevice& keyboard, Screen& screen);
 
+    void handleChar(char c);
+    void handleEscapeSequence();
+    bool parseEscapeSequence();
     void echo(char c);
     void newline();
     void backspace();
@@ -31,12 +34,13 @@ private:
     KeyboardDevice& _keyboard;
     Screen& _screen;
 
-    RingBuffer<char, TERMINAL_INPUT_BUFFER_SIZE> _inputBuffer;
-
-    // To protect _inputBuffer
     Spinlock _lock;
 
-    // Cursor
-    size_t _x = 0;
-    size_t _y = 0;
+    // Input / keyboard
+    RingBuffer<char, TERMINAL_INPUT_BUFFER_SIZE> _inputBuffer;
+
+    // Output / screen
+    size_t _x = 0, _y = 0;
+    Screen::Color _fg = Screen::LightGrey, _bg = Screen::Black;
+    SmallVector<char, TERMINAL_OUTPUT_BUFFER_SIZE> _outputBuffer;
 };
