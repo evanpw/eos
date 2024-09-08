@@ -17,9 +17,20 @@ T bit_cast(const U& u) {
     return __builtin_bit_cast(T, u);
 }
 
-// WARNING: risk of overflow
 template <typename T, typename U>
 T ceilDiv(T num, U denom) {
     ASSERT(num >= 0 && denom > 0);
     return (num + denom - 1) / denom;
+}
+
+template <typename T, typename U>
+T roundUp(T num, U denom) {
+    ASSERT(num >= 0 && denom > 0);
+    return denom * ceilDiv(num, denom);
+}
+
+template <typename T, typename U>
+T roundDown(T num, U denom) {
+    ASSERT(num >= 0 && denom > 0);
+    return denom * (num / denom);
 }

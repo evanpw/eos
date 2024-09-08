@@ -72,9 +72,7 @@ MemoryManager::MemoryManager()
         availableBytes += entry.length;
 
         if (entry.base <= 1 * MiB && end > 1 * MiB) {
-            // Round down to page-multiple size
-            end = (end / PAGE_SIZE) * PAGE_SIZE;
-            availableAt1MiB = end - 1 * MiB;
+            availableAt1MiB = roundDown(end, PAGE_SIZE) - 1 * MiB;
         }
     }
 
@@ -151,8 +149,8 @@ FreePageRange* MemoryManager::buildFreePageList() {
         }
 
         // Align this range to page boundaries
-        base = PAGE_SIZE * ceilDiv(base, PAGE_SIZE);
-        end = PAGE_SIZE * (end / PAGE_SIZE);
+        base = roundUp(base, PAGE_SIZE);
+        end = roundDown(end, PAGE_SIZE);
         if (base >= end) {
             continue;
         }
@@ -217,8 +215,8 @@ void MemoryManager::initializeHeap() {
 
 // TODO: this should return 16-byte aligned pointers to conform with the C spec
 void* MemoryManager::kmalloc(size_t size) {
-    // Round up to the nearest multiple of 4 bytes
-    size = 4 * ((size + 3) / 4);
+    // Don't allocate chunks of less than 4 bytes (for alignment reasons)
+    size = roundUp(size, 4);
 
     size_t requiredSize = size + sizeof(BlockHeader);
 
