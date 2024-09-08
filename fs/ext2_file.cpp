@@ -17,7 +17,8 @@ ssize_t Ext2File::read(OpenFileDescription& fd, void* buffer, size_t count) {
     return bytesRead;
 }
 
-ssize_t Ext2File::write(OpenFileDescription& fd, const void* buffer, size_t count) {
+ssize_t Ext2File::write(OpenFileDescription& /*fd*/, const void* /*buffer*/,
+                        size_t /*count*/) {
     // We don't have a writeable filesystem yet
     return -EBADF;
 }

@@ -3,9 +3,9 @@
 
 #include "estd/print.h"
 
-extern "C" void main() __attribute__((section(".entry")));
+extern "C" int main() __attribute__((section(".entry")));
 
-void main() {
+int main() {
     char buffer[64];
 
     int fd = open("version.txt", 0);
@@ -29,4 +29,6 @@ void main() {
             write(1, "\bno\n", 4);
         }
     }
+
+    return 0;
 }

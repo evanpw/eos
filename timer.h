@@ -1,5 +1,4 @@
 #pragma once
-#include "interrupts.h"
 #include "trap.h"
 
 extern "C" void irqHandler0(TrapRegisters& regs);

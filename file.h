@@ -22,7 +22,7 @@ struct OpenFileDescription {
 struct File {
     virtual ~File() = default;
 
-    virtual void close(){};
+    virtual void close() {};
     virtual ssize_t read(OpenFileDescription& fd, void* buffer, size_t count) = 0;
     virtual ssize_t write(OpenFileDescription& fd, const void* buffer, size_t count) = 0;
 };

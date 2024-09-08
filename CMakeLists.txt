@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 
 set(CMAKE_TOOLCHAIN_FILE ${CMAKE_SOURCE_DIR}/x86_64-elf.cmake)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Use C++20 with GNU extensions
 set(CMAKE_CXX_STANDARD 20)

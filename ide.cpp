@@ -2,7 +2,6 @@
 
 #include <string.h>
 
-#include "boot.h"
 #include "estd/buffer.h"
 #include "estd/print.h"
 #include "io.h"

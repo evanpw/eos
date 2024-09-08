@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include "estd/assertions.h"
-#include "estd/new.h"
+#include "estd/new.h"  // IWYU pragma: keep
 #include "estd/print.h"
 #include "klibc.h"
 #include "page_map.h"

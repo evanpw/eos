@@ -1,6 +1,6 @@
 // Keyboard drive
 #pragma once
-#include "interrupts.h"
+#include "estd/assertions.h"
 #include "trap.h"
 
 void irqHandler1(TrapRegisters& regs);

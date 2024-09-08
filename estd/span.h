@@ -1,5 +1,9 @@
 #pragma once
 
+#include <stddef.h>
+
+#include "estd/assertions.h"
+
 template <typename T>
 class Span {
 public:

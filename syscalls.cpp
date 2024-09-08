@@ -7,7 +7,6 @@
 #include "estd/print.h"
 #include "file.h"
 #include "fs/ext2_file.h"
-#include "io.h"
 #include "klibc.h"
 #include "panic.h"
 #include "process.h"
@@ -64,7 +63,7 @@ int sys_sleep(int ticks) {
     return 0;
 }
 
-int sys_open(const char* path, int oflag) {
+int sys_open(const char* path, int /*oflag*/) {
     // TODO: handle flags correctly
     Process& process = *currentThread->process;
 
@@ -122,13 +121,13 @@ void initSyscalls() {
     Processor::wrmsr(IA32_FMASK, 0x200);
 
     // Create table of syscall handlers
-    syscallTable[SYS_read] = bit_cast<SyscallHandler>(sys_read);
-    syscallTable[SYS_write] = bit_cast<SyscallHandler>(sys_write);
-    syscallTable[SYS_getpid] = bit_cast<SyscallHandler>(sys_getpid);
-    syscallTable[SYS_exit] = bit_cast<SyscallHandler>(sys_exit);
-    syscallTable[SYS_sleep] = bit_cast<SyscallHandler>(sys_sleep);
-    syscallTable[SYS_open] = bit_cast<SyscallHandler>(sys_open);
-    syscallTable[SYS_close] = bit_cast<SyscallHandler>(sys_close);
+    syscallTable[SYS_read] = bit_cast<SyscallHandler>((void*)sys_read);
+    syscallTable[SYS_write] = bit_cast<SyscallHandler>((void*)sys_write);
+    syscallTable[SYS_getpid] = bit_cast<SyscallHandler>((void*)sys_getpid);
+    syscallTable[SYS_exit] = bit_cast<SyscallHandler>((void*)sys_exit);
+    syscallTable[SYS_sleep] = bit_cast<SyscallHandler>((void*)sys_sleep);
+    syscallTable[SYS_open] = bit_cast<SyscallHandler>((void*)sys_open);
+    syscallTable[SYS_close] = bit_cast<SyscallHandler>((void*)sys_close);
 
     println("Syscalls initialized");
 }

@@ -5,7 +5,6 @@
 #include "errno.h"
 #include "estd/print.h"
 #include "klibc.h"
-#include "panic.h"
 #include "units.h"
 
 size_t Ext2FileSystem::blockSize() const { return 1024UL << _superBlock->log_block_size; }

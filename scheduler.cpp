@@ -1,6 +1,5 @@
 #include "scheduler.h"
 
-#include "estd/print.h"
 #include "process.h"
 #include "processor.h"
 #include "thread.h"
@@ -14,9 +13,9 @@ extern "C" void enterContextImpl(Thread* toThread) {
     // TODO: save / restore FPU state
 }
 
-extern "C" [[noreturn]] void __attribute__((naked)) enterContext(Thread* toThread) {
+extern "C" [[noreturn]] void __attribute__((naked)) enterContext(Thread* /*toThread*/) {
     asm volatile(
-        "mov %[toRsp], %%rsp\n"
+        "mov 0x8(%%rdi),%%rsp\n"  // toThread->rsp
         "call enterContextImpl\n"
         "pop %%r15\n"
         "pop %%r14\n"
@@ -26,11 +25,11 @@ extern "C" [[noreturn]] void __attribute__((naked)) enterContext(Thread* toThrea
         "pop %%rbp\n"
         "ret\n"
         :
-        : [toRsp] "m"(toThread->rsp)
-        :);
+        :
+        : "memory");
 }
 
-void __attribute__((naked)) switchContext(Thread* toThread, Thread* fromThread) {
+void __attribute__((naked)) switchContext(Thread* /*toThread*/, Thread* /*fromThread*/) {
     asm volatile(
         "push %%rbp\n"
         "mov %%rsp, %%rbp\n"
@@ -39,11 +38,11 @@ void __attribute__((naked)) switchContext(Thread* toThread, Thread* fromThread) 
         "push %%r13\n"
         "push %%r14\n"
         "push %%r15\n"
-        "mov %%rsp, %[fromRsp]\n"
+        "mov %%rsp, 0x8(%%rsi)\n"  // fromThread->rsp
         "jmp enterContext\n"
-        : [fromRsp] "=m"(fromThread->rsp)
         :
-        :);
+        :
+        : "memory");
 }
 
 void Scheduler::start(Thread* initialThread) {

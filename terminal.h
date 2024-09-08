@@ -4,7 +4,6 @@
 #include "estd/small_vector.h"
 #include "file.h"
 #include "keyboard.h"
-#include "panic.h"
 #include "screen.h"
 #include "spinlock.h"
 

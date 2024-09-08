@@ -10,7 +10,6 @@
 #include "panic.h"
 #include "processor.h"
 #include "system.h"
-#include "timer.h"
 #include "trap.h"
 
 InterruptDescriptor::InterruptDescriptor(uint64_t addr, uint8_t flags)
@@ -19,11 +18,6 @@ InterruptDescriptor::InterruptDescriptor(uint64_t addr, uint8_t flags)
   flags(flags),
   addr1(bitSlice(addr, 16, 32)),
   addr2(bitSlice(addr, 32, 64)) {}
-
-// Interrupt descriptor flags
-static constexpr uint8_t ISR_PRESENT = 0x80;
-static constexpr uint8_t ISR_INTERRUPT_GATE = 0x0E;
-static constexpr uint8_t ISR_TRAP_GATE = 0x0F;
 
 // PIC initialization command words (ICWs)
 // Reference: https://pdos.csail.mit.edu/6.828/2017/readings/hardware/8259A.pdf

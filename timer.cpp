@@ -1,6 +1,5 @@
 #include "timer.h"
 
-#include "estd/print.h"
 #include "interrupts.h"
 #include "io.h"
 #include "scheduler.h"

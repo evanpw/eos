@@ -1,8 +1,7 @@
 #include "thread.h"
 
 #include "boot.h"
-#include "estd/new.h"
-#include "estd/print.h"
+#include "estd/new.h"  // IWYU pragma: keep
 #include "klibc.h"
 #include "page_map.h"
 #include "process.h"
@@ -42,7 +41,7 @@ Thread::Thread(Process* process, VirtualAddress entryPoint) : process(process) {
     // On top of that, construct a stack which looks like the one constructed by
     // switchContext, except that the return address is switchToUserMode, which pops all
     // the registers from TrapRegisters and issues a sysret to enter user mode
-    *(--stackPtr) = bit_cast<uint64_t>(switchToUserMode);
+    *(--stackPtr) = bit_cast<uint64_t>((void*)switchToUserMode);
 
     // The rest of the regs (rbp, rbx, r12, r13, r14, r15) can be set to zero here
     for (size_t i = 0; i < 6; ++i) {

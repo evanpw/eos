@@ -1,5 +1,9 @@
 #pragma once
 
+#include <stddef.h>
+
+#include "estd/assertions.h"
+
 // Like a std::vector, but with a small, inline, compile-time capacity
 template <typename T, size_t N>
 class SmallVector {

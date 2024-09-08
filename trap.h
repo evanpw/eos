@@ -1,4 +1,5 @@
 #pragma once
+#include <stdint.h>
 
 // Stores the previous register values at kernel entry in a uniform format. We need to
 // have the same structure for both IRQs and syscalls because either may cause a thread

@@ -641,7 +641,7 @@ private:
         return *_current;
     }
 
-    uint8_t* _codeStart;
+    [[maybe_unused]] uint8_t* _codeStart;
     uint8_t* _codeEnd;
     uint8_t* _current;
 };

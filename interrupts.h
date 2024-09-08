@@ -2,7 +2,6 @@
 #pragma once
 #include <stdint.h>
 
-#include "estd/bits.h"
 #include "processor.h"
 #include "trap.h"
 
@@ -31,6 +30,11 @@ struct __attribute__((packed)) InterruptDescriptor {
 };
 
 static_assert(sizeof(InterruptDescriptor) == 16);
+
+// Interrupt descriptor flags
+static constexpr uint8_t ISR_PRESENT = 0x80;
+static constexpr uint8_t ISR_INTERRUPT_GATE = 0x0E;
+static constexpr uint8_t ISR_TRAP_GATE = 0x0F;
 
 extern InterruptDescriptor* g_idt;
 extern IDTRegister g_idtr;

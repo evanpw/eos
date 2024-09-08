@@ -1,8 +1,6 @@
 #include "terminal.h"
 
-#include "estd/print.h"
 #include "estd/vector.h"
-#include "io.h"
 
 Terminal::Terminal(KeyboardDevice& keyboard, Screen& screen)
 : _keyboard(keyboard), _screen(screen) {
@@ -506,7 +504,7 @@ void Terminal::onKeyEvent(const KeyboardEvent& event) {
         // TODO: input-buffer editing
 
         bool shifted =
-            _keyboard.isPressed(KeyCode::LShift) | _keyboard.isPressed(KeyCode::RShift);
+            _keyboard.isPressed(KeyCode::LShift) || _keyboard.isPressed(KeyCode::RShift);
         char c = shifted ? keyCodeToAsciiShifted(event.key)
                          : keyCodeToAsciiUnshifted(event.key);
 

@@ -7,7 +7,7 @@
 #include "page_map.h"
 #include "panic.h"
 #include "system.h"
-#include "terminal.h"
+#include "terminal.h"  // IWYU pragma: keep
 #include "thread.h"
 
 pid_t Process::s_nextPid = 1;

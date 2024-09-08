@@ -10,7 +10,7 @@ class Terminal;
 class PCIDevices;
 class IDEController;
 class Ext2FileSystem;
-class Scheduler;
+struct Scheduler;
 
 class System {
 public:

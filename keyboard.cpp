@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #include "estd/print.h"
+#include "interrupts.h"
 #include "io.h"
 #include "system.h"
 

@@ -1,5 +1,7 @@
 // Defines the memory map structure return by the INT 15h, EAX=E820h function
 #pragma once
+#include <stdint.h>
+
 #include "estd/span.h"
 
 enum AddressRangeType : uint32_t {

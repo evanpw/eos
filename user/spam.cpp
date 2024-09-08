@@ -2,11 +2,13 @@
 
 #include "estd/print.h"
 
-extern "C" void main() __attribute__((section(".entry")));
+extern "C" int main() __attribute__((section(".entry")));
 
-void main() {
+int main() {
     while (true) {
         sleep(20);
         print("u");
     }
+
+    return 0;
 }

@@ -3,7 +3,6 @@
 #include <string.h>
 
 #include "mem.h"
-#include "system.h"
 
 // Page map flags
 constexpr uint64_t PAGE_PRESENT = 1 << 0;

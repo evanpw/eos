@@ -2,7 +2,6 @@
 #pragma once
 
 #include "address.h"
-#include "trap.h"
 
 struct Process;
 
@@ -23,5 +22,6 @@ struct __attribute__((packed)) Thread {
 };
 
 static_assert(offsetof(Thread, kernelStack) == 0);
+static_assert(offsetof(Thread, rsp) == 8);
 
 extern "C" Thread* currentThread;

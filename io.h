@@ -1,8 +1,7 @@
 // Defines some functions for port I/O and reading and writing MSRs
 #pragma once
+#include <stddef.h>
 #include <stdint.h>
-
-#include "estd/bits.h"
 
 inline uint8_t inb(uint16_t port) {
     uint8_t result;
