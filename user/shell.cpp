@@ -8,7 +8,7 @@ extern "C" int main() __attribute__((section(".entry")));
 int main() {
     char buffer[64];
 
-    int fd = open("version.txt", 0);
+    int fd = open("/etc/version.txt", 0);
     ssize_t bytesRead = read(fd, buffer, 64);
     write(STDOUT_FILENO, "\033[31;42m", 8);
     write(STDOUT_FILENO, buffer, bytesRead);

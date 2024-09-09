@@ -235,30 +235,66 @@ bool Ext2FileSystem::init() {
 }
 
 OwnPtr<ext2::Inode> Ext2FileSystem::lookup(const char* path) {
-    char nameBuffer[256];
+    // TODO: check path pointer points to valid memory
+    OwnPtr<ext2::Inode> current = readInode(ext2::ROOT_INO);
 
-    uint32_t ino = 0;
-    uint16_t offset = 0;
-    while (offset < _rootInode->size()) {
-        ext2::DirectoryEntry dirEntry;
-        memcpy(&dirEntry, &_rootDir[offset], sizeof(dirEntry));
-
-        memcpy(nameBuffer, &_rootDir[offset + sizeof(dirEntry)], dirEntry.name_len);
-        nameBuffer[dirEntry.name_len] = '\0';
-
-        if (strncmp(nameBuffer, path, dirEntry.name_len + 1) == 0) {
-            ino = dirEntry.inode;
+    const char* p = path;
+    while (true) {
+        while (*p == '/') {
+            ++p;
         }
 
-        offset += dirEntry.rec_len;
-    }
+        // If we've reached the end of the path, we're done
+        if (*p == '\0') {
+            return current;
+        }
 
-    if (ino == 0) {
-        println("ext2: file not found: '{}'", path);
-        return {};
-    }
+        // Find the next component of the path
+        const char* next = strchr(p, '/');
+        if (!next) {
+            next = p + strlen(p);
+        }
 
-    return readInode(ino);
+        // Make sure that current location is a directory
+        if ((current->mode & 0xF000) != ext2::S_IFDIR) {
+            return {};
+        }
+
+        Buffer dirBuffer(current->size());
+        if (!readFullFile(*current, dirBuffer.get())) {
+            println("ext2: corrupt filesystem when looking up '{}'", path);
+            return {};
+        }
+
+        // Search for the next component in the current directory
+        ext2::DirectoryEntry* foundEntry = nullptr;
+        uint16_t offset = 0;
+        while (offset < current->size()) {
+            ext2::DirectoryEntry* dirEntry =
+                reinterpret_cast<ext2::DirectoryEntry*>(&dirBuffer[offset]);
+
+            if (dirEntry->name_len == next - p &&
+                strncmp(p, dirEntry->name, next - p) == 0) {
+                foundEntry = dirEntry;
+                break;
+            }
+
+            offset += dirEntry->rec_len;
+        }
+
+        if (!foundEntry) {
+            return {};
+        }
+
+        // Load the inode for the next component
+        current = readInode(foundEntry->inode);
+        if (!current) {
+            println("ext2: corrupt filesystem when looking up '{}'", path);
+            return {};
+        }
+
+        p = next;
+    }
 }
 
 OwnPtr<Ext2FileSystem> Ext2FileSystem::create(DiskDevice& disk) {

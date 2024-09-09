@@ -105,11 +105,13 @@ with open(loop_filename, "r+b") as fh:
 # Mount the disk image and copy the user files to it
 with tempfile.TemporaryDirectory() as tmpdir:
     runcmd(f"mount {loop_filename}p1 {tmpdir}")
+    os.mkdir(f"{tmpdir}/bin")
+    os.mkdir(f"{tmpdir}/etc")
 
     try:
         for filename in glob.glob(f"{build_dir}/user/*.bin"):
-            shutil.copy(filename, tmpdir)
+            shutil.copy(filename, f"{tmpdir}/bin")
 
-        shutil.copy(f"{src_dir}/version.txt", tmpdir)
+        shutil.copy(f"{src_dir}/version.txt", f"{tmpdir}/etc")
     finally:
         runcmd(f"umount {tmpdir}")

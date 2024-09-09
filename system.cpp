@@ -20,9 +20,9 @@
 void System::run() {
     System system;
 
-    Process process1("shell.bin");
+    Process process1("/bin/shell.bin");
     system._scheduler->threads.push_back(process1.thread.get());
-    Process process2("spam.bin");
+    Process process2("/bin/spam.bin");
     system._scheduler->threads.push_back(process2.thread.get());
 
     println("Entering ring3");

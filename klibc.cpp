@@ -34,13 +34,15 @@ int strncmp(const char* s1, const char* s2, size_t n) {
     if (n == 0) return 0;
 
     for (size_t i = 0; i < n; ++i) {
-        if (*lhs == 0 || *rhs == 0 || *lhs != *rhs) break;
+        if (*lhs == 0 || *rhs == 0 || *lhs != *rhs) {
+            return *lhs - *rhs;
+        }
 
         ++lhs;
         ++rhs;
     }
 
-    return *lhs - *rhs;
+    return 0;
 }
 
 char* strncpy(char* dest, const char* src, size_t n) {
@@ -53,4 +55,14 @@ char* strncpy(char* dest, const char* src, size_t n) {
     }
 
     return dest;
+}
+
+const char* strchr(const char* s, int c) {
+    const char* p = s;
+    while (*p) {
+        if (*p == c) return p;
+        ++p;
+    }
+
+    return nullptr;
 }
