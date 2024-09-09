@@ -1,6 +1,7 @@
 #include "terminal.h"
 
 #include "estd/vector.h"
+#include "klibc.h"
 
 Terminal::Terminal(KeyboardDevice& keyboard, Screen& screen)
 : _keyboard(keyboard), _screen(screen) {
@@ -576,6 +577,17 @@ bool Terminal::parseEscapeSequence() {
         }
 
         switch (c) {
+            case 's':
+                _savedX = _x;
+                _savedY = _y;
+                return true;
+
+            case 'u':
+                _x = _savedX;
+                _y = _savedY;
+                _screen.setCursor(_x, _y);
+                return true;
+
             case 'J':
                 _screen.clear(_bg);
                 _x = 0;
@@ -626,6 +638,16 @@ bool Terminal::parseEscapeSequence() {
                     } else if (arg == 47) {
                         _bg = Screen::LightGrey;
                     }
+                }
+
+                return true;
+            }
+
+            case 'H': {
+                if (args.size() == 2) {
+                    _x = min(max(0, args[1] - 1), (int)_screen.width() - 1);
+                    _y = min(max(0, args[0] - 1), (int)_screen.height() - 1);
+                    _screen.setCursor(_x, _y);
                 }
 
                 return true;

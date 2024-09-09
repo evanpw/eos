@@ -40,6 +40,7 @@ private:
 
     // Output / screen
     size_t _x = 0, _y = 0;
+    size_t _savedX = 0, _savedY = 0;
     Screen::Color _fg = Screen::LightGrey, _bg = Screen::Black;
     SmallVector<char, TERMINAL_OUTPUT_BUFFER_SIZE> _outputBuffer;
 };
