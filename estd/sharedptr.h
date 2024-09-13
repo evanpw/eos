@@ -1,5 +1,5 @@
 #pragma once
-#include "estd/assertions.h"
+#include "estd/atomic.h"
 
 template <typename T>
 class SharedPtr {
@@ -8,17 +8,14 @@ class SharedPtr {
 
 public:
     SharedPtr() : _ptr(nullptr), _refCount(nullptr) {}
-    explicit SharedPtr(T* ptr) : _ptr(ptr), _refCount(new int(1)) {}
+    explicit SharedPtr(T* ptr) : _ptr(ptr), _refCount(new AtomicInt(1)) {}
 
     ~SharedPtr() { clear(); }
 
     void clear() {
         if (!_ptr) return;
 
-        ASSERT(*_refCount > 0);
-        --(*_refCount);
-
-        if (*_refCount == 0) {
+        if (_refCount->decrement() == 0) {
             delete _ptr;
             delete _refCount;
         }
@@ -32,16 +29,14 @@ public:
 
         if (ptr) {
             _ptr = ptr;
-            _refCount = new int(1);
+            _refCount = new AtomicInt(1);
         }
     }
 
     // Copyable
     SharedPtr(const SharedPtr& other) : _ptr(other._ptr), _refCount(other._refCount) {
         if (!_ptr) return;
-
-        ASSERT(*_refCount > 0);
-        ++(*_refCount);
+        _refCount->increment();
     }
 
     SharedPtr& operator=(const SharedPtr& other) {
@@ -52,8 +47,7 @@ public:
             _refCount = other._refCount;
 
             if (_ptr) {
-                ASSERT(*_refCount > 0);
-                ++(*_refCount);
+                _refCount->increment();
             }
         }
 
@@ -65,9 +59,7 @@ public:
     template <typename U>
     SharedPtr(const SharedPtr<U>& other) : _ptr(other._ptr), _refCount(other._refCount) {
         if (!_ptr) return;
-
-        ASSERT(*_refCount > 0);
-        ++(*_refCount);
+        _refCount->increment();
     }
 
     // TODO: should be moveable?
@@ -75,23 +67,11 @@ public:
     // Access
     T* get() const { return _ptr; }
     operator bool() const { return _ptr != nullptr; }
-
-    T* operator->() const {
-        ASSERT(_ptr && *_refCount > 0);
-        return _ptr;
-    }
-
-    T& operator*() const {
-        ASSERT(_ptr && *_refCount > 0);
-        return *_ptr;
-    }
-
-    int refCount() const {
-        ASSERT(_ptr && *_refCount > 0);
-        return *_refCount;
-    }
+    T* operator->() const { return _ptr; }
+    T& operator*() const { return *_ptr; }
+    int refCount() const { return _refCount->load(); }
 
 private:
     T* _ptr;
-    int* _refCount;
+    AtomicInt* _refCount;
 };
