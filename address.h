@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 #include "estd/bits.h"
+#include "units.h"
 
 struct PhysicalAddress {
     PhysicalAddress(uint64_t value = 0) : value(value) {}
@@ -36,6 +37,11 @@ struct PhysicalAddress {
     uint64_t pageOffset(int pageSize = 0) const {
         ASSERT(pageSize >= 0 && pageSize <= 2);
         return lowBits(value, 12 + 9 * pageSize);
+    }
+
+    uint64_t pageFrameIdx() {
+        ASSERT(pageOffset() == 0);
+        return value / PAGE_SIZE;
     }
 
     uint64_t value;

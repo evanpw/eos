@@ -26,6 +26,18 @@ struct FreePageRange {
     FreePageRange* next;
 };
 
+enum class PageFrameStatus {
+    Reserved,  // not a valid memory range, or used allocated by the boot code
+    Free,
+    InUse,
+};
+
+// We have one of these structures for each physical page frame
+struct PageFrame {
+    PageFrameStatus status;
+    uint64_t refCount;
+};
+
 // Handles physical and virtual memory at the page level
 class MemoryManager {
 public:
@@ -52,6 +64,9 @@ private:
 
     FreePageRange* _freePageList = nullptr;
     FreePageRange* buildFreePageList();
+
+    PageFrame* _pageFrameArray = nullptr;
+    PageFrame* buildPageFrameArray(uint64_t topOfMemory);
 
     struct __attribute__((packed)) BlockHeader {
         static BlockHeader freeBlock(uint32_t size) {

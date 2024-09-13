@@ -81,6 +81,7 @@ MemoryManager::MemoryManager()
 
     _kaddressSpace.buildLinearMemoryMap(physicalMemoryRange);
     _freePageList = buildFreePageList();
+    _pageFrameArray = buildPageFrameArray(roundDown(physicalMemoryRange, PAGE_SIZE));
 
     initializeHeap();
 
@@ -188,6 +189,40 @@ FreePageRange* MemoryManager::buildFreePageList() {
     }
 
     return head;
+}
+
+PageFrame* MemoryManager::buildPageFrameArray(uint64_t physicalMemoryRange) {
+    // Figure out how much space we need to store the page frame array
+    size_t numEntries = physicalMemoryRange / PAGE_SIZE;
+    size_t size = numEntries * sizeof(PageFrame);
+    size_t sizeInPages = ceilDiv(size, PAGE_SIZE);
+
+    // Allocate memory to store the array
+    PhysicalAddress physStart = pageAlloc(sizeInPages);
+    VirtualAddress virtStart = physicalToVirtual(physStart);
+
+    // Initialize the entire space as reserved
+    PageFrame* pageFrameArray = virtStart.ptr<PageFrame>();
+    for (size_t i = 0; i < sizeInPages; i++) {
+        PageFrame* frame = new (&pageFrameArray[i]) PageFrame;
+        frame->status = PageFrameStatus::Reserved;
+        frame->refCount = 0;
+    }
+
+    // Walk the free page list and mark the corresponding page frames as free
+    FreePageRange* current = _freePageList;
+    while (current) {
+        uint64_t startIdx = current->start.pageFrameIdx();
+        uint64_t endIdx = current->end.pageFrameIdx();
+
+        for (uint64_t i = startIdx; i < endIdx; i++) {
+            pageFrameArray[i].status = PageFrameStatus::Free;
+        }
+
+        current = current->next;
+    }
+
+    return virtStart.ptr<PageFrame>();
 }
 
 size_t MemoryManager::freePageCount() const {
