@@ -20,13 +20,11 @@
 void System::run() {
     System system;
 
-    Process process1("/bin/shell.bin");
-    system._scheduler->threads.push_back(process1.thread.get());
-    Process process2("/bin/spam.bin");
-    system._scheduler->threads.push_back(process2.thread.get());
+    Process::create("/bin/shell.bin");
+    Process::create("/bin/spam.bin");
 
     println("Entering ring3");
-    system._scheduler->start(process2.thread.get());
+    system._scheduler->start();
     __builtin_unreachable();
 }
 
@@ -50,6 +48,8 @@ System::System() {
 
     _fs = Ext2FileSystem::create(_ideController->rootPartition());
     ASSERT(_fs);
+
+    ProcessTable::init();
 }
 
 SharedPtr<Terminal> System::terminal() {

@@ -9,10 +9,17 @@ extern "C" uint64_t currentKernelStack;
 extern "C" [[noreturn]] void enterContext(Thread* toThread);
 
 struct Scheduler {
-    void start(Thread* initialThread);
+    void start();
     void run();
 
-    Vector<Thread*> threads;
-    size_t currentIdx = 0;
+    void yield();
+    void stopThread(Thread* thread);
+    void cleanupDeadThreads();
+
     bool running = false;
+
+    Vector<Thread*> runQueue;
+    size_t nextIdx = 0;
+
+    Vector<Thread*> deadQueue;
 };

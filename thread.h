@@ -3,9 +3,9 @@
 
 #include "address.h"
 
-struct Process;
+class Process;
 
-struct __attribute__((packed)) Thread {
+struct Thread {
     // Always points to the top of the kernel stack. When this thread is running in user
     // mode, the kernel stack is empty, and on syscall entry the stack pointer is set to
     // this value. The entry code assumes that this value is at offset 0 within the Thread
@@ -17,8 +17,13 @@ struct __attribute__((packed)) Thread {
     uint64_t rsp;
 
     Thread(Process* process, VirtualAddress entryPoint);
+    ~Thread();
 
     Process* process;
+
+    // Keep track of allocations so they can be freed
+    PhysicalAddress userStackPages;
+    PhysicalAddress kernelStackPages;
 };
 
 static_assert(offsetof(Thread, kernelStack) == 0);

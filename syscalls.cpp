@@ -8,9 +8,9 @@
 #include "file.h"
 #include "fs/ext2_file.h"
 #include "klibc.h"
-#include "panic.h"
 #include "process.h"
 #include "processor.h"
+#include "scheduler.h"
 #include "system.h"
 #include "thread.h"
 #include "timer.h"
@@ -48,10 +48,14 @@ pid_t sys_getpid() {
     return process.pid;
 }
 
-void sys_exit(int status) {
-    // TODO: tear down the process and return to the scheduler
+[[noreturn]] void sys_exit(int status) {
     println("User process exited with status {}", status);
-    halt();
+
+    // TODO: free resources
+
+    // Does not return
+    System::scheduler().stopThread(currentThread);
+    __builtin_unreachable();
 }
 
 int sys_sleep(int ticks) {
@@ -80,6 +84,8 @@ int sys_close(int fd) {
     Process& process = *currentThread->process;
     return process.close(fd);
 }
+
+void sys_launch(const char* filename) { Process::create(filename); }
 
 // We don't have static initialization, so this is initialized at runtime
 SyscallHandler syscallTable[MAX_SYSCALL_NO + 1];
@@ -128,6 +134,7 @@ void initSyscalls() {
     syscallTable[SYS_sleep] = bit_cast<SyscallHandler>((void*)sys_sleep);
     syscallTable[SYS_open] = bit_cast<SyscallHandler>((void*)sys_open);
     syscallTable[SYS_close] = bit_cast<SyscallHandler>((void*)sys_close);
+    syscallTable[SYS_launch] = bit_cast<SyscallHandler>((void*)sys_launch);
 
     println("Syscalls initialized");
 }

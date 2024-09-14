@@ -30,5 +30,11 @@ ssize_t write(int fd, const void* buffer, size_t count) {
 
 pid_t getpid() { return __syscall(SYS_getpid); }
 
+void _exit(int status) {
+    __syscall(SYS_exit, status);
+    __builtin_unreachable();
+}
+
 // Non-standard
 int sleep(int ticks) { return __syscall(SYS_sleep, ticks); }
+void launch(const char* filename) { __syscall(SYS_launch, (uint64_t)filename); }

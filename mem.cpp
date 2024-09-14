@@ -122,6 +122,57 @@ PhysicalAddress MemoryManager::pageAlloc(size_t count) {
     panic("OOM in MemoryManager::pageAlloc");
 }
 
+void MemoryManager::pageFree(PhysicalAddress start, size_t count) {
+    PhysicalAddress end = start + count * PAGE_SIZE;
+
+    FreePageRange* prev = nullptr;
+    FreePageRange* current = _freePageList;
+    while (current) {
+        if (end > current->start) {
+            prev = current;
+            current = current->next;
+            continue;
+        }
+
+        ASSERT(!prev || (prev->end <= start));
+
+        if (end == current->start) {
+            // Merge the new range with the current one
+            current->start = start;
+
+            // Merge with the previous range if they're now contiguous
+            if (prev && prev->end == start) {
+                prev->end = current->end;
+                prev->next = current->next;
+                delete current;
+            }
+
+            return;
+        }
+
+        // Insert a new range before the current one
+        FreePageRange* newRange = new FreePageRange(start, end);
+        newRange->next = current;
+
+        if (prev) {
+            prev->next = newRange;
+        } else {
+            _freePageList = newRange;
+        }
+
+        return;
+    }
+
+    if (prev->end == start) {
+        // Merge the new range with the previous one
+        prev->end = end;
+    } else {
+        // Append a new range
+        FreePageRange* newRange = new FreePageRange(start, end);
+        prev->next = newRange;
+    }
+}
+
 FreePageRange* MemoryManager::buildFreePageList() {
     // Assume that previous steps didn't take up the entire contiguous chunk at
     // 1MiB, and that we can store all of the initial free page ranges in one

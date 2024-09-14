@@ -1,5 +1,6 @@
 #include "scheduler.h"
 
+#include "panic.h"
 #include "process.h"
 #include "processor.h"
 #include "thread.h"
@@ -45,16 +46,69 @@ void __attribute__((naked)) switchContext(Thread* /*toThread*/, Thread* /*fromTh
         : "memory");
 }
 
-void Scheduler::start(Thread* initialThread) {
+void Scheduler::start() {
+    ASSERT(!running && !runQueue.empty());
+
     running = true;
+    Thread* initialThread = runQueue[nextIdx];
+    nextIdx = (nextIdx + 1) % runQueue.size();
     enterContext(initialThread);
 }
 
 void Scheduler::run() {
-    if (!running || threads.empty()) return;
+    if (!running || runQueue.empty()) return;
+
+    cleanupDeadThreads();
 
     Thread* fromThread = currentThread;
-    currentIdx = (currentIdx + 1) % threads.size();
-    Thread* toThread = threads[currentIdx];
+    Thread* toThread = runQueue[nextIdx];
+    nextIdx = (nextIdx + 1) % runQueue.size();
     switchContext(toThread, fromThread);
+}
+
+void Scheduler::yield() { run(); }
+
+void Scheduler::stopThread(Thread* thread) {
+    // TODO: needs a lock
+
+    for (size_t i = 0; i < runQueue.size(); ++i) {
+        if (runQueue[i] != thread) continue;
+
+        // Move the thread from the run queue to the dead queue
+        Thread* lastThread = runQueue.back();
+        runQueue[i] = lastThread;
+        runQueue.pop_back();
+        deadQueue.push_back(thread);
+
+        ASSERT(!runQueue.empty());
+        nextIdx = (i + 1) % runQueue.size();
+
+        // If we're stopping our own thread, we need to switch to something else
+        if (thread == currentThread) {
+            yield();
+        } else {
+            return;
+        }
+    }
+
+    panic("Thread not found");
+}
+
+void Scheduler::cleanupDeadThreads() {
+    bool foundSelf = false;
+    for (Thread* thread : deadQueue) {
+        // We can't clean up a thread until we've switched away from it
+        if (thread == currentThread) {
+            foundSelf = true;
+            continue;
+        }
+
+        Process::destroy(thread->process);
+    }
+
+    deadQueue.clear();
+
+    if (foundSelf) {
+        deadQueue.push_back(currentThread);
+    }
 }

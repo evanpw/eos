@@ -1,5 +1,6 @@
 #pragma once
 #include "estd/assertions.h"
+#include "estd/stdlib.h"
 
 template <typename T>
 class Vector {
@@ -33,9 +34,10 @@ public:
         T* newData = new T[newCapacity];
 
         for (size_t i = 0; i < _size; ++i) {
-            newData[i] = _data[i];
+            newData[i] = move(_data[i]);
         }
 
+        delete[] _data;
         _data = newData;
         _capacity = newCapacity;
     }
@@ -49,6 +51,29 @@ public:
         _data[_size++] = value;
     }
 
+    void push_back(T&& value) {
+        if (_size == _capacity) {
+            reserve(_capacity == 0 ? 1 : 2 * _capacity);
+        }
+
+        ASSERT(_capacity > _size);
+        _data[_size++] = move(value);
+    }
+
+    void pop_back() {
+        ASSERT(_size > 0);
+        _data[_size - 1].~T();
+        --_size;
+    }
+
+    void clear() {
+        for (size_t i = 0; i < _size; ++i) {
+            _data[i].~T();
+        }
+
+        _size = 0;
+    }
+
     const T& operator[](size_t index) const {
         ASSERT(index < _size);
         return _data[index];
@@ -57,6 +82,11 @@ public:
     T& operator[](size_t index) {
         ASSERT(index < _size);
         return _data[index];
+    }
+
+    T& back() {
+        ASSERT(_size > 0);
+        return _data[_size - 1];
     }
 
     iterator begin() { return data(); }

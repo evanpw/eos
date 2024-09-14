@@ -6,15 +6,15 @@
 extern "C" int main() __attribute__((section(".entry")));
 
 int main() {
-    char c = 'a';
-    while (true) {
+    for (char c = 'a'; c < 'j'; c++) {
         print("\033[s\033[0;80H");
         putchar(c);
         print("\033[u");
         sleep(20);
-
-        c = (c == 'z') ? 'a' : c + 1;
     }
+
+    // TODO: allow just returning
+    _exit(12);
 
     return 0;
 }

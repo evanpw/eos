@@ -23,6 +23,8 @@ int main() {
 
         if (buffer[0] == 'c') {
             write(1, "\033[J", 3);
+        } else if (buffer[0] == 's') {
+            launch("/bin/spam.bin");
         } else if (buffer[0] == 'y') {
             write(1, "\byes\n", 5);
         } else {

@@ -33,6 +33,21 @@ enum class PageFrameStatus {
     InUse,
 };
 
+/*
+struct AllocatedPages {
+    PhysicalAddress start;
+    size_t pageCount;
+
+    ~AllocatedPages() {
+        // This is a bit of a hack, but it's fine for our purposes
+        for (size_t i = 0; i < pageCount; ++i) {
+            System::mm().pageFrameArray()[start.pageFrame()].status =
+                PageFrameStatus::Free;
+        }
+    }
+};
+*/
+
 // We have one of these structures for each physical page frame
 struct PageFrame {
     PageFrameStatus status;
@@ -45,6 +60,7 @@ public:
     size_t freePageCount() const;
 
     PhysicalAddress pageAlloc(size_t count = 1);
+    void pageFree(PhysicalAddress start, size_t count = 1);
 
     VirtualAddress physicalToVirtual(PhysicalAddress physAddr) {
         return _kaddressSpace.physicalToVirtual(physAddr);

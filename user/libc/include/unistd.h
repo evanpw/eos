@@ -12,7 +12,9 @@ extern "C" {
 ssize_t write(int fd, const void* buffer, size_t count);
 ssize_t read(int fd, void* buffer, size_t count);
 pid_t getpid();
+[[noreturn]] void _exit(int status);
 
 // Non-standard
 int sleep(int ticks);
+void launch(const char* path);
 }

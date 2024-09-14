@@ -16,14 +16,14 @@ extern "C" void switchToUserMode();
 
 Thread::Thread(Process* process, VirtualAddress entryPoint) : process(process) {
     // Allocate a user mode stack
-    PhysicalAddress stackBottomUserPhys = System::mm().pageAlloc(4);
+    userStackPages = System::mm().pageAlloc(4);
     VirtualAddress stackBottomUser = process->addressSpace->vmalloc(4);
     VirtualAddress stackTopUser = stackBottomUser + 4 * PAGE_SIZE;
-    process->addressSpace->mapPages(stackBottomUser, stackBottomUserPhys, 4);
+    process->addressSpace->mapPages(stackBottomUser, userStackPages, 4);
 
     // Allocate a kernel stack
-    PhysicalAddress stackBottomPhys = System::mm().pageAlloc(4);
-    VirtualAddress stackBottom = System::mm().physicalToVirtual(stackBottomPhys);
+    kernelStackPages = System::mm().pageAlloc(4);
+    VirtualAddress stackBottom = System::mm().physicalToVirtual(kernelStackPages);
     VirtualAddress stackTop = stackBottom + 4 * PAGE_SIZE;
 
     // Construct an initial stack that looks like a thread returning from a syscall
@@ -50,4 +50,9 @@ Thread::Thread(Process* process, VirtualAddress entryPoint) : process(process) {
 
     kernelStack = stackTop.value;
     rsp = bit_cast<uint64_t>(stackPtr);
+}
+
+Thread::~Thread() {
+    System::mm().pageFree(userStackPages, 4);
+    System::mm().pageFree(kernelStackPages, 4);
 }
