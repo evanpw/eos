@@ -206,7 +206,7 @@ PageFrame* MemoryManager::buildPageFrameArray(uint64_t physicalMemoryRange) {
     for (size_t i = 0; i < sizeInPages; i++) {
         PageFrame* frame = new (&pageFrameArray[i]) PageFrame;
         frame->status = PageFrameStatus::Reserved;
-        frame->refCount = 0;
+        frame->refCount.store(0);
     }
 
     // Walk the free page list and mark the corresponding page frames as free

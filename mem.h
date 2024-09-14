@@ -6,6 +6,7 @@
 #include "address.h"
 #include "e820.h"
 #include "estd/assertions.h"
+#include "estd/atomic.h"
 #include "estd/bits.h"
 #include "page_map.h"
 #include "units.h"
@@ -35,7 +36,7 @@ enum class PageFrameStatus {
 // We have one of these structures for each physical page frame
 struct PageFrame {
     PageFrameStatus status;
-    uint64_t refCount;
+    AtomicInt refCount;
 };
 
 // Handles physical and virtual memory at the page level
