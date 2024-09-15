@@ -3,8 +3,6 @@
 
 #include "estd/print.h"
 
-extern "C" int main() __attribute__((section(".entry")));
-
 int main() {
     char buffer[64];
 

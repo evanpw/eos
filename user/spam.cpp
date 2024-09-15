@@ -3,8 +3,6 @@
 #include "estd/print.h"
 #include "stdio.h"
 
-extern "C" int main() __attribute__((section(".entry")));
-
 int main() {
     for (char c = 'a'; c < 'j'; c++) {
         print("\033[s\033[0;80H");
@@ -13,8 +11,5 @@ int main() {
         sleep(20);
     }
 
-    // TODO: allow just returning
-    _exit(12);
-
-    return 0;
+    return 12;
 }

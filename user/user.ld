@@ -1,9 +1,10 @@
 SECTIONS
 {
-    ENTRY(main)
+    ENTRY(_start)
 
     . = 0x8000000000;
-    .text : { *(.entry) *(.text*) }
+    .entry : { *(.entry) }
+    .text : { *(.text*) }
     .rodata : { *(.rodata*) }
 
     /*
