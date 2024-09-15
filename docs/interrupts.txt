@@ -4,6 +4,7 @@
     - immediately after a syscall entry, until the stack is switched to the kernel stack
     - during irq handling, including the scheduler (irq0 timer interrupt) and in the
       keyboard driver (irq1 keyboard interrupt)
+    - during exception handlers
     - while a spinlock is being held
 
 * at all other times, the current thread can be interrupted
