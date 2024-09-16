@@ -55,7 +55,13 @@ void Scheduler::start() {
     enterContext(initialThread);
 }
 
-void Scheduler::run() {
+void Scheduler::onTimerInterrupt() {
+    SpinlockLocker locker(_schedLock);
+    yield();
+}
+
+void Scheduler::yield() {
+    ASSERT(_schedLock.isLocked());
     if (!running || runQueue.empty()) return;
 
     cleanupDeadThreads();
@@ -63,13 +69,23 @@ void Scheduler::run() {
     Thread* fromThread = currentThread;
     Thread* toThread = runQueue[nextIdx];
     nextIdx = (nextIdx + 1) % runQueue.size();
-    switchContext(toThread, fromThread);
+
+    // We have to temporarily unlock the sched lock, or we'll deadlock on the next
+    // timer interrupt, and then relock it before returning so that the caller can
+    // continue safely
+    {
+        SpinlockUnlocker unlocker(_schedLock);
+        switchContext(toThread, fromThread);
+    }
 }
 
-void Scheduler::yield() { run(); }
+void Scheduler::startThread(Thread* thread) {
+    SpinlockLocker locker(_schedLock);
+    runQueue.push_back(thread);
+}
 
 void Scheduler::stopThread(Thread* thread) {
-    // TODO: needs a lock
+    SpinlockLocker locker(_schedLock);
 
     for (size_t i = 0; i < runQueue.size(); ++i) {
         if (runQueue[i] != thread) continue;
@@ -95,6 +111,8 @@ void Scheduler::stopThread(Thread* thread) {
 }
 
 void Scheduler::cleanupDeadThreads() {
+    ASSERT(_schedLock.isLocked());
+
     bool foundSelf = false;
     for (Thread* thread : deadQueue) {
         // We can't clean up a thread until we've switched away from it
@@ -110,5 +128,53 @@ void Scheduler::cleanupDeadThreads() {
 
     if (foundSelf) {
         deadQueue.push_back(currentThread);
+    }
+}
+
+void Scheduler::sleepThread(const SharedPtr<Blocker>& blocker, Spinlock& lock) {
+    SpinlockLocker locker(_schedLock);
+
+    // We can't hold this lock while sleeping
+    lock.unlock();
+
+    for (size_t i = 0; i < runQueue.size(); ++i) {
+        if (runQueue[i] != currentThread) continue;
+
+        // Move the thread from the run queue to the wait queue
+        Thread* lastThread = runQueue.back();
+        runQueue[i] = lastThread;
+        runQueue.pop_back();
+        waitQueue.push_back({currentThread, blocker});
+
+        ASSERT(!runQueue.empty());
+        nextIdx = (i + 1) % runQueue.size();
+
+        // We won't return from this call until we're unblocked
+        yield();
+
+        // Re-acquire the lock before returning to the previous context
+        lock.lock();
+        return;
+    }
+
+    panic("current thread not found in run queue");
+}
+
+void Scheduler::wakeThreads(const SharedPtr<Blocker>& blocker) {
+    SpinlockLocker locker(_schedLock);
+
+    size_t i = 0;
+    while (i < waitQueue.size()) {
+        BlockedThread& blockedThread = waitQueue[i];
+
+        if (blockedThread.blocker.get() != blocker.get()) {
+            ++i;
+            continue;
+        }
+
+        // Move the thread from the wait queue to the run queue
+        waitQueue[i] = waitQueue.back();
+        waitQueue.pop_back();
+        runQueue.push_back(blockedThread.thread);
     }
 }

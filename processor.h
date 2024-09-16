@@ -43,6 +43,17 @@ public:
     static void init();
     static void initDescriptors();
     static void checkFeatures();
+    static uint64_t flags() {
+        uint64_t rflags;
+        asm volatile(
+            "pushf\n"
+            "pop %0\n"
+            : "=rm"(rflags)
+            :
+            : "memory");
+
+        return rflags;
+    }
 
     static void halt() { asm volatile("hlt"); }
     static void pause() { asm volatile("pause"); }
@@ -53,20 +64,13 @@ public:
 
     static void enableInterrupts() { asm volatile("sti"); }
     static void disableInterrupts() { asm volatile("cli"); }
+    static bool interruptsEnabled() { return flags() & (1 << 9); }
 
     // Disables interrupts and returns the previous interrupt state
     static InterruptsFlag saveAndDisableInterrupts() {
-        uint64_t rflags;
-        asm volatile(
-            "pushf\n"
-            "pop %0\n"
-            : "=rm"(rflags)
-            :
-            : "memory");
-
+        bool ifFlag = interruptsEnabled();
         disableInterrupts();
 
-        bool ifFlag = rflags & (1 << 9);
         return ifFlag ? InterruptsFlag::Enabled : InterruptsFlag::Disabled;
     }
 

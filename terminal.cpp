@@ -504,6 +504,7 @@ void Terminal::onKeyEvent(const KeyboardEvent& event) {
     if (event.pressed) {
         // TODO: input-buffer editing
 
+        // TODO: pass modifiers in with the event
         bool shifted =
             _keyboard.isPressed(KeyCode::LShift) || _keyboard.isPressed(KeyCode::RShift);
         char c = shifted ? keyCodeToAsciiShifted(event.key)

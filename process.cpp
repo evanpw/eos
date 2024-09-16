@@ -64,7 +64,7 @@ Process::Process(pid_t pid, const char* filename) : pid(pid) {
     addressSpace->mapPages(entryPoint, imagePages, pagesNeeded);
 
     thread = OwnPtr<Thread>(new Thread(this, entryPoint));
-    System::scheduler().runQueue.push_back(thread.get());
+    System::scheduler().startThread(thread.get());
 }
 
 Process::~Process() { System::mm().pageFree(imagePages); }

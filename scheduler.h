@@ -1,25 +1,49 @@
 #pragma once
 #include <stdint.h>
 
+#include "estd/sharedptr.h"
 #include "estd/vector.h"
+#include "spinlock.h"
 
 struct Thread;
 
 extern "C" uint64_t currentKernelStack;
 extern "C" [[noreturn]] void enterContext(Thread* toThread);
 
-struct Scheduler {
-    void start();
-    void run();
+// An opaque token whose identity represents a particular state that's blocking
+// some thread
+struct Blocker {
+    // No copy / move
+    Blocker(const Blocker&) = delete;
+    Blocker& operator=(const Blocker&) = delete;
+};
 
-    void yield();
+struct BlockedThread {
+    Thread* thread;
+    SharedPtr<Blocker> blocker;
+};
+
+struct Scheduler {
+public:
+    void start();
+
+    void startThread(Thread* thread);
     void stopThread(Thread* thread);
+
+    void sleepThread(const SharedPtr<Blocker>& blocker, Spinlock& lock);
+    void wakeThreads(const SharedPtr<Blocker>& blocker);
+
+    void onTimerInterrupt();
+
+private:
+    void yield();
     void cleanupDeadThreads();
 
-    bool running = false;
-
     Vector<Thread*> runQueue;
-    size_t nextIdx = 0;
-
+    Vector<BlockedThread> waitQueue;
     Vector<Thread*> deadQueue;
+
+    bool running = false;
+    size_t nextIdx = 0;
+    Spinlock _schedLock;
 };

@@ -44,7 +44,9 @@ public:
         }
     }
 
-    operator bool() const { return size() != 0; }
+    bool empty() const { return size() == 0; }
+    bool full() const { return size() == N; }
+    operator bool() const { return !empty(); }
 
 private:
     T* increment(T* ptr) {

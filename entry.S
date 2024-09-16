@@ -1,7 +1,6 @@
 .altmacro
 .global syscallEntry
 .global irqEntry
-
 .macro PUSH_GENERAL_REGS
     pushq %rax
     pushq %rcx
@@ -72,6 +71,7 @@ syscallEntryAsm:
     popq %rcx    // rip
     add $8, %rsp // cs
     popq %r11    // rflags
+    cli          // disable interrupts again before switching backing to the user stack
     popq %rsp    // rspPrev (this also skips ss)
 
     sysretq

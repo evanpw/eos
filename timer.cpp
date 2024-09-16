@@ -16,5 +16,5 @@ void Timer::init() {
 void irqHandler0(TrapRegisters&) {
     Timer::increment();
     outb(PIC1_COMMAND, EOI);
-    System::scheduler().run();
+    System::scheduler().onTimerInterrupt();
 }
