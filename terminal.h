@@ -4,6 +4,7 @@
 #include "estd/small_vector.h"
 #include "file.h"
 #include "keyboard.h"
+#include "scheduler.h"
 #include "screen.h"
 #include "spinlock.h"
 
@@ -37,6 +38,7 @@ private:
 
     // Input / keyboard
     RingBuffer<char, TERMINAL_INPUT_BUFFER_SIZE> _inputBuffer;
+    SharedPtr<Blocker> _inputBlocker;
 
     // Output / screen
     size_t _x = 0, _y = 0;

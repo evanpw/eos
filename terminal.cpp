@@ -2,9 +2,10 @@
 
 #include "estd/vector.h"
 #include "klibc.h"
+#include "system.h"
 
 Terminal::Terminal(KeyboardDevice& keyboard, Screen& screen)
-: _keyboard(keyboard), _screen(screen) {
+: _keyboard(keyboard), _screen(screen), _inputBlocker(new Blocker) {
     _keyboard.addListener(this);
 }
 
@@ -512,6 +513,7 @@ void Terminal::onKeyEvent(const KeyboardEvent& event) {
 
         if (c != '\0') {
             _inputBuffer.push(c);
+            System::scheduler().wakeThreads(_inputBlocker);
             handleChar(c);
         }
     }
@@ -719,6 +721,11 @@ void Terminal::backspace() {
 
 ssize_t Terminal::read(OpenFileDescription&, void* buffer, size_t count) {
     SpinlockLocker locker(_lock);
+
+    // Block until at least one byte is available
+    while (_inputBuffer.empty()) {
+        System::scheduler().sleepThread(_inputBlocker, _lock);
+    }
 
     // TODO: check fd mode
     // TODO: blocking, canonical mode

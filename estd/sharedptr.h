@@ -40,7 +40,7 @@ public:
     }
 
     SharedPtr& operator=(const SharedPtr& other) {
-        if (this != &other) {
+        if (_ptr != other._ptr) {
             clear();
 
             _ptr = other._ptr;

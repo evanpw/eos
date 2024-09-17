@@ -47,6 +47,8 @@ struct PhysicalAddress {
     uint64_t value;
 };
 
+static_assert(sizeof(PhysicalAddress) == sizeof(uint64_t));
+
 struct VirtualAddress {
     VirtualAddress(uint64_t value = 0) : value(value) {}
 
@@ -92,3 +94,5 @@ struct VirtualAddress {
 
     uint64_t value;
 };
+
+static_assert(sizeof(VirtualAddress) == sizeof(uint64_t));

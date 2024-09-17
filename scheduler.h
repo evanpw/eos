@@ -1,6 +1,7 @@
 #pragma once
 #include <stdint.h>
 
+#include "estd/ownptr.h"
 #include "estd/sharedptr.h"
 #include "estd/vector.h"
 #include "spinlock.h"
@@ -13,6 +14,8 @@ extern "C" [[noreturn]] void enterContext(Thread* toThread);
 // An opaque token whose identity represents a particular state that's blocking
 // some thread
 struct Blocker {
+    Blocker() = default;
+
     // No copy / move
     Blocker(const Blocker&) = delete;
     Blocker& operator=(const Blocker&) = delete;
@@ -25,6 +28,7 @@ struct BlockedThread {
 
 struct Scheduler {
 public:
+    Scheduler();
     void start();
 
     void startThread(Thread* thread);
@@ -46,4 +50,6 @@ private:
     bool running = false;
     size_t nextIdx = 0;
     Spinlock _schedLock;
+
+    OwnPtr<Thread> _idleThread;
 };

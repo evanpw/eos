@@ -1,5 +1,6 @@
 #pragma once
 #include "estd/assertions.h"
+#include "estd/new.h"
 #include "estd/stdlib.h"
 
 template <typename T>
@@ -13,14 +14,20 @@ public:
     Vector(size_t count, const T& value = T()) {
         _capacity = count;
         _size = count;
-        _data = new T[_capacity];
+        _data = static_cast<T*>(::operator new[](sizeof(T) * _capacity));
 
         for (size_t i = 0; i < _size; ++i) {
-            _data[i] = value;
+            new (&_data[i]) T(value);
         }
     }
 
-    ~Vector() { delete[] _data; }
+    ~Vector() {
+        for (size_t i = 0; i < _size; ++i) {
+            _data[i].~T();
+        }
+
+        ::operator delete[](_data);
+    }
 
     size_t size() const { return _size; }
     size_t capacity() const { return _capacity; }
@@ -31,13 +38,14 @@ public:
     void reserve(size_t newCapacity) {
         if (newCapacity < _capacity) return;
 
-        T* newData = new T[newCapacity];
+        T* newData = static_cast<T*>(::operator new[](sizeof(T) * newCapacity));
 
         for (size_t i = 0; i < _size; ++i) {
-            newData[i] = move(_data[i]);
+            new (&newData[i]) T(move(_data[i]));
+            _data[i].~T();
         }
 
-        delete[] _data;
+        ::operator delete[](_data);
         _data = newData;
         _capacity = newCapacity;
     }
@@ -48,7 +56,7 @@ public:
         }
 
         ASSERT(_capacity > _size);
-        _data[_size++] = value;
+        new (&_data[_size++]) T(value);
     }
 
     void push_back(T&& value) {
@@ -57,7 +65,7 @@ public:
         }
 
         ASSERT(_capacity > _size);
-        _data[_size++] = move(value);
+        new (&_data[_size++]) T(move(value));
     }
 
     void pop_back() {

@@ -2,6 +2,7 @@
 #pragma once
 
 #include "address.h"
+#include "estd/ownptr.h"
 
 class Process;
 
@@ -16,14 +17,16 @@ struct Thread {
     // which is used by switchContext to restore the thread context and resume execution
     uint64_t rsp;
 
-    Thread(Process* process, VirtualAddress entryPoint);
-    ~Thread();
+    static OwnPtr<Thread> createUserThread(Process* process, VirtualAddress entryPoint);
+    static OwnPtr<Thread> createKernelThread(VirtualAddress entryPoint);
 
     Process* process;
 
     // Keep track of allocations so they can be freed
     PhysicalAddress userStackPages;
     PhysicalAddress kernelStackPages;
+
+    ~Thread();
 };
 
 static_assert(offsetof(Thread, kernelStack) == 0);

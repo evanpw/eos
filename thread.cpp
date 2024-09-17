@@ -13,17 +13,21 @@ Thread* currentThread;
 
 // Defined in entry.S
 extern "C" void switchToUserMode();
+extern "C" void enterKernelThread();
 
-Thread::Thread(Process* process, VirtualAddress entryPoint) : process(process) {
+OwnPtr<Thread> Thread::createUserThread(Process* process, VirtualAddress entryPoint) {
+    Thread* thread = new Thread;
+    thread->process = process;
+
     // Allocate a user mode stack
-    userStackPages = System::mm().pageAlloc(4);
+    thread->userStackPages = System::mm().pageAlloc(4);
     VirtualAddress stackBottomUser = process->addressSpace->vmalloc(4);
     VirtualAddress stackTopUser = stackBottomUser + 4 * PAGE_SIZE;
-    process->addressSpace->mapPages(stackBottomUser, userStackPages, 4);
+    process->addressSpace->mapPages(stackBottomUser, thread->userStackPages, 4);
 
     // Allocate a kernel stack
-    kernelStackPages = System::mm().pageAlloc(4);
-    VirtualAddress stackBottom = System::mm().physicalToVirtual(kernelStackPages);
+    thread->kernelStackPages = System::mm().pageAlloc(4);
+    VirtualAddress stackBottom = System::mm().physicalToVirtual(thread->kernelStackPages);
     VirtualAddress stackTop = stackBottom + 4 * PAGE_SIZE;
 
     // Construct an initial stack that looks like a thread returning from a syscall
@@ -48,11 +52,56 @@ Thread::Thread(Process* process, VirtualAddress entryPoint) : process(process) {
         *(--stackPtr) = 0;
     }
 
-    kernelStack = stackTop.value;
-    rsp = bit_cast<uint64_t>(stackPtr);
+    thread->kernelStack = stackTop.value;
+    thread->rsp = bit_cast<uint64_t>(stackPtr);
+
+    return OwnPtr<Thread>(thread);
+}
+
+OwnPtr<Thread> Thread::createKernelThread(VirtualAddress entryPoint) {
+    Thread* thread = new Thread;
+    thread->process = nullptr;
+
+    // Allocate a user mode stack
+    thread->userStackPages = 0;
+
+    // Allocate a kernel stack
+    thread->kernelStackPages = System::mm().pageAlloc(4);
+    VirtualAddress stackBottom = System::mm().physicalToVirtual(thread->kernelStackPages);
+    VirtualAddress stackTop = stackBottom + 4 * PAGE_SIZE;
+
+    // Construct an initial stack that looks like a thread returning from an interrupt
+    uint64_t* stackPtr = stackTop.ptr<uint64_t>();
+    stackPtr -= sizeof(TrapRegisters) / sizeof(uint64_t);
+    memset(stackPtr, 0, sizeof(TrapRegisters));
+
+    TrapRegisters& regs = *new (stackPtr) TrapRegisters;
+    regs.rip = entryPoint.value;
+    regs.rspPrev = stackTop.value;
+    regs.rflags = 0x202;  // IF + reserved bit
+    regs.ss = SELECTOR_DATA0;
+    regs.cs = SELECTOR_CODE0;
+
+    // On top of that, construct a stack which looks like the one constructed by
+    // switchContext, except that the return address is switchToUserMode, which pops
+    // off the (unused) error code and performs an iretq
+    *(--stackPtr) = bit_cast<uint64_t>((void*)enterKernelThread);
+
+    // The rest of the regs (rbp, rbx, r12, r13, r14, r15) can be set to zero here
+    for (size_t i = 0; i < 6; ++i) {
+        *(--stackPtr) = 0;
+    }
+
+    thread->kernelStack = stackTop.value;
+    thread->rsp = bit_cast<uint64_t>(stackPtr);
+
+    return OwnPtr<Thread>(thread);
 }
 
 Thread::~Thread() {
-    System::mm().pageFree(userStackPages, 4);
+    if (userStackPages != 0) {
+        System::mm().pageFree(userStackPages, 4);
+    }
+
     System::mm().pageFree(kernelStackPages, 4);
 }

@@ -16,7 +16,10 @@ int main() {
     println("pid={}", getpid());
 
     while (true) {
-        while (read(STDIN_FILENO, buffer, 64) == 0) {
+        bytesRead = read(STDIN_FILENO, buffer, 1);
+        if (bytesRead == 0) {
+            println("EOF");
+            continue;
         }
 
         if (buffer[0] == 'c') {

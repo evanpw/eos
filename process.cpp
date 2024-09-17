@@ -63,7 +63,7 @@ Process::Process(pid_t pid, const char* filename) : pid(pid) {
     VirtualAddress entryPoint = addressSpace->userMapBase();
     addressSpace->mapPages(entryPoint, imagePages, pagesNeeded);
 
-    thread = OwnPtr<Thread>(new Thread(this, entryPoint));
+    thread = Thread::createUserThread(this, entryPoint);
     System::scheduler().startThread(thread.get());
 }
 

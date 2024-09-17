@@ -52,9 +52,8 @@ public:
         __atomic_add_fetch(&_value, 1, __ATOMIC_ACQ_REL);
     }
 
-    // NB: this returns the _new_ value, not the previous value
     uint64_t decrement() volatile noexcept {
-        return __atomic_sub_fetch(&_value, 1, __ATOMIC_ACQ_REL) - 1;
+        return __atomic_sub_fetch(&_value, 1, __ATOMIC_ACQ_REL);
     }
 
 private:

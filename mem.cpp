@@ -356,10 +356,17 @@ void* MemoryManager::kmalloc(size_t size) {
 }
 
 void MemoryManager::kfree(void* ptr) {
+    // Should be safe to free a nullptr
+    if (!ptr) {
+        return;
+    }
+
     // Locate the header for this heap block and verify that it looks good
     uint8_t* blockPtr = reinterpret_cast<uint8_t*>(ptr) - sizeof(BlockHeader);
     BlockHeader* header = reinterpret_cast<BlockHeader*>(blockPtr);
-    ASSERT(blockPtr >= _heap && blockPtr + header->size() <= _heap + HEAP_SIZE);
+    ASSERT(blockPtr >= _heap);
+    ASSERT(blockPtr < _heap + HEAP_SIZE);
+    ASSERT(blockPtr + header->size() <= _heap + HEAP_SIZE);
     ASSERT(header->size() % 4 == 0);
     ASSERT(header->size() >= sizeof(BlockHeader) + 4);
     ASSERT(!header->isFree());

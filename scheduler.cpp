@@ -1,5 +1,6 @@
 #include "scheduler.h"
 
+#include "klibc.h"
 #include "panic.h"
 #include "process.h"
 #include "processor.h"
@@ -7,10 +8,23 @@
 
 uint64_t currentKernelStack;
 
+void idleThread() {
+    while (true) {
+        ASSERT(Processor::interruptsEnabled());
+        Processor::halt();
+    }
+}
+
 extern "C" void enterContextImpl(Thread* toThread) {
     currentThread = toThread;
     currentKernelStack = toThread->kernelStack;
-    Processor::loadCR3(toThread->process->addressSpace->pml4());
+
+    if (toThread->process) {
+        Processor::loadCR3(toThread->process->addressSpace->pml4());
+    } else {
+        Processor::loadCR3(KERNEL_PML4);
+    }
+
     // TODO: save / restore FPU state
 }
 
@@ -46,13 +60,21 @@ void __attribute__((naked)) switchContext(Thread* /*toThread*/, Thread* /*fromTh
         : "memory");
 }
 
-void Scheduler::start() {
-    ASSERT(!running && !runQueue.empty());
+Scheduler::Scheduler() {
+    _idleThread = Thread::createKernelThread(bit_cast<uint64_t>(&idleThread));
+}
 
+void Scheduler::start() {
+    ASSERT(!running && nextIdx == 0);
     running = true;
-    Thread* initialThread = runQueue[nextIdx];
-    nextIdx = (nextIdx + 1) % runQueue.size();
-    enterContext(initialThread);
+
+    if (!runQueue.empty()) {
+        Thread* initialThread = runQueue[nextIdx];
+        nextIdx = (nextIdx + 1) % runQueue.size();
+        enterContext(initialThread);
+    } else {
+        enterContext(_idleThread.get());
+    }
 }
 
 void Scheduler::onTimerInterrupt() {
@@ -62,13 +84,21 @@ void Scheduler::onTimerInterrupt() {
 
 void Scheduler::yield() {
     ASSERT(_schedLock.isLocked());
-    if (!running || runQueue.empty()) return;
+    if (!running) return;
 
     cleanupDeadThreads();
 
     Thread* fromThread = currentThread;
-    Thread* toThread = runQueue[nextIdx];
-    nextIdx = (nextIdx + 1) % runQueue.size();
+    Thread* toThread;
+
+    if (!runQueue.empty()) {
+        ASSERT(nextIdx < runQueue.size());
+        toThread = runQueue[nextIdx];
+        nextIdx = (nextIdx + 1) % runQueue.size();
+    } else {
+        ASSERT(nextIdx == 0);
+        toThread = _idleThread.get();
+    }
 
     // We have to temporarily unlock the sched lock, or we'll deadlock on the next
     // timer interrupt, and then relock it before returning so that the caller can
@@ -96,8 +126,11 @@ void Scheduler::stopThread(Thread* thread) {
         runQueue.pop_back();
         deadQueue.push_back(thread);
 
-        ASSERT(!runQueue.empty());
-        nextIdx = (i + 1) % runQueue.size();
+        if (!runQueue.empty()) {
+            nextIdx = (i + 1) % runQueue.size();
+        } else {
+            nextIdx = 0;
+        }
 
         // If we're stopping our own thread, we need to switch to something else
         if (thread == currentThread) {
@@ -146,8 +179,11 @@ void Scheduler::sleepThread(const SharedPtr<Blocker>& blocker, Spinlock& lock) {
         runQueue.pop_back();
         waitQueue.push_back({currentThread, blocker});
 
-        ASSERT(!runQueue.empty());
-        nextIdx = (i + 1) % runQueue.size();
+        if (!runQueue.empty()) {
+            nextIdx = (i + 1) % runQueue.size();
+        } else {
+            nextIdx = 0;
+        }
 
         // We won't return from this call until we're unblocked
         yield();
@@ -173,8 +209,9 @@ void Scheduler::wakeThreads(const SharedPtr<Blocker>& blocker) {
         }
 
         // Move the thread from the wait queue to the run queue
+        Thread* thread = blockedThread.thread;
         waitQueue[i] = waitQueue.back();
         waitQueue.pop_back();
-        runQueue.push_back(blockedThread.thread);
+        runQueue.push_back(thread);
     }
 }
