@@ -6,5 +6,6 @@
       keyboard driver (irq1 keyboard interrupt)
     - during exception handlers
     - while a spinlock is being held
+    - between releasing the sched lock and switching contexts in the scheduler
 
 * at all other times, the current thread can be interrupted
