@@ -80,10 +80,9 @@ MemoryManager::MemoryManager()
     _freePageList = &initialPages;
 
     _kaddressSpace.buildLinearMemoryMap(physicalMemoryRange);
+    initializeHeap();
     _freePageList = buildFreePageList();
     _pageFrameArray = buildPageFrameArray(roundDown(physicalMemoryRange, PAGE_SIZE));
-
-    initializeHeap();
 
     println("Memory manager initialized");
     println("Available physical memory: {} MiB", availableBytes / MiB);
@@ -174,12 +173,6 @@ void MemoryManager::pageFree(PhysicalAddress start, size_t count) {
 }
 
 FreePageRange* MemoryManager::buildFreePageList() {
-    // Assume that previous steps didn't take up the entire contiguous chunk at
-    // 1MiB, and that we can store all of the initial free page ranges in one
-    // page
-    VirtualAddress slabStart = physicalToVirtual(pageAlloc());
-    VirtualAddress slabEnd = slabStart + PAGE_SIZE;
-
     FreePageRange* head = nullptr;
     FreePageRange* tail = nullptr;
     for (const auto& entry : _e820Table) {
@@ -207,12 +200,8 @@ FreePageRange* MemoryManager::buildFreePageList() {
             continue;
         }
 
-        // Allocate space for the new range
-        ASSERT(slabStart + sizeof(FreePageRange) <= slabEnd);
-        void* newAddr = slabStart.ptr<void>();
-        slabStart += sizeof(FreePageRange);
-
         // Initialize the new range at the appropriate address
+        void* newAddr = kmalloc(sizeof(FreePageRange));
         FreePageRange* newRange = new (newAddr) FreePageRange(base, end);
 
         // Insert it into the list
@@ -293,6 +282,7 @@ void MemoryManager::initializeHeap() {
     // Allocate and zero out a contiguous region to use as a heap
     PhysicalAddress physicalPages = pageAlloc(HEAP_SIZE / PAGE_SIZE);
     _heap = physicalToVirtual(physicalPages).ptr<uint8_t>();
+    println("Creating {} MiB kernel heap at address {:X}", HEAP_SIZE / MiB, _heap);
 
     // Initialize the entire space as a single free block
     BlockHeader* firstBlock = new (_heap) BlockHeader;
@@ -383,5 +373,16 @@ void MemoryManager::showHeap() const {
         println("addr={:X}, size={}, free={}", ptr, header->size(), header->isFree());
 
         ptr += header->size();
+    }
+}
+
+void MemoryManager::showFreePageList() const {
+    FreePageRange* current = _freePageList;
+    while (current) {
+        ASSERT(current->start.pageOffset() == 0 && current->end.pageOffset() == 0);
+        println("addr: {:X}, sizePages={} (current={:X}, next={:X})",
+                current->start.value, (current->end - current->start) / PAGE_SIZE,
+                current, current->next);
+        current = current->next;
     }
 }

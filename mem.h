@@ -70,7 +70,10 @@ public:
 
     void* kmalloc(size_t size);
     void kfree(void* ptr);
+
+    // For debugging purposes
     void showHeap() const;
+    void showFreePageList() const;
 
 private:
     friend class System;

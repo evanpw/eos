@@ -7,6 +7,7 @@
 #include "boot.h"
 #include "estd/bits.h"
 #include "estd/ownptr.h"
+#include "estd/vector.h"
 #include "units.h"
 
 struct PageMapEntry {
@@ -44,13 +45,8 @@ class KernelAddressSpace {
 public:
     KernelAddressSpace(MemoryManager& mm) : _mm(mm) {}
 
-    void mapPageImpl(PhysicalAddress pml4, VirtualAddress virtAddr,
-                     PhysicalAddress physAddr, int pageSize = 0, uint64_t flags = 0);
-
     void mapPage(VirtualAddress virtAddr, PhysicalAddress physAddr, int pageSize = 0,
-                 uint64_t flags = 0) {
-        mapPageImpl(_pml4, virtAddr, physAddr, pageSize, flags);
-    }
+                 uint64_t flags = 0);
 
     VirtualAddress physicalToVirtual(PhysicalAddress physAddr);
 
@@ -58,7 +54,7 @@ public:
 
 private:
     MemoryManager& _mm;
-    PhysicalAddress _pml4 = KERNEL_PML4;
+    const PhysicalAddress _pml4 = KERNEL_PML4;
 
     const PhysicalAddress _identityMapEnd = 2 * MiB;
     const VirtualAddress _linearMapOffset = 0xFFFF800000000000;
@@ -69,20 +65,21 @@ private:
 };
 
 class UserAddressSpace {
+    friend class KernelAddressSpace;
+
 public:
+    ~UserAddressSpace();
+
     void mapPage(VirtualAddress virtAddr, PhysicalAddress physAddr, int pageSize = 0);
     void mapPages(VirtualAddress virtAddr, PhysicalAddress physAddr, size_t count);
 
     PhysicalAddress pml4() const { return _pml4; }
+    VirtualAddress userMapBase() const { return _userMapBase; }
 
     VirtualAddress vmalloc(size_t pageCount);
 
-    VirtualAddress userMapBase() const { return _userMapBase; }
-
 private:
-    friend class KernelAddressSpace;
-    UserAddressSpace(KernelAddressSpace& kaddr, PhysicalAddress pml4)
-    : _kaddr(kaddr), _pml4(pml4) {}
+    UserAddressSpace(KernelAddressSpace& kaddr, PhysicalAddress pml4);
 
     KernelAddressSpace& _kaddr;
     PhysicalAddress _pml4;
@@ -92,4 +89,8 @@ private:
 
     // Simple bump-pointer virtual memory allocator
     VirtualAddress _nextUserAddress = _userMapBase + 2 * MiB;
+
+    // Keep track of the pages we've used for PMLs so that we can free them at destructor
+    // time
+    Vector<PhysicalAddress> _allocatedPages;
 };

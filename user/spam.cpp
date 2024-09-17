@@ -4,7 +4,7 @@
 #include "stdio.h"
 
 int main() {
-    for (char c = 'a'; c < 'j'; c++) {
+    for (char c = 'a'; c < 'd'; c++) {
         print("\033[s\033[0;80H");
         putchar(c);
         print("\033[u");

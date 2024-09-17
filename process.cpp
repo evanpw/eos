@@ -49,8 +49,8 @@ Process::Process(pid_t pid, const char* filename) : pid(pid) {
     ASSERT(inode);
 
     // Allocate a fresh piece of page-aligned physical memory to store it
-    uint64_t pagesNeeded = ceilDiv(inode->size(), PAGE_SIZE);
-    imagePages = System::mm().pageAlloc(pagesNeeded);
+    imagePagesCount = ceilDiv(inode->size(), PAGE_SIZE);
+    imagePages = System::mm().pageAlloc(imagePagesCount);
     uint8_t* ptr = System::mm().physicalToVirtual(imagePages).ptr<uint8_t>();
 
     // Read the executable from disk
@@ -61,13 +61,13 @@ Process::Process(pid_t pid, const char* filename) : pid(pid) {
     // Create user address space and map the executable image into it
     addressSpace = System::mm().kaddressSpace().makeUserAddressSpace();
     VirtualAddress entryPoint = addressSpace->userMapBase();
-    addressSpace->mapPages(entryPoint, imagePages, pagesNeeded);
+    addressSpace->mapPages(entryPoint, imagePages, imagePagesCount);
 
     thread = Thread::createUserThread(this, entryPoint);
     System::scheduler().startThread(thread.get());
 }
 
-Process::~Process() { System::mm().pageFree(imagePages); }
+Process::~Process() { System::mm().pageFree(imagePages, imagePagesCount); }
 
 int Process::open(const SharedPtr<File>& file) {
     // Find next available fd

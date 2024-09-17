@@ -51,6 +51,7 @@ public:
     OwnPtr<UserAddressSpace> addressSpace;
     OwnPtr<Thread> thread;
     PhysicalAddress imagePages;
+    uint64_t imagePagesCount;
 
     int open(const SharedPtr<File>& file);
     int close(int fd);
