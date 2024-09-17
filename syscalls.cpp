@@ -51,8 +51,6 @@ pid_t sys_getpid() {
 [[noreturn]] void sys_exit(int status) {
     println("proc: user process exited with status {}", status);
 
-    // TODO: free resources
-
     // Does not return
     System::scheduler().stopThread(currentThread);
     __builtin_unreachable();
