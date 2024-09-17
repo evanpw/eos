@@ -214,15 +214,16 @@ void parseMADT(TableHeader* madt) {
         ptr += recordLength - 2;
     }
 
-    println("CPU cores: {}", numCores);
-    println("Local APIC address: {:X}", localApicAddress.value);
-    println("I/O APIC address: {:X}", ioApicAddress.value);
+    println("acpi: cpu cores: {}", numCores);
+    println("acpi: local apic address: {:X}", localApicAddress.value);
+    println("acpi: i/o apic address: {:X}", ioApicAddress.value);
 }
 
 // High Performance Event Timer Table
 void parseHPET(TableHeader* header) {
     // https://www.intel.com/content/dam/www/public/us/en/documents/technical-specifications/software-developers-hpet-spec-1-0a.pdf
-    HPETTable* table = reinterpret_cast<HPETTable*>(header);
+    [[maybe_unused]] HPETTable* table = reinterpret_cast<HPETTable*>(header);
+    /*
     println("hpet: revisionId = {}", table->revisionId);
     println("hpet: numComparators = {}", table->numComparators);
     println("hpet: counterSize = {}", table->counterSize);
@@ -236,6 +237,7 @@ void parseHPET(TableHeader* header) {
     println("hpet: minTick = {}", table->minTick);
     println("hpet: pageProtection = {}", table->pageProtection);
     println("hpet: oem = {}", table->oem);
+    */
 }
 
 bool parseACPITables() {
@@ -248,7 +250,7 @@ bool parseACPITables() {
 
     TableHeader* rsdt = TableHeader::tryCreate(rsdp->rsdtAddress);
     if (!rsdt) {
-        println("RSDT not found or invalid");
+        println("acpi: rdst not found or invalid");
         return false;
     }
 
@@ -278,8 +280,9 @@ bool parseACPITables() {
 
 void initACPI() {
     if (!parseACPITables()) {
-        println("No ACPI tables found");
+        println("acpi: no acpi tables found");
+        return;
     }
 
-    println("ACPI initialized");
+    println("acpi: init complete");
 }

@@ -26,7 +26,7 @@ Screen::Screen() {
     clear();
     setCursor(0, 0);
 
-    println("Screen initialized");
+    println("vga: init complete");
 }
 
 void Screen::clear(Color bg) {

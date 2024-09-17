@@ -348,7 +348,7 @@ IDEController::IDEController() {
     PCIDevice* pciDevice = System::pciDevices().findByClass(PCIDeviceClass::StorageIDE);
 
     if (!pciDevice) {
-        println("No IDE controller found");
+        println("ide: no ide controller found");
         return;
     }
 
@@ -364,34 +364,32 @@ IDEController::IDEController() {
     _primary->writeRegister(Control, 2);
     _secondary->writeRegister(Control, 2);
 
-    println("Detecting IDE drives");
-
     // Detect drives
     _primaryMaster = detectDrive(*_primary, DriveSelector::Master);
     if (_primaryMaster) {
-        println("Primary master: {}", _primaryMaster->modelName());
+        println("ide: primary master: {}", _primaryMaster->modelName());
         detectPartitions(*_primaryMaster);
     }
 
     _primarySlave = detectDrive(*_primary, DriveSelector::Slave);
     if (_primarySlave) {
-        println("Primary slave: {}", _primarySlave->modelName());
+        println("ide: primary slave: {}", _primarySlave->modelName());
         detectPartitions(*_primarySlave);
     }
 
     _secondaryMaster = detectDrive(*_secondary, DriveSelector::Master);
     if (_secondaryMaster) {
-        println("Secondary master: {}", _secondaryMaster->modelName());
+        println("ide: secondary master: {}", _secondaryMaster->modelName());
         detectPartitions(*_secondaryMaster);
     }
 
     _secondarySlave = detectDrive(*_secondary, DriveSelector::Slave);
     if (_secondarySlave) {
-        println("Secondary slave: {}", _secondarySlave->modelName());
+        println("ide: secondary slave: {}", _secondarySlave->modelName());
         detectPartitions(*_secondarySlave);
     }
 
-    println("IDE controller initialized");
+    println("ide: init complete");
 }
 
 IDEController::~IDEController() = default;

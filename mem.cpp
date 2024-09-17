@@ -84,8 +84,8 @@ MemoryManager::MemoryManager()
     _freePageList = buildFreePageList();
     _pageFrameArray = buildPageFrameArray(roundDown(physicalMemoryRange, PAGE_SIZE));
 
-    println("Memory manager initialized");
-    println("Available physical memory: {} MiB", availableBytes / MiB);
+    println("mm: available physical memory: {} MiB", availableBytes / MiB);
+    println("mm: init complete");
 }
 
 PhysicalAddress MemoryManager::pageAlloc(size_t count) {
@@ -282,7 +282,8 @@ void MemoryManager::initializeHeap() {
     // Allocate and zero out a contiguous region to use as a heap
     PhysicalAddress physicalPages = pageAlloc(HEAP_SIZE / PAGE_SIZE);
     _heap = physicalToVirtual(physicalPages).ptr<uint8_t>();
-    println("Creating {} MiB kernel heap at address {:X}", HEAP_SIZE / MiB, _heap);
+    println("mm: creating {} MiB kernel heap at address {:X}", HEAP_SIZE / MiB,
+            physicalPages.value);
 
     // Initialize the entire space as a single free block
     BlockHeader* firstBlock = new (_heap) BlockHeader;
@@ -380,9 +381,8 @@ void MemoryManager::showFreePageList() const {
     FreePageRange* current = _freePageList;
     while (current) {
         ASSERT(current->start.pageOffset() == 0 && current->end.pageOffset() == 0);
-        println("addr: {:X}, sizePages={} (current={:X}, next={:X})",
-                current->start.value, (current->end - current->start) / PAGE_SIZE,
-                current, current->next);
+        println("addr: {:X}, size={} pages", current->start.value,
+                (current->end - current->start) / PAGE_SIZE);
         current = current->next;
     }
 }

@@ -38,7 +38,7 @@ KeyboardDevice::KeyboardDevice() {
 
     registerIrqHandler(1, irqHandler1);
 
-    println("Keyboard initialized");
+    println("kbd: init complete");
 }
 
 void KeyboardDevice::handleKey(uint8_t scanCode) {

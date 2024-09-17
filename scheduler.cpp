@@ -1,5 +1,6 @@
 #include "scheduler.h"
 
+#include "estd/print.h"
 #include "klibc.h"
 #include "panic.h"
 #include "process.h"
@@ -67,6 +68,8 @@ Scheduler::Scheduler() {
 void Scheduler::start() {
     ASSERT(!running && nextIdx == 0);
     running = true;
+
+    println("sched: init complete");
 
     if (!runQueue.empty()) {
         Thread* initialThread = runQueue[nextIdx];

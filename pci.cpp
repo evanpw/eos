@@ -143,11 +143,9 @@ void PCIDevices::scanBus(uint16_t bus) {
 }
 
 void PCIDevices::findAllDevices() {
-    println("Detecting PCI devices");
-
     // bus 0, device 0 will be the Host Bridge
     if (!PCIDevice::exists(0, 0)) {
-        println("No PCI bus found");
+        println("pci: no pci bus found");
         return;
     }
 
@@ -175,5 +173,5 @@ PCIDevice* PCIDevices::findByClass(PCIDeviceClass classCode) {
 
 PCIDevices::PCIDevices() {
     findAllDevices();
-    println("PCI devices initialized");
+    println("pci: init complete");
 }

@@ -49,7 +49,7 @@ pid_t sys_getpid() {
 }
 
 [[noreturn]] void sys_exit(int status) {
-    println("User process exited with status {}", status);
+    println("proc: user process exited with status {}", status);
 
     // TODO: free resources
 
@@ -136,5 +136,5 @@ void initSyscalls() {
     syscallTable[SYS_close] = bit_cast<SyscallHandler>((void*)sys_close);
     syscallTable[SYS_launch] = bit_cast<SyscallHandler>((void*)sys_launch);
 
-    println("Syscalls initialized");
+    println("syscall: init complete");
 }

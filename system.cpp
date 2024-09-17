@@ -1,7 +1,6 @@
 #include "system.h"
 
 #include "acpi.h"
-#include "estd/print.h"
 #include "fs/ext2.h"
 #include "ide.h"
 #include "interrupts.h"
@@ -23,7 +22,6 @@ void System::run() {
     Process::create("/bin/shell.bin");
     Process::create("/bin/spam.bin");
 
-    println("Entering ring3");
     system._scheduler->start();
     __builtin_unreachable();
 }

@@ -230,7 +230,7 @@ bool Ext2FileSystem::init() {
         return false;
     }
 
-    println("ext2 filesystem initialized");
+    println("ext2: init complete");
     return true;
 }
 
