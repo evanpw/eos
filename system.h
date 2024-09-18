@@ -1,7 +1,6 @@
 // Holder class for initializing and accessing various components of the kernel
 #pragma once
-#include "estd/ownptr.h"
-#include "estd/sharedptr.h"
+#include "estd/memory.h"
 #include "mem.h"
 
 class Screen;
@@ -29,7 +28,7 @@ public:
         return *(instance()._keyboard);
     }
 
-    static SharedPtr<Terminal> terminal();
+    static estd::shared_ptr<Terminal> terminal();
 
     static PCIDevices& pciDevices() {
         ASSERT(instance()._pciDevices);
@@ -64,12 +63,12 @@ private:
     // This can't be a pointer because we need it to implement new()
     MemoryManager _mm;
 
-    OwnPtr<Screen> _screen;
-    OwnPtr<KeyboardDevice> _keyboard;
-    SharedPtr<Terminal> _terminal;
-    OwnPtr<PCIDevices> _pciDevices;
-    OwnPtr<IDEController> _ideController;
-    OwnPtr<Ext2FileSystem> _fs;
-    OwnPtr<Scheduler> _scheduler;
-    OwnPtr<Timer> _timer;
+    estd::unique_ptr<Screen> _screen;
+    estd::unique_ptr<KeyboardDevice> _keyboard;
+    estd::shared_ptr<Terminal> _terminal;
+    estd::unique_ptr<PCIDevices> _pciDevices;
+    estd::unique_ptr<IDEController> _ideController;
+    estd::unique_ptr<Ext2FileSystem> _fs;
+    estd::unique_ptr<Scheduler> _scheduler;
+    estd::unique_ptr<Timer> _timer;
 };

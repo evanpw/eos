@@ -3,17 +3,17 @@
 #include <stddef.h>
 #include <sys/types.h>
 
-#include "estd/ownptr.h"
-#include "estd/sharedptr.h"
+#include "estd/memory.h"
 
 struct File;
 
 // The kernel data structure that a usermode file descriptor points to
 struct OpenFileDescription {
-    SharedPtr<File> file;
+    estd::shared_ptr<File> file;
     off_t offset = 0;
 
-    static OwnPtr<OpenFileDescription> create(const SharedPtr<File>& file);
+    static estd::unique_ptr<OpenFileDescription> create(
+        const estd::shared_ptr<File>& file);
 };
 
 // Something that supports open/close and read / write. Could be a device, a

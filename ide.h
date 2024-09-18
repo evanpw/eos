@@ -5,7 +5,7 @@
 #include <stdint.h>
 
 #include "disk.h"
-#include "estd/ownptr.h"
+#include "estd/memory.h"
 #include "estd/print.h"
 
 class IDEChannel;
@@ -80,16 +80,16 @@ public:
     }
 
 private:
-    OwnPtr<IDEDevice> detectDrive(IDEChannel& channel, DriveSelector drive);
+    estd::unique_ptr<IDEDevice> detectDrive(IDEChannel& channel, DriveSelector drive);
     void detectPartitions(IDEDevice& device);
 
-    OwnPtr<IDEChannel> _primary;
-    OwnPtr<IDEChannel> _secondary;
+    estd::unique_ptr<IDEChannel> _primary;
+    estd::unique_ptr<IDEChannel> _secondary;
 
-    OwnPtr<IDEDevice> _primaryMaster;
-    OwnPtr<IDEDevice> _primarySlave;
-    OwnPtr<IDEDevice> _secondaryMaster;
-    OwnPtr<IDEDevice> _secondarySlave;
+    estd::unique_ptr<IDEDevice> _primaryMaster;
+    estd::unique_ptr<IDEDevice> _primarySlave;
+    estd::unique_ptr<IDEDevice> _secondaryMaster;
+    estd::unique_ptr<IDEDevice> _secondarySlave;
 
-    OwnPtr<DiskPartitionDevice> _rootPartition;
+    estd::unique_ptr<DiskPartitionDevice> _rootPartition;
 };

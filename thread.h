@@ -2,7 +2,7 @@
 #pragma once
 
 #include "address.h"
-#include "estd/ownptr.h"
+#include "estd/memory.h"
 
 class Process;
 
@@ -17,8 +17,9 @@ struct Thread {
     // which is used by switchContext to restore the thread context and resume execution
     uint64_t rsp;
 
-    static OwnPtr<Thread> createUserThread(Process* process, VirtualAddress entryPoint);
-    static OwnPtr<Thread> createKernelThread(VirtualAddress entryPoint);
+    static estd::unique_ptr<Thread> createUserThread(Process* process,
+                                                     VirtualAddress entryPoint);
+    static estd::unique_ptr<Thread> createKernelThread(VirtualAddress entryPoint);
 
     Process* process;
 

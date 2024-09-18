@@ -71,7 +71,7 @@ int sys_open(const char* path, int /*oflag*/) {
         return -ENOENT;
     }
 
-    SharedPtr<Ext2File> file(new Ext2File(System::fs(), move(inode)));
+    estd::shared_ptr<Ext2File> file(new Ext2File(System::fs(), move(inode)));
     return process.open(file);
 }
 

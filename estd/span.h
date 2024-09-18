@@ -1,13 +1,13 @@
 #pragma once
 
-#include <stddef.h>
-
 #include "estd/assertions.h"
 
+namespace estd {
+
 template <typename T>
-class Span {
+class span {
 public:
-    Span(T* ptr, size_t size) : _data(ptr), _size(size) {}
+    span(T* ptr, size_t size) : _data(ptr), _size(size) {}
 
     T* data() const { return _data; }
     size_t length() const { return _size; }
@@ -24,3 +24,5 @@ private:
     T* _data;
     size_t _size;
 };
+
+}  // namespace estd

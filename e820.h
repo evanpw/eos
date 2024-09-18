@@ -26,4 +26,4 @@ struct __attribute__((packed)) E820Entry {
     AddressRangeExtended extended;
 };
 
-using E820Table = Span<E820Entry>;
+using E820Table = estd::span<E820Entry>;

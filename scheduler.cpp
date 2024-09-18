@@ -167,7 +167,7 @@ void Scheduler::cleanupDeadThreads() {
     }
 }
 
-void Scheduler::sleepThread(const SharedPtr<Blocker>& blocker, Spinlock* lock) {
+void Scheduler::sleepThread(const estd::shared_ptr<Blocker>& blocker, Spinlock* lock) {
     SpinlockLocker locker(_schedLock);
 
     // We can't hold this lock while sleeping
@@ -199,7 +199,7 @@ void Scheduler::sleepThread(const SharedPtr<Blocker>& blocker, Spinlock* lock) {
     panic("current thread not found in run queue");
 }
 
-void Scheduler::wakeThreads(const SharedPtr<Blocker>& blocker) {
+void Scheduler::wakeThreads(const estd::shared_ptr<Blocker>& blocker) {
     SpinlockLocker locker(_schedLock);
 
     size_t i = 0;

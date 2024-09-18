@@ -1,13 +1,12 @@
 #include "process.h"
 
 #include "errno.h"
-#include "estd/stdlib.h"
+#include "estd/utility.h"
 #include "file.h"
 #include "fs/ext2.h"
 #include "klibc.h"
 #include "page_map.h"
 #include "panic.h"
-#include "scheduler.h"
 #include "system.h"
 #include "terminal.h"  // IWYU pragma: keep
 #include "thread.h"
@@ -21,8 +20,8 @@ void ProcessTable::init() {
 
 Process* ProcessTable::create(const char* filename) {
     Process* process = new Process(_nextPid++, filename);
-    // TODO: write an emplace_back function for Vector
-    _processes.push_back(move(OwnPtr<Process>(process)));
+    // TODO: write an emplace_back function for vector
+    _processes.push_back(estd::move(estd::unique_ptr<Process>(process)));
     return process;
 }
 
@@ -30,7 +29,7 @@ void ProcessTable::destroy(Process* process) {
     for (size_t i = 0; i < _processes.size(); ++i) {
         if (_processes[i].get() != process) continue;
 
-        swap(_processes[i], _processes.back());
+        estd::swap(_processes[i], _processes.back());
         _processes.pop_back();
 
         return;
@@ -69,7 +68,7 @@ Process::Process(pid_t pid, const char* filename) : pid(pid) {
 
 Process::~Process() { System::mm().pageFree(imagePages, imagePagesCount); }
 
-int Process::open(const SharedPtr<File>& file) {
+int Process::open(const estd::shared_ptr<File>& file) {
     // Find next available fd
     for (size_t i = 0; i < RLIMIT_NOFILE; ++i) {
         if (!openFiles[i]) {

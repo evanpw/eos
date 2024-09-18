@@ -1,5 +1,6 @@
 #include "file.h"
 
-OwnPtr<OpenFileDescription> OpenFileDescription::create(const SharedPtr<File>& file) {
-    return OwnPtr<OpenFileDescription>(new OpenFileDescription{file});
+estd::unique_ptr<OpenFileDescription> OpenFileDescription::create(
+    const estd::shared_ptr<File>& file) {
+    return estd::unique_ptr<OpenFileDescription>(new OpenFileDescription{file});
 }

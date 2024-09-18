@@ -1,12 +1,14 @@
 #pragma once
 #include "estd/assertions.h"
 
+namespace estd {
+
 template <typename T>
-class OwnPtr {
+class unique_ptr {
 public:
-    OwnPtr() = default;
-    explicit OwnPtr(T* ptr) : _ptr(ptr) {}
-    ~OwnPtr() { clear(); }
+    unique_ptr() = default;
+    explicit unique_ptr(T* ptr) : _ptr(ptr) {}
+    ~unique_ptr() { clear(); }
 
     void clear() {
         delete _ptr;
@@ -25,13 +27,13 @@ public:
     }
 
     // Non-copyable
-    OwnPtr(const OwnPtr&) = delete;
-    OwnPtr& operator=(const OwnPtr&) = delete;
+    unique_ptr(const unique_ptr&) = delete;
+    unique_ptr& operator=(const unique_ptr&) = delete;
 
     // Movable
-    OwnPtr(OwnPtr&& other) : _ptr(other.release()) {}
+    unique_ptr(unique_ptr&& other) : _ptr(other.release()) {}
 
-    OwnPtr& operator=(OwnPtr&& other) {
+    unique_ptr& operator=(unique_ptr&& other) {
         _ptr = other.release();
         return *this;
     }
@@ -55,11 +57,11 @@ private:
 };
 
 template <typename T>
-class OwnPtr<T[]> {
+class unique_ptr<T[]> {
 public:
-    OwnPtr() = default;
-    explicit OwnPtr(T* ptr) : _ptr(ptr) {}
-    ~OwnPtr() { clear(); }
+    unique_ptr() = default;
+    explicit unique_ptr(T* ptr) : _ptr(ptr) {}
+    ~unique_ptr() { clear(); }
 
     void clear() {
         delete[] _ptr;
@@ -78,13 +80,13 @@ public:
     }
 
     // Non-copyable
-    OwnPtr(const OwnPtr&) = delete;
-    OwnPtr& operator=(const OwnPtr&) = delete;
+    unique_ptr(const unique_ptr&) = delete;
+    unique_ptr& operator=(const unique_ptr&) = delete;
 
     // Movable
-    OwnPtr(OwnPtr&& other) : _ptr(other.release()) {}
+    unique_ptr(unique_ptr&& other) : _ptr(other.release()) {}
 
-    OwnPtr& operator=(OwnPtr&& other) {
+    unique_ptr& operator=(unique_ptr&& other) {
         _ptr = other.release();
         return *this;
     }
@@ -101,3 +103,5 @@ public:
 private:
     T* _ptr = nullptr;
 };
+
+}  // namespace estd

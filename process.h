@@ -3,7 +3,7 @@
 #include <stddef.h>
 #include <unistd.h>
 
-#include "estd/ownptr.h"
+#include "estd/memory.h"
 #include "estd/vector.h"
 #include "file.h"
 #include "page_map.h"
@@ -28,7 +28,7 @@ private:
     Process* create(const char* filename);
     void destroy(Process* process);
 
-    Vector<OwnPtr<Process>> _processes;
+    estd::vector<estd::unique_ptr<Process>> _processes;
     pid_t _nextPid = 1;
 };
 
@@ -47,13 +47,13 @@ public:
     static void destroy(Process* process) { ProcessTable::the().destroy(process); }
 
     pid_t pid;
-    OwnPtr<OpenFileDescription> openFiles[RLIMIT_NOFILE] = {};
-    OwnPtr<UserAddressSpace> addressSpace;
-    OwnPtr<Thread> thread;
+    estd::unique_ptr<OpenFileDescription> openFiles[RLIMIT_NOFILE] = {};
+    estd::unique_ptr<UserAddressSpace> addressSpace;
+    estd::unique_ptr<Thread> thread;
     PhysicalAddress imagePages;
     uint64_t imagePagesCount;
 
-    int open(const SharedPtr<File>& file);
+    int open(const estd::shared_ptr<File>& file);
     int close(int fd);
 
 private:

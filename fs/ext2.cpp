@@ -68,14 +68,14 @@ bool Ext2FileSystem::readBlockGroupDescriptorTable() {
     return true;
 }
 
-OwnPtr<ext2::Inode> Ext2FileSystem::readInode(uint32_t ino) {
+estd::unique_ptr<ext2::Inode> Ext2FileSystem::readInode(uint32_t ino) {
     uint32_t blockGroup = (ino - 1) / _superBlock->inodes_per_group;
     uint32_t index = (ino - 1) % _superBlock->inodes_per_group;
 
     uint32_t blockId = _blockGroups[blockGroup].inode_table;
     uint32_t offset = index * _superBlock->inode_size;
 
-    OwnPtr<ext2::Inode> inode(new ext2::Inode);
+    estd::unique_ptr<ext2::Inode> inode(new ext2::Inode);
     if (!readRange(inode.get(), blockId, sizeof(ext2::Inode), offset)) {
         return {};
     }
@@ -109,7 +109,7 @@ bool Ext2FileSystem::readFullFile(const ext2::Inode& inode, uint8_t* dest) {
 
     // Indirect blocks
     size_t entriesPerBlock = blockSize() / sizeof(uint32_t);
-    OwnPtr<uint32_t[]> indBlock(new uint32_t[entriesPerBlock]);
+    estd::unique_ptr<uint32_t[]> indBlock(new uint32_t[entriesPerBlock]);
     if (!readBlock(indBlock.get(), inode.block[12])) {
         return false;
     }
@@ -234,9 +234,9 @@ bool Ext2FileSystem::init() {
     return true;
 }
 
-OwnPtr<ext2::Inode> Ext2FileSystem::lookup(const char* path) {
+estd::unique_ptr<ext2::Inode> Ext2FileSystem::lookup(const char* path) {
     // TODO: check path pointer points to valid memory
-    OwnPtr<ext2::Inode> current = readInode(ext2::ROOT_INO);
+    estd::unique_ptr<ext2::Inode> current = readInode(ext2::ROOT_INO);
 
     const char* p = path;
     while (true) {
@@ -297,8 +297,8 @@ OwnPtr<ext2::Inode> Ext2FileSystem::lookup(const char* path) {
     }
 }
 
-OwnPtr<Ext2FileSystem> Ext2FileSystem::create(DiskDevice& disk) {
-    OwnPtr<Ext2FileSystem> fs(new Ext2FileSystem(disk));
+estd::unique_ptr<Ext2FileSystem> Ext2FileSystem::create(DiskDevice& disk) {
+    estd::unique_ptr<Ext2FileSystem> fs(new Ext2FileSystem(disk));
 
     if (!fs->init()) {
         return {};

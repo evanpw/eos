@@ -245,7 +245,8 @@ static void copyString(char* dest, uint16_t* src, size_t numBytes) {
     *d = '\0';
 }
 
-OwnPtr<IDEDevice> IDEController::detectDrive(IDEChannel& channel, DriveSelector drive) {
+estd::unique_ptr<IDEDevice> IDEController::detectDrive(IDEChannel& channel,
+                                                       DriveSelector drive) {
     channel.selectDrive(drive);
     channel.sendCommand(Identify);
 
@@ -254,7 +255,7 @@ OwnPtr<IDEDevice> IDEController::detectDrive(IDEChannel& channel, DriveSelector 
         return {};
     }
 
-    OwnPtr<IDEDevice> device;
+    estd::unique_ptr<IDEDevice> device;
 
     // Otherwise, wait for command to finish or fail
     if (channel.waitForData()) {
@@ -339,8 +340,8 @@ void IDEController::detectPartitions(IDEDevice& device) {
 
         // TODO: support multiple partitions across drives
         ASSERT(!_rootPartition);
-        _rootPartition =
-            OwnPtr(new DiskPartitionDevice(device, entry.lbaStart, entry.numSectors));
+        _rootPartition = estd::unique_ptr(
+            new DiskPartitionDevice(device, entry.lbaStart, entry.numSectors));
     }
 }
 

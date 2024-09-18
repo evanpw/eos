@@ -106,7 +106,7 @@ void KernelAddressSpace::buildLinearMemoryMap(uint64_t physicalMemoryRange) {
     }
 }
 
-OwnPtr<UserAddressSpace> KernelAddressSpace::makeUserAddressSpace() {
+estd::unique_ptr<UserAddressSpace> KernelAddressSpace::makeUserAddressSpace() {
     // Create a fresh empty PML4
     PhysicalAddress upml4 = _mm.pageAlloc();
 
@@ -120,7 +120,7 @@ OwnPtr<UserAddressSpace> KernelAddressSpace::makeUserAddressSpace() {
         ASSERT(uptr[i] == 0);
     }
 
-    return OwnPtr<UserAddressSpace>(new UserAddressSpace(*this, upml4));
+    return estd::unique_ptr<UserAddressSpace>(new UserAddressSpace(*this, upml4));
 }
 
 UserAddressSpace::UserAddressSpace(KernelAddressSpace& kaddr, PhysicalAddress pml4)

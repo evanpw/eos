@@ -1,8 +1,7 @@
 #pragma once
 #include <stdint.h>
 
-#include "estd/ownptr.h"
-#include "estd/sharedptr.h"
+#include "estd/memory.h"
 #include "estd/vector.h"
 #include "spinlock.h"
 
@@ -23,7 +22,7 @@ struct Blocker {
 
 struct BlockedThread {
     Thread* thread;
-    SharedPtr<Blocker> blocker;
+    estd::shared_ptr<Blocker> blocker;
 };
 
 struct Scheduler {
@@ -34,8 +33,8 @@ public:
     void startThread(Thread* thread);
     void stopThread(Thread* thread);
 
-    void sleepThread(const SharedPtr<Blocker>& blocker, Spinlock* lock = nullptr);
-    void wakeThreads(const SharedPtr<Blocker>& blocker);
+    void sleepThread(const estd::shared_ptr<Blocker>& blocker, Spinlock* lock = nullptr);
+    void wakeThreads(const estd::shared_ptr<Blocker>& blocker);
 
     void onTimerInterrupt();
 
@@ -43,13 +42,13 @@ private:
     void yield();
     void cleanupDeadThreads();
 
-    Vector<Thread*> runQueue;
-    Vector<BlockedThread> waitQueue;
-    Vector<Thread*> deadQueue;
+    estd::vector<Thread*> runQueue;
+    estd::vector<BlockedThread> waitQueue;
+    estd::vector<Thread*> deadQueue;
 
     bool running = false;
     size_t nextIdx = 0;
     Spinlock _schedLock;
 
-    OwnPtr<Thread> _idleThread;
+    estd::unique_ptr<Thread> _idleThread;
 };

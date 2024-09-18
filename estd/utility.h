@@ -1,6 +1,7 @@
 #pragma once
 
-// TODO: see
+namespace estd {
+
 // https://stackoverflow.com/questions/7510182/how-does-stdmove-transfer-values-into-rvalues
 template <typename T>
 T&& move(T& arg) noexcept {
@@ -18,3 +19,5 @@ void swap(T& lhs, T& rhs) {
     lhs = move(rhs);
     rhs = move(tmp);
 }
+
+}  // namespace estd

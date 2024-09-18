@@ -16,7 +16,7 @@ Timer::Timer() { registerIrqHandler(0, irqHandler0); }
 void Timer::sleep(uint64_t duration) {
     uint64_t endTick = tickCount() + duration;
 
-    SharedPtr<TimerBlocker> blocker(new TimerBlocker{endTick});
+    estd::shared_ptr<TimerBlocker> blocker(new TimerBlocker{endTick});
     _blockers.push_back(blocker);
 
     System::scheduler().sleepThread(blocker);

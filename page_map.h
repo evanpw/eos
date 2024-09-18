@@ -6,7 +6,7 @@
 #include "address.h"
 #include "boot.h"
 #include "estd/bits.h"
-#include "estd/ownptr.h"
+#include "estd/memory.h"
 #include "estd/vector.h"
 #include "units.h"
 
@@ -50,7 +50,7 @@ public:
 
     VirtualAddress physicalToVirtual(PhysicalAddress physAddr);
 
-    OwnPtr<UserAddressSpace> makeUserAddressSpace();
+    estd::unique_ptr<UserAddressSpace> makeUserAddressSpace();
 
 private:
     MemoryManager& _mm;
@@ -92,5 +92,5 @@ private:
 
     // Keep track of the pages we've used for PMLs so that we can free them at destructor
     // time
-    Vector<PhysicalAddress> _allocatedPages;
+    estd::vector<PhysicalAddress> _allocatedPages;
 };

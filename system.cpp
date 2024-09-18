@@ -50,7 +50,7 @@ System::System() {
     ProcessTable::init();
 }
 
-SharedPtr<Terminal> System::terminal() {
+estd::shared_ptr<Terminal> System::terminal() {
     ASSERT(instance()._terminal);
     return instance()._terminal;
 }

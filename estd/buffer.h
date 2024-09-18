@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include "estd/assertions.h"
-#include "estd/stdlib.h"
+#include "estd/utility.h"
 
 // Fixed (runtime) length, heap-allocated array of bytes
 class Buffer {
@@ -51,9 +51,8 @@ public:
 
 private:
     void swap(Buffer& other) {
-        using ::swap;
-        swap(_data, other._data);
-        swap(_size, other._size);
+        estd::swap(_data, other._data);
+        estd::swap(_size, other._size);
     }
 
     uint8_t* _data = 0;

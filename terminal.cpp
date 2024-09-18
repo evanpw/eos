@@ -556,7 +556,7 @@ bool Terminal::parseEscapeSequence() {
         char c = _outputBuffer[idx];
 
         // Look for optional numerical arguments
-        Vector<int> args;
+        estd::vector<int> args;
         if (c >= '0' && c <= '9') {
             while (true) {
                 int arg = 0;

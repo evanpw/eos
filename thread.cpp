@@ -15,7 +15,8 @@ Thread* currentThread;
 extern "C" void switchToUserMode();
 extern "C" void enterKernelThread();
 
-OwnPtr<Thread> Thread::createUserThread(Process* process, VirtualAddress entryPoint) {
+estd::unique_ptr<Thread> Thread::createUserThread(Process* process,
+                                                  VirtualAddress entryPoint) {
     Thread* thread = new Thread;
     thread->process = process;
 
@@ -55,10 +56,10 @@ OwnPtr<Thread> Thread::createUserThread(Process* process, VirtualAddress entryPo
     thread->kernelStack = stackTop.value;
     thread->rsp = bit_cast<uint64_t>(stackPtr);
 
-    return OwnPtr<Thread>(thread);
+    return estd::unique_ptr<Thread>(thread);
 }
 
-OwnPtr<Thread> Thread::createKernelThread(VirtualAddress entryPoint) {
+estd::unique_ptr<Thread> Thread::createKernelThread(VirtualAddress entryPoint) {
     Thread* thread = new Thread;
     thread->process = nullptr;
 
@@ -95,7 +96,7 @@ OwnPtr<Thread> Thread::createKernelThread(VirtualAddress entryPoint) {
     thread->kernelStack = stackTop.value;
     thread->rsp = bit_cast<uint64_t>(stackPtr);
 
-    return OwnPtr<Thread>(thread);
+    return estd::unique_ptr<Thread>(thread);
 }
 
 Thread::~Thread() {

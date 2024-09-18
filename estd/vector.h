@@ -1,17 +1,19 @@
 #pragma once
 #include "estd/assertions.h"
 #include "estd/new.h"
-#include "estd/stdlib.h"
+#include "estd/utility.h"
+
+namespace estd {
 
 template <typename T>
-class Vector {
+class vector {
 public:
     using iterator = T*;
     using const_iterator = const T*;
 
-    Vector() : _data(nullptr), _capacity(0), _size(0) {}
+    vector() : _data(nullptr), _capacity(0), _size(0) {}
 
-    Vector(size_t count, const T& value = T()) {
+    vector(size_t count, const T& value = T()) {
         _capacity = count;
         _size = count;
         _data = static_cast<T*>(::operator new[](sizeof(T) * _capacity));
@@ -21,7 +23,7 @@ public:
         }
     }
 
-    ~Vector() {
+    ~vector() {
         for (size_t i = 0; i < _size; ++i) {
             _data[i].~T();
         }
@@ -41,7 +43,7 @@ public:
         T* newData = static_cast<T*>(::operator new[](sizeof(T) * newCapacity));
 
         for (size_t i = 0; i < _size; ++i) {
-            new (&newData[i]) T(move(_data[i]));
+            new (&newData[i]) T(estd::move(_data[i]));
             _data[i].~T();
         }
 
@@ -65,7 +67,7 @@ public:
         }
 
         ASSERT(_capacity > _size);
-        new (&_data[_size++]) T(move(value));
+        new (&_data[_size++]) T(estd::move(value));
     }
 
     void pop_back() {
@@ -103,13 +105,15 @@ public:
     const_iterator cend() { return data() + size(); }
 
     // TODO: implement these
-    Vector(const Vector&) = delete;
-    Vector(Vector&&) = delete;
-    Vector& operator=(const Vector&) = delete;
-    Vector& operator=(Vector&&) = delete;
+    vector(const vector&) = delete;
+    vector(vector&&) = delete;
+    vector& operator=(const vector&) = delete;
+    vector& operator=(vector&&) = delete;
 
 private:
     T* _data;
     size_t _capacity;
     size_t _size;
 };
+
+}  // namespace estd

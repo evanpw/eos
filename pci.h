@@ -77,7 +77,7 @@ private:
 
 class PCIDevices {
 public:
-    const Vector<PCIDevice*>& devices() { return _devices; }
+    const estd::vector<PCIDevice*>& devices() { return _devices; }
     PCIDevice* findByClass(PCIDeviceClass classCode);
 
 private:
@@ -89,5 +89,5 @@ private:
     void checkDevice(uint16_t bus, uint8_t device);
     void checkFunction(uint8_t bus, uint8_t device, uint8_t function);
 
-    Vector<PCIDevice*> _devices;
+    estd::vector<PCIDevice*> _devices;
 };
