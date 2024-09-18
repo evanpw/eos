@@ -48,8 +48,8 @@ public:
         __atomic_store_n(&_value, value, __ATOMIC_RELEASE);
     }
 
-    void increment() volatile noexcept {
-        __atomic_add_fetch(&_value, 1, __ATOMIC_ACQ_REL);
+    uint64_t increment() volatile noexcept {
+        return __atomic_add_fetch(&_value, 1, __ATOMIC_ACQ_REL);
     }
 
     uint64_t decrement() volatile noexcept {

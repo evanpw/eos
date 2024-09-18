@@ -34,7 +34,7 @@ public:
     void startThread(Thread* thread);
     void stopThread(Thread* thread);
 
-    void sleepThread(const SharedPtr<Blocker>& blocker, Spinlock& lock);
+    void sleepThread(const SharedPtr<Blocker>& blocker, Spinlock* lock = nullptr);
     void wakeThreads(const SharedPtr<Blocker>& blocker);
 
     void onTimerInterrupt();

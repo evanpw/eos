@@ -167,11 +167,11 @@ void Scheduler::cleanupDeadThreads() {
     }
 }
 
-void Scheduler::sleepThread(const SharedPtr<Blocker>& blocker, Spinlock& lock) {
+void Scheduler::sleepThread(const SharedPtr<Blocker>& blocker, Spinlock* lock) {
     SpinlockLocker locker(_schedLock);
 
     // We can't hold this lock while sleeping
-    lock.unlock();
+    if (lock) lock->unlock();
 
     for (size_t i = 0; i < runQueue.size(); ++i) {
         if (runQueue[i] != currentThread) continue;
@@ -192,7 +192,7 @@ void Scheduler::sleepThread(const SharedPtr<Blocker>& blocker, Spinlock& lock) {
         yield();
 
         // Re-acquire the lock before returning to the previous context
-        lock.lock();
+        if (lock) lock->lock();
         return;
     }
 

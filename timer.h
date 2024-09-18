@@ -1,16 +1,28 @@
 #pragma once
+#include "estd/atomic.h"
+#include "scheduler.h"
 #include "trap.h"
 
 extern "C" void irqHandler0(TrapRegisters& regs);
 
-struct Timer {
+class Timer {
+    friend void irqHandler0(TrapRegisters& regs);
+
 public:
-    static void init();
-    static uint64_t tickCount() { return s_tickCount; }
+    Timer();
+
+    uint64_t tickCount() { return _tickCount.load(); }
+    void sleep(uint64_t duration);
 
 private:
-    static uint64_t s_tickCount;
+    AtomicInt _tickCount = 0;
+    void increment();
 
-    friend void irqHandler0(TrapRegisters& regs);
-    static void increment() { ++s_tickCount; }
+    struct TimerBlocker : Blocker {
+        TimerBlocker(uint64_t endTick) : endTick(endTick) {}
+        uint64_t endTick;
+    };
+
+    // TODO: should store these in sorted order, for efficiency
+    Vector<SharedPtr<TimerBlocker>> _blockers;
 };

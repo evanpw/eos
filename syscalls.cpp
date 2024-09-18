@@ -57,11 +57,8 @@ pid_t sys_getpid() {
 }
 
 int sys_sleep(int ticks) {
-    uint64_t end = Timer::tickCount() + ticks;
-    while (Timer::tickCount() < end) {
-        Processor::pause();
-    }
-
+    // Will block the current thread and allow other threads to run
+    System::timer().sleep(ticks);
     return 0;
 }
 

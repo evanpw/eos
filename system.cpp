@@ -42,7 +42,7 @@ System::System() {
     _ideController.assign(new IDEController);
     initACPI();
     _scheduler.assign(new Scheduler);
-    Timer::init();
+    _timer.assign(new Timer);
 
     _fs = Ext2FileSystem::create(_ideController->rootPartition());
     ASSERT(_fs);

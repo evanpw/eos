@@ -724,7 +724,7 @@ ssize_t Terminal::read(OpenFileDescription&, void* buffer, size_t count) {
 
     // Block until at least one byte is available
     while (_inputBuffer.empty()) {
-        System::scheduler().sleepThread(_inputBlocker, _lock);
+        System::scheduler().sleepThread(_inputBlocker, &_lock);
     }
 
     // TODO: check fd mode

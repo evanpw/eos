@@ -11,6 +11,7 @@ class PCIDevices;
 class IDEController;
 class Ext2FileSystem;
 struct Scheduler;
+class Timer;
 
 class System {
 public:
@@ -45,6 +46,11 @@ public:
         return *(instance()._scheduler);
     }
 
+    static Timer& timer() {
+        ASSERT(instance()._timer);
+        return *(instance()._timer);
+    }
+
 private:
     System();
 
@@ -65,4 +71,5 @@ private:
     OwnPtr<IDEController> _ideController;
     OwnPtr<Ext2FileSystem> _fs;
     OwnPtr<Scheduler> _scheduler;
+    OwnPtr<Timer> _timer;
 };
