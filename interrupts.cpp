@@ -160,6 +160,8 @@ void configurePIC() {
 }
 
 void installInterrupts() {
+    ASSERT(!Processor::interruptsEnabled());
+
     g_idt = new InterruptDescriptor[256];
 
     for (size_t idx = 0; idx < 32; ++idx) {
