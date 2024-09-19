@@ -16,6 +16,8 @@ int main() {
     println("pid={}", getpid());
 
     while (true) {
+        print("$ ");
+
         bytesRead = read(STDIN_FILENO, buffer, 63);
         if (bytesRead == 0) {
             println("EOF");
