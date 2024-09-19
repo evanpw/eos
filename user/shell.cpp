@@ -8,10 +8,9 @@ int main() {
     char buffer[64];
 
     int fd = open("/etc/version.txt", 0);
-    ssize_t bytesRead = read(fd, buffer, 64);
-    write(STDOUT_FILENO, "\033[31;42m", 8);
-    write(STDOUT_FILENO, buffer, bytesRead);
-    write(STDOUT_FILENO, "\033[m", 3);
+    ssize_t bytesRead = read(fd, buffer, 63);
+    buffer[bytesRead] = '\0';
+    print("\033[31;42m{}\033[m", buffer);
     close(fd);
 
     println("pid={}", getpid());
@@ -31,7 +30,7 @@ int main() {
         }
 
         if (strcmp(buffer, "clear") == 0) {
-            write(1, "\033[J", 3);
+            print("\033[J");
         } else if (strcmp(buffer, "spam") == 0) {
             launch("/bin/spam.bin");
         } else {
