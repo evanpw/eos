@@ -1,4 +1,5 @@
 #include <fcntl.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "estd/print.h"
@@ -16,20 +17,25 @@ int main() {
     println("pid={}", getpid());
 
     while (true) {
-        bytesRead = read(STDIN_FILENO, buffer, 1);
+        bytesRead = read(STDIN_FILENO, buffer, 63);
         if (bytesRead == 0) {
             println("EOF");
             continue;
         }
 
-        if (buffer[0] == 'c') {
-            write(1, "\033[J", 3);
-        } else if (buffer[0] == 's') {
-            launch("/bin/spam.bin");
-        } else if (buffer[0] == 'y') {
-            write(1, "\byes\n", 5);
+        // Trim trailing newline and/or add null terminator
+        if (bytesRead > 0 && buffer[bytesRead - 1] == '\n') {
+            buffer[bytesRead - 1] = '\0';
         } else {
-            write(1, "\bno\n", 4);
+            buffer[bytesRead] = '\0';
+        }
+
+        if (strcmp(buffer, "clear") == 0) {
+            write(1, "\033[J", 3);
+        } else if (strcmp(buffer, "spam") == 0) {
+            launch("/bin/spam.bin");
+        } else {
+            println("no such command: {}", buffer);
         }
     }
 

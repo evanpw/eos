@@ -61,3 +61,9 @@ add_custom_target(
     shell.elf
     spam.elf
 )
+
+set(USERLAND_BINARIES
+    ${CMAKE_CURRENT_BINARY_DIR}/shell.bin
+    ${CMAKE_CURRENT_BINARY_DIR}/spam.bin
+    PARENT_SCOPE
+)

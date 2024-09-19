@@ -121,6 +121,7 @@ add_custom_command(
 ## Disk Image ##
 
 add_custom_target(build-disk-image ALL DEPENDS ${CMAKE_BINARY_DIR}/diskimg)
+add_dependencies(build-disk-image userland)
 
 add_custom_command(
     OUTPUT ${CMAKE_BINARY_DIR}/diskimg
@@ -128,7 +129,7 @@ add_custom_command(
         ${CMAKE_BINARY_DIR}/boot.bin
         ${CMAKE_BINARY_DIR}/boot.elf
         ${CMAKE_BINARY_DIR}/kernel.bin
-        userland
+        ${USERLAND_BINARIES}
     COMMAND
         sudo python
         ${CMAKE_SOURCE_DIR}/scripts/create_disk_image.py

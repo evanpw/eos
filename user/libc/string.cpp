@@ -40,7 +40,19 @@ int strncmp(const char* s1, const char* s2, size_t n) {
         ++rhs;
     }
 
-    return *lhs - *rhs;
+    return (unsigned char)(*lhs) - (unsigned char)(*rhs);
+}
+
+int strcmp(const char* s1, const char* s2) {
+    const char* lhs = s1;
+    const char* rhs = s2;
+
+    while (*lhs && *rhs && *lhs == *rhs) {
+        ++lhs;
+        ++rhs;
+    }
+
+    return (unsigned char)(*lhs) - (unsigned char)(*rhs);
 }
 
 char* strncpy(char* dest, const char* src, size_t n) {

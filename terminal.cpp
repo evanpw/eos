@@ -511,11 +511,24 @@ void Terminal::onKeyEvent(const KeyboardEvent& event) {
         char c = shifted ? keyCodeToAsciiShifted(event.key)
                          : keyCodeToAsciiUnshifted(event.key);
 
-        if (c != '\0') {
-            _inputBuffer.push(c);
+        // Key which doesn't correspond to any ascii character (e.g., F1)
+        if (c == '\0') return;
+
+        // If the input buffer is completely full, discard any further input
+        if (_inputBuffer.full()) return;
+
+        // If the input buffer is nearly full (only one spot left), allow a newline but
+        // discard any other input
+        if (_inputBuffer.almostFull() && c != '\n') return;
+
+        _inputBuffer.push(c);
+
+        if (c == '\n') {
+            _inputLines++;
             System::scheduler().wakeThreads(_inputBlocker);
-            handleChar(c);
         }
+
+        handleChar(c);
     }
 }
 
@@ -723,7 +736,7 @@ ssize_t Terminal::read(OpenFileDescription&, void* buffer, size_t count) {
     SpinlockLocker locker(_lock);
 
     // Block until at least one byte is available
-    while (_inputBuffer.empty()) {
+    while (_inputLines == 0) {
         System::scheduler().sleepThread(_inputBlocker, &_lock);
     }
 
@@ -733,8 +746,17 @@ ssize_t Terminal::read(OpenFileDescription&, void* buffer, size_t count) {
     char* dest = static_cast<char*>(buffer);
 
     while (_inputBuffer && bytesRead < count) {
-        *dest++ = _inputBuffer.pop();
+        char c = _inputBuffer.pop();
+
+        *dest++ = c;
         ++bytesRead;
+
+        // Read one line at a time
+        if (c == '\n') {
+            ASSERT(_inputLines > 0);
+            --_inputLines;
+            break;
+        }
     }
 
     return bytesRead;

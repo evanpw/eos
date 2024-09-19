@@ -45,6 +45,7 @@ public:
     }
 
     bool empty() const { return size() == 0; }
+    bool almostFull() const { return size() == N - 1; }
     bool full() const { return size() == N; }
     operator bool() const { return !empty(); }
 

@@ -38,6 +38,7 @@ private:
 
     // Input / keyboard
     RingBuffer<char, TERMINAL_INPUT_BUFFER_SIZE> _inputBuffer;
+    size_t _inputLines = 0;
     estd::shared_ptr<Blocker> _inputBlocker;
 
     // Output / screen
