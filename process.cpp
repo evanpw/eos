@@ -66,7 +66,22 @@ Process::Process(pid_t pid, const char* filename) : pid(pid) {
     System::scheduler().startThread(thread.get());
 }
 
-Process::~Process() { System::mm().pageFree(imagePages, imagePagesCount); }
+Process::~Process() {
+    System::mm().pageFree(imagePages, imagePagesCount);
+
+    if (heapPagesCount > 0) {
+        System::mm().pageFree(heapPages, heapPagesCount);
+    }
+}
+
+void Process::createHeap(size_t size) {
+    // TODO: allow expanding an existing heap
+    ASSERT(heapPagesCount == 0);
+
+    heapPagesCount = ceilDiv(size, PAGE_SIZE);
+    heapPages = System::mm().pageAlloc(heapPagesCount);
+    addressSpace->mapPages(heapStart(), heapPages, heapPagesCount);
+}
 
 int Process::open(const estd::shared_ptr<File>& file) {
     // Find next available fd

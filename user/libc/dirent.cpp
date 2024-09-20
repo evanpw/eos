@@ -1,14 +1,11 @@
 #include "dirent.h"
 
 #include "errno.h"
-#include "estd/new.h"  // IWYU pragma: keep
 #include "fcntl.h"
+#include "stdlib.h"
 #include "syscall.h"
 
-static bool isValidDir(DIR* dir) {
-    // return dir && dir->buffer && dir->bufferSize != 0;
-    return dir && dir->bufferSize != 0;
-}
+static bool isValidDir(DIR* dir) { return dir && dir->buffer && dir->bufferSize != 0; }
 
 int closedir(DIR* dir) {
     if (!isValidDir(dir)) {
@@ -16,13 +13,10 @@ int closedir(DIR* dir) {
         return -1;
     }
 
-    // delete[] dir->buffer;
-    // delete dir;
+    free(dir->buffer);
+    free(dir);
     return 0;
 }
-
-// TODO: dynamic memory allocation in user space
-DIR theDir;
 
 DIR* opendir(const char* name) {
     int fd = open(name, 0);
@@ -30,53 +24,34 @@ DIR* opendir(const char* name) {
         return nullptr;
     }
 
-    int64_t result = __syscall(SYS_read_dir, fd, (uint64_t)theDir.buffer, 4096);
-
-    if (result >= 0) {
-        theDir.offset = 0;
-        theDir.bufferSize = result;
-        return &theDir;
-    }
-
-    if (result == -EINVAL) {
-        // The read_dir syscall returns EINVAL if the buffer is too small
-        errno = EFBIG;
-        return nullptr;
-    }
-
-    // Any other that occurs in the syscall is just returned to the caller
-    errno = -result;
-    return nullptr;
-
-    /*
-    DIR* dir = new DIR;
+    DIR* dir = (DIR*)malloc(sizeof(DIR));
 
     // Start with a size of 4 KB and grow if necessary
-    dir->bufferSize = 4096;
+    size_t bufferSize = 4096;
     while (true) {
-        dir->buffer = new uint8_t[dir->bufferSize];
+        dir->buffer = (uint8_t*)malloc(bufferSize);
 
-        int64_t result =
-            __syscall(SYS_read_dir, fd, (uint64_t)dir->buffer, dir->bufferSize);
+        int64_t result = __syscall(SYS_read_dir, fd, (uint64_t)dir->buffer, bufferSize);
 
         if (result >= 0) {
+            dir->bufferSize = result;
+            dir->offset = 0;
             return dir;
         }
 
         if (result == -EINVAL) {
             // The read_dir syscall returns EINVAL if the buffer is too small
-            delete[] dir->buffer;
-            dir->bufferSize *= 2;
+            free(dir->buffer);
+            bufferSize *= 2;
             continue;
         }
 
         // Any other that occurs in the syscall is just returned to the caller
-        delete[] dir->buffer;
-        delete dir;
+        free(dir->buffer);
+        free(dir);
         errno = -result;
         return nullptr;
     }
-    */
 }
 
 dirent* readdir(DIR* dir) {

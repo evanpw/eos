@@ -10,5 +10,6 @@ static constexpr size_t SYS_open = 5;
 static constexpr size_t SYS_close = 6;
 static constexpr size_t SYS_launch = 7;
 static constexpr size_t SYS_read_dir = 8;
+static constexpr size_t SYS_sbrk = 9;
 
-static constexpr size_t MAX_SYSCALL_NO = 8;
+static constexpr size_t MAX_SYSCALL_NO = 9;

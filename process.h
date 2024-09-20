@@ -46,12 +46,25 @@ public:
     }
     static void destroy(Process* process) { ProcessTable::the().destroy(process); }
 
+    VirtualAddress heapStart() const {
+        return addressSpace->userMapBase() + imagePagesCount * PAGE_SIZE;
+    }
+
+    size_t heapSize() const { return heapPagesCount * PAGE_SIZE; }
+
+    void createHeap(size_t size);
+
     pid_t pid;
     estd::unique_ptr<OpenFileDescription> openFiles[RLIMIT_NOFILE] = {};
     estd::unique_ptr<UserAddressSpace> addressSpace;
     estd::unique_ptr<Thread> thread;
+
+    // TODO: more flexible handling of process memory
     PhysicalAddress imagePages;
     uint64_t imagePagesCount;
+
+    PhysicalAddress heapPages = 0;
+    uint64_t heapPagesCount = 0;
 
     int open(const estd::shared_ptr<File>& file);
     int close(int fd);

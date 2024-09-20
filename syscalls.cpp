@@ -94,6 +94,20 @@ int sys_close(int fd) {
 
 void sys_launch(const char* filename) { Process::create(filename); }
 
+VirtualAddress sys_sbrk(intptr_t incr) {
+    Process& process = *currentThread->process;
+
+    if (incr < 0) {
+        return -EINVAL;
+    }
+
+    if (incr > 0) {
+        process.createHeap(incr);
+    }
+
+    return process.heapStart();
+}
+
 // We don't have static initialization, so this is initialized at runtime
 SyscallHandler syscallTable[MAX_SYSCALL_NO + 1];
 
@@ -143,6 +157,7 @@ void initSyscalls() {
     syscallTable[SYS_close] = bit_cast<SyscallHandler>((void*)sys_close);
     syscallTable[SYS_launch] = bit_cast<SyscallHandler>((void*)sys_launch);
     syscallTable[SYS_read_dir] = bit_cast<SyscallHandler>((void*)sys_read_dir);
+    syscallTable[SYS_sbrk] = bit_cast<SyscallHandler>((void*)sys_sbrk);
 
     println("syscall: init complete");
 }

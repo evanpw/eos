@@ -28,6 +28,7 @@ add_library(
     libc/dirent.cpp
     libc/errno.cpp
     libc/fcntl.cpp
+    libc/heap.cpp
     libc/stdio.cpp
     libc/stdlib.cpp
     libc/string.cpp

@@ -13,6 +13,7 @@ ssize_t write(int fd, const void* buffer, size_t count);
 ssize_t read(int fd, void* buffer, size_t count);
 pid_t getpid();
 [[noreturn]] void _exit(int status);
+void* sbrk(intptr_t incr);
 
 // Non-standard
 int sleep(int ticks);

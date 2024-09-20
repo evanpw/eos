@@ -10,3 +10,4 @@
 #define EMFILE 24   // Too many open files
 #define ENOTDIR 20  // Not a directory
 #define EFBIG 27    // File too large
+#define ENOMEM 12   // Out of memory

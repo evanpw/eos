@@ -9,9 +9,9 @@
 extern "C" {
 
 struct DIR {
-    uint8_t buffer[4096];
-    uint32_t bufferSize = 4096;
-    uint32_t offset = 0;
+    uint8_t* buffer;
+    uint32_t bufferSize;
+    uint32_t offset;
 };
 
 int closedir(DIR*);

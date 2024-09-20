@@ -35,6 +35,17 @@ void _exit(int status) {
     __builtin_unreachable();
 }
 
+void* sbrk(intptr_t incr) {
+    int64_t result = __syscall(SYS_sbrk, incr);
+
+    if (result < 0) {
+        errno = -result;
+        return (void*)-1;
+    }
+
+    return (void*)result;
+}
+
 // Non-standard
 int sleep(int ticks) { return __syscall(SYS_sleep, ticks); }
 void launch(const char* filename) { __syscall(SYS_launch, (uint64_t)filename); }
