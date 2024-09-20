@@ -5,6 +5,21 @@
 
 #include "estd/print.h"
 
+void clear() { print("\033[J"); }
+
+void spam() { launch("/bin/spam.bin"); }
+
+void ls() {
+    DIR* dir = opendir("");
+    struct dirent* entry;
+    while ((entry = readdir(dir)) != NULL) {
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+            continue;
+        }
+        println("{}", entry->d_name);
+    }
+}
+
 int main() {
     char buffer[64];
 
@@ -33,15 +48,11 @@ int main() {
         }
 
         if (strcmp(buffer, "clear") == 0) {
-            print("\033[J");
+            clear();
         } else if (strcmp(buffer, "spam") == 0) {
-            launch("/bin/spam.bin");
+            spam();
         } else if (strcmp(buffer, "ls") == 0) {
-            DIR* dir = opendir("");
-            struct dirent* entry;
-            while ((entry = readdir(dir)) != NULL) {
-                println("{}", entry->d_name);
-            }
+            ls();
         } else {
             println("no such command: {}", buffer);
         }
