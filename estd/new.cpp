@@ -16,11 +16,11 @@ void operator delete[](void* ptr) noexcept { System::mm().kfree(ptr); }
 void operator delete(void* ptr, size_t) noexcept { System::mm().kfree(ptr); }
 void operator delete[](void* ptr, size_t) noexcept { System::mm().kfree(ptr); }
 #else
-#include "estd/assertions.h"
-void* operator new(size_t) { ASSERT(false); }
-void* operator new[](size_t) { ASSERT(false); }
-void operator delete(void*) noexcept { ASSERT(false); }
-void operator delete[](void*) noexcept { ASSERT(false); }
-void operator delete(void*, size_t) noexcept { ASSERT(false); }
-void operator delete[](void*, size_t) noexcept { ASSERT(false); }
+#include "stdlib.h"
+void* operator new(size_t count) { return malloc(count); }
+void* operator new[](size_t count) { return malloc(count); }
+void operator delete(void* ptr) noexcept { free(ptr); }
+void operator delete[](void* ptr) noexcept { free(ptr); }
+void operator delete(void* ptr, size_t) noexcept { free(ptr); }
+void operator delete[](void* ptr, size_t) noexcept { free(ptr); }
 #endif

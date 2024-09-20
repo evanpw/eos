@@ -37,11 +37,11 @@ add_library(
 )
 
 add_library(estd_user ${ESTD_SOURCES})
+target_link_libraries(estd_user PRIVATE libc)
 
 macro(make_user_target name)
     add_executable(${name}.elf ${ARGN})
     target_link_libraries(${name}.elf PRIVATE estd_user)
-    target_link_libraries(estd_user PRIVATE libc)
 
     # Convert to flat binary format
     add_custom_command(
