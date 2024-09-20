@@ -741,21 +741,19 @@ ssize_t Terminal::read(OpenFileDescription&, void* buffer, size_t count) {
     }
 
     // TODO: check fd mode
-    // TODO: blocking, canonical mode
     size_t bytesRead = 0;
     char* dest = static_cast<char*>(buffer);
 
-    while (_inputBuffer && bytesRead < count) {
+    // Read all complete lines as long as space remains in the buffer
+    while (_inputLines > 0 && bytesRead < count) {
         char c = _inputBuffer.pop();
 
         *dest++ = c;
         ++bytesRead;
 
-        // Read one line at a time
         if (c == '\n') {
             ASSERT(_inputLines > 0);
             --_inputLines;
-            break;
         }
     }
 
