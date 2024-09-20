@@ -3,6 +3,7 @@
 #include <stddef.h>
 #include <sys/types.h>
 
+#include "api/errno.h"
 #include "estd/memory.h"
 
 struct File;
@@ -25,4 +26,8 @@ struct File {
     virtual void close() {};
     virtual ssize_t read(OpenFileDescription& fd, void* buffer, size_t count) = 0;
     virtual ssize_t write(OpenFileDescription& fd, const void* buffer, size_t count) = 0;
+    virtual ssize_t readDir(OpenFileDescription& /*fd*/, void* /*buffer*/,
+                            size_t /*count*/) {
+        return -ENOTDIR;
+    }
 };

@@ -2,7 +2,7 @@
 
 #include <string.h>
 
-#include "errno.h"
+#include "api/errno.h"
 #include "estd/print.h"
 #include "klibc.h"
 #include "units.h"
@@ -268,7 +268,7 @@ estd::unique_ptr<ext2::Inode> Ext2FileSystem::lookup(const char* path) {
 
         // Search for the next component in the current directory
         ext2::DirectoryEntry* foundEntry = nullptr;
-        uint16_t offset = 0;
+        uint64_t offset = 0;
         while (offset < current->size()) {
             ext2::DirectoryEntry* dirEntry =
                 reinterpret_cast<ext2::DirectoryEntry*>(&dirBuffer[offset]);

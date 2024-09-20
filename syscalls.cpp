@@ -2,8 +2,8 @@
 
 #include <stdint.h>
 
+#include "api/errno.h"
 #include "api/syscalls.h"
-#include "errno.h"
 #include "estd/print.h"
 #include "file.h"
 #include "fs/ext2_file.h"
@@ -29,6 +29,18 @@ ssize_t sys_read(int fd, void* buffer, size_t count) {
     OpenFileDescription& description = *process.openFiles[fd];
     File& file = *description.file;
     return file.read(description, buffer, count);
+}
+
+ssize_t sys_read_dir(int fd, void* buffer, size_t count) {
+    Process& process = *currentThread->process;
+
+    if (fd < 0 || fd >= RLIMIT_NOFILE || !process.openFiles[fd]) {
+        return -EBADF;
+    }
+
+    OpenFileDescription& description = *process.openFiles[fd];
+    File& file = *description.file;
+    return file.readDir(description, buffer, count);
 }
 
 ssize_t sys_write(int fd, const void* buffer, size_t count) {
@@ -130,6 +142,7 @@ void initSyscalls() {
     syscallTable[SYS_open] = bit_cast<SyscallHandler>((void*)sys_open);
     syscallTable[SYS_close] = bit_cast<SyscallHandler>((void*)sys_close);
     syscallTable[SYS_launch] = bit_cast<SyscallHandler>((void*)sys_launch);
+    syscallTable[SYS_read_dir] = bit_cast<SyscallHandler>((void*)sys_read_dir);
 
     println("syscall: init complete");
 }

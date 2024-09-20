@@ -1,3 +1,4 @@
+#include <dirent.h>
 #include <fcntl.h>
 #include <string.h>
 #include <unistd.h>
@@ -35,6 +36,12 @@ int main() {
             print("\033[J");
         } else if (strcmp(buffer, "spam") == 0) {
             launch("/bin/spam.bin");
+        } else if (strcmp(buffer, "ls") == 0) {
+            DIR* dir = opendir("");
+            struct dirent* entry;
+            while ((entry = readdir(dir)) != NULL) {
+                println("{}", entry->d_name);
+            }
         } else {
             println("no such command: {}", buffer);
         }

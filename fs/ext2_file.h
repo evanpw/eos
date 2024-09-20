@@ -10,6 +10,7 @@ public:
 
     ssize_t read(OpenFileDescription& fd, void* buffer, size_t count) override;
     ssize_t write(OpenFileDescription& fd, const void* buffer, size_t count) override;
+    ssize_t readDir(OpenFileDescription& fd, void* buffer, size_t count) override;
 
 private:
     Ext2FileSystem& _fs;

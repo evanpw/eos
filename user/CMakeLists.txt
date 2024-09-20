@@ -25,6 +25,7 @@ include_directories(
 add_library(
     libc
     libc/_start.cpp
+    libc/dirent.cpp
     libc/errno.cpp
     libc/fcntl.cpp
     libc/stdio.cpp
