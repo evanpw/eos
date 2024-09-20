@@ -6,6 +6,8 @@ void* operator new[](size_t, void* ptr) { return ptr; }
 void operator delete(void*, void*) noexcept {}
 void operator delete[](void*, void*) noexcept {}
 
+// TODO: new C++17 aligned new / delete
+
 // Regular (non-placement) new / delete
 #ifdef KERNEL
 #include "system.h"
