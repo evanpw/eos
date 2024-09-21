@@ -97,7 +97,10 @@ int64_t sys_close(int fd) {
     return process.close(fd);
 }
 
-void sys_launch(const char* path, const char* argv[]) { Process::create(path, argv); }
+pid_t sys_launch(const char* path, const char* argv[]) {
+    Process* child = Process::create(path, argv);
+    return child->pid;
+}
 
 VirtualAddress sys_sbrk(intptr_t incr) {
     Process& process = *currentThread->process;
@@ -138,6 +141,15 @@ int64_t sys_chdir(const char* path) {
     // TODO: process needs a lock
     process.cwdIno = ino;
     return 0;
+}
+
+int64_t sys_wait_pid(pid_t pid) {
+    int result = ProcessTable::the().waitProcess(pid);
+    if (result < 0) {
+        return result;
+    }
+
+    return pid;
 }
 
 // We don't have static initialization, so this is initialized at runtime
@@ -194,6 +206,7 @@ void initSyscalls() {
     syscallTable[SYS_sbrk] = bit_cast<SyscallHandler>((void*)sys_sbrk);
     syscallTable[SYS_getcwd] = bit_cast<SyscallHandler>((void*)sys_getcwd);
     syscallTable[SYS_chdir] = bit_cast<SyscallHandler>((void*)sys_chdir);
+    syscallTable[SYS_wait_pid] = bit_cast<SyscallHandler>((void*)sys_wait_pid);
 
     println("syscall: init complete");
 }

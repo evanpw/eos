@@ -20,6 +20,7 @@ add_link_options(
 include_directories(
     ${CMAKE_SOURCE_DIR}
     libc/include
+    libc/
 )
 
 add_library(
@@ -34,6 +35,7 @@ add_library(
     libc/string.cpp
     libc/syscall.cpp
     libc/unistd.cpp
+    libc/sys/wait.cpp
 )
 
 add_library(estd_user ${ESTD_SOURCES})

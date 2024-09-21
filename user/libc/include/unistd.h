@@ -20,5 +20,5 @@ char* getcwd(char* buffer, size_t size);
 
 // Non-standard
 int sleep(int ticks);
-void launch(const char* path, const char* argv[]);
+pid_t launch(const char* path, const char* argv[]);
 }

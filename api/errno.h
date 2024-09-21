@@ -12,3 +12,4 @@
 #define EFBIG 27         // File too large
 #define ENOMEM 12        // Out of memory
 #define ENAMETOOLONG 36  // File name too long
+#define ECHILD 10        // No child processes

@@ -200,7 +200,13 @@ void Scheduler::sleepThread(const estd::shared_ptr<Blocker>& blocker, Spinlock* 
 }
 
 void Scheduler::wakeThreads(const estd::shared_ptr<Blocker>& blocker) {
-    SpinlockLocker locker(_schedLock);
+    // TODO: use a recursive lock instead -- this has a race condition
+    bool wasLocked = _schedLock.isLocked();
+    if (!wasLocked) {
+        _schedLock.lock();
+    }
+
+    // SpinlockLocker locker(_schedLock);
 
     size_t i = 0;
     while (i < waitQueue.size()) {
@@ -216,5 +222,9 @@ void Scheduler::wakeThreads(const estd::shared_ptr<Blocker>& blocker) {
         waitQueue[i] = waitQueue.back();
         waitQueue.pop_back();
         runQueue.push_back(thread);
+    }
+
+    if (!wasLocked) {
+        _schedLock.unlock();
     }
 }

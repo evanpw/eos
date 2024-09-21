@@ -19,6 +19,8 @@ void ProcessTable::init() {
 }
 
 Process* ProcessTable::create(const char* path, const char* argv[]) {
+    SpinlockLocker locker(_lock);
+
     Process* process = new Process(_nextPid++, path, argv);
     // TODO: write an emplace_back function for vector
     _processes.push_back(estd::move(estd::unique_ptr<Process>(process)));
@@ -26,16 +28,52 @@ Process* ProcessTable::create(const char* path, const char* argv[]) {
 }
 
 void ProcessTable::destroy(Process* process) {
+    SpinlockLocker locker(_lock);
+
     for (size_t i = 0; i < _processes.size(); ++i) {
         if (_processes[i].get() != process) continue;
 
         estd::swap(_processes[i], _processes.back());
         _processes.pop_back();
 
+        for (size_t j = 0; j < _blockers.size(); ++j) {
+            if (_blockers[j]->pid != process->pid) continue;
+
+            System::scheduler().wakeThreads(_blockers.back());
+            estd::swap(_blockers[j], _blockers.back());
+            _blockers.pop_back();
+        }
+
         return;
     }
 
     panic("process not found");
+}
+
+int ProcessTable::waitProcess(pid_t pid) {
+    if (pid < 1) {
+        return -ECHILD;
+    }
+
+    SpinlockLocker locker(_lock);
+
+    bool found = false;
+    for (auto& process : _processes) {
+        if (process->pid == pid) {
+            found = true;
+            break;
+        }
+    }
+
+    if (!found) {
+        return -ECHILD;
+    }
+
+    estd::shared_ptr<ProcessBlocker> blocker(new ProcessBlocker(pid));
+    _blockers.push_back(blocker);
+    System::scheduler().sleepThread(blocker, &_lock);
+
+    return 0;
 }
 
 Process::Process(pid_t pid, const char* path, const char* argv[])

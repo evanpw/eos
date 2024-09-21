@@ -13,5 +13,6 @@ static constexpr size_t SYS_read_dir = 8;
 static constexpr size_t SYS_sbrk = 9;
 static constexpr size_t SYS_getcwd = 10;
 static constexpr size_t SYS_chdir = 11;
+static constexpr size_t SYS_wait_pid = 12;
 
-static constexpr size_t MAX_SYSCALL_NO = 11;
+static constexpr size_t MAX_SYSCALL_NO = 12;

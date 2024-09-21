@@ -1,6 +1,7 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <string.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 #include "estd/print.h"
@@ -102,7 +103,8 @@ int main() {
             if (*args != '\0') {
                 argv[0] = args;
             }
-            launch("/bin/cat.bin", argv);
+            pid_t child = launch("/bin/cat.bin", argv);
+            waitpid(child, nullptr, 0);
         } else {
             println("no such command: {}", buffer);
         }
