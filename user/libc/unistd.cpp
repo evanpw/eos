@@ -71,4 +71,6 @@ char* getcwd(char* buffer, size_t size) {
 
 // Non-standard
 int sleep(int ticks) { return __syscall(SYS_sleep, ticks); }
-void launch(const char* filename) { __syscall(SYS_launch, (uint64_t)filename); }
+void launch(const char* path, const char* argv[]) {
+    __syscall(SYS_launch, (uint64_t)path, (uint64_t)argv);
+}

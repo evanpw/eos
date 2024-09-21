@@ -97,7 +97,7 @@ int64_t sys_close(int fd) {
     return process.close(fd);
 }
 
-void sys_launch(const char* filename) { Process::create(filename); }
+void sys_launch(const char* path, const char* argv[]) { Process::create(path, argv); }
 
 VirtualAddress sys_sbrk(intptr_t incr) {
     Process& process = *currentThread->process;

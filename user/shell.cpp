@@ -7,7 +7,7 @@
 
 void clear() { print("\033[J"); }
 
-void spam() { launch("/bin/spam.bin"); }
+void spam() { launch("/bin/spam.bin", nullptr); }
 
 void ls(const char* path) {
     DIR* dir = opendir(path);
@@ -62,6 +62,10 @@ int main() {
             buffer[bytesRead] = '\0';
         }
 
+        if (*buffer == '\0') {
+            continue;
+        }
+
         const char* cmd = buffer;
         const char* args = parseCommand(buffer);
 
@@ -93,6 +97,12 @@ int main() {
             }
         } else if (strcmp(cmd, "echo") == 0) {
             echo(args);
+        } else if (strcmp(cmd, "cat") == 0) {
+            const char* argv[2] = {};
+            if (*args != '\0') {
+                argv[0] = args;
+            }
+            launch("/bin/cat.bin", argv);
         } else {
             println("no such command: {}", buffer);
         }

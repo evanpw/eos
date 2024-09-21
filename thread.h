@@ -18,14 +18,33 @@ struct Thread {
     uint64_t rsp;
 
     static estd::unique_ptr<Thread> createUserThread(Process* process,
-                                                     VirtualAddress entryPoint);
+                                                     VirtualAddress entryPoint,
+                                                     const char* programName,
+                                                     const char* argv[]);
     static estd::unique_ptr<Thread> createKernelThread(VirtualAddress entryPoint);
 
     Process* process;
 
-    // Keep track of allocations so they can be freed
-    PhysicalAddress userStackPages;
-    PhysicalAddress kernelStackPages;
+    //// User stack
+    PhysicalAddress userStackTop;
+    VirtualAddress userStackTopVirt;
+    size_t userStackPages;
+
+    PhysicalAddress userStackBottom() const {
+        return userStackTop - userStackPages * PAGE_SIZE;
+    }
+
+    VirtualAddress userStackBottomVirt() const {
+        return userStackTopVirt - userStackPages * PAGE_SIZE;
+    }
+
+    //// Kernel stack
+    PhysicalAddress kernelStackTop;
+    size_t kernelStackPages;
+
+    PhysicalAddress kernelStackBottom() const {
+        return kernelStackTop - kernelStackPages * PAGE_SIZE;
+    }
 
     ~Thread();
 };

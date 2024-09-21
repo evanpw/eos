@@ -56,16 +56,19 @@ endmacro()
 
 make_user_target(shell shell.cpp)
 make_user_target(spam spam.cpp)
+make_user_target(cat cat.cpp)
 
 add_custom_target(
     userland
     DEPENDS
     shell.elf
     spam.elf
+    cat.elf
 )
 
 set(USERLAND_BINARIES
     ${CMAKE_CURRENT_BINARY_DIR}/shell.bin
     ${CMAKE_CURRENT_BINARY_DIR}/spam.bin
+    ${CMAKE_CURRENT_BINARY_DIR}/cat.bin
     PARENT_SCOPE
 )

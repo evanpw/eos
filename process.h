@@ -25,7 +25,7 @@ public:
 private:
     static ProcessTable* _instance;
 
-    Process* create(const char* filename);
+    Process* create(const char* path, const char* argv[]);
     void destroy(Process* process);
 
     estd::vector<estd::unique_ptr<Process>> _processes;
@@ -41,8 +41,8 @@ public:
     ~Process();
 
     // Actually performed by ProcessTable, but access from Process for clarity
-    static Process* create(const char* filename) {
-        return ProcessTable::the().create(filename);
+    static Process* create(const char* path, const char* argv[]) {
+        return ProcessTable::the().create(path, argv);
     }
     static void destroy(Process* process) { ProcessTable::the().destroy(process); }
 
@@ -72,5 +72,5 @@ public:
     int close(int fd);
 
 private:
-    Process(pid_t pid, const char* filename);
+    Process(pid_t pid, const char* path, const char* argv[]);
 };

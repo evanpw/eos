@@ -18,8 +18,8 @@ void ProcessTable::init() {
     _instance = new ProcessTable;
 }
 
-Process* ProcessTable::create(const char* filename) {
-    Process* process = new Process(_nextPid++, filename);
+Process* ProcessTable::create(const char* path, const char* argv[]) {
+    Process* process = new Process(_nextPid++, path, argv);
     // TODO: write an emplace_back function for vector
     _processes.push_back(estd::move(estd::unique_ptr<Process>(process)));
     return process;
@@ -38,13 +38,14 @@ void ProcessTable::destroy(Process* process) {
     panic("process not found");
 }
 
-Process::Process(pid_t pid, const char* filename) : pid(pid), cwdIno(ext2::ROOT_INO) {
+Process::Process(pid_t pid, const char* path, const char* argv[])
+: pid(pid), cwdIno(ext2::ROOT_INO) {
     open(System::terminal());  // stdin
     open(System::terminal());  // stdout
     open(System::terminal());  // stderr
 
     // Look up the executable on disk
-    uint32_t ino = System::fs().lookup(cwdIno, filename);
+    uint32_t ino = System::fs().lookup(cwdIno, path);
     ASSERT(ino != ext2::BAD_INO);
     auto inode = System::fs().readInode(ino);
     ASSERT(inode);
@@ -64,7 +65,16 @@ Process::Process(pid_t pid, const char* filename) : pid(pid), cwdIno(ext2::ROOT_
     VirtualAddress entryPoint = addressSpace->userMapBase();
     addressSpace->mapPages(entryPoint, imagePages, imagePagesCount);
 
-    thread = Thread::createUserThread(this, entryPoint);
+    // Find the program name by taking everything after the last slash
+    const char* p = path;
+    const char* lastSlash = strchr(path, '/');
+    while (lastSlash) {
+        p = lastSlash + 1;
+        lastSlash = strchr(p, '/');
+    }
+    const char* programName = p;
+
+    thread = Thread::createUserThread(this, entryPoint, programName, argv);
     System::scheduler().startThread(thread.get());
 }
 
