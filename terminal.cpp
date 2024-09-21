@@ -222,6 +222,8 @@ char keyCodeToAsciiUnshifted(KeyCode keyCode) {
     switch (keyCode) {
         case KeyCode::Escape:
             return '\033';
+        case KeyCode::Backspace:
+            return '\b';
         case KeyCode::One:
             return '1';
         case KeyCode::Two:
@@ -361,6 +363,8 @@ char keyCodeToAsciiShifted(KeyCode keyCode) {
     switch (keyCode) {
         case KeyCode::Escape:
             return '\033';
+        case KeyCode::Backspace:
+            return '\b';
         case KeyCode::One:
             return '!';
         case KeyCode::Two:
@@ -503,36 +507,56 @@ void Terminal::onKeyEvent(const KeyboardEvent& event) {
     //        (uint8_t)event.key, keyCodeToString(event.key), event.pressed);
 
     if (event.pressed) {
-        // TODO: input-buffer editing
-
         // TODO: pass modifiers in with the event
         bool shifted =
             _keyboard.isPressed(KeyCode::LShift) || _keyboard.isPressed(KeyCode::RShift);
         char c = shifted ? keyCodeToAsciiShifted(event.key)
                          : keyCodeToAsciiUnshifted(event.key);
 
-        // Key which doesn't correspond to any ascii character (e.g., F1)
-        if (c == '\0') return;
-
-        // If the input buffer is completely full, discard any further input
-        if (_inputBuffer.full()) return;
-
-        // If the input buffer is nearly full (only one spot left), allow a newline but
-        // discard any other input
-        if (_inputBuffer.almostFull() && c != '\n') return;
-
-        _inputBuffer.push(c);
-
-        if (c == '\n') {
-            _inputLines++;
-            System::scheduler().wakeThreads(_inputBlocker);
+        if (handleInput(c)) {
+            handleOutput(c);
         }
-
-        handleChar(c);
     }
 }
 
-void Terminal::handleChar(char c) {
+bool Terminal::handleInput(char c) {
+    // Key which doesn't correspond to any ascii character (e.g., F1)
+    if (c == '\0') return false;
+
+    // Backspace deletes rather than appends a character to the input buffer
+    if (c == '\b') {
+        if (!_inputBuffer.empty()) {
+            char dc = _inputBuffer.popBack();
+            if (dc == '\n') {
+                ASSERT(_inputLines > 0);
+                --_inputLines;
+            }
+
+            return true;
+        }
+
+        // If the input buffer is empty, don't echo the backspace
+        return false;
+    }
+
+    // If the input buffer is completely full, discard any further input
+    if (_inputBuffer.full()) return false;
+
+    // If the input buffer is nearly full (only one spot left), allow a newline
+    // but discard any other input
+    if (_inputBuffer.almostFull() && c != '\n') return false;
+
+    _inputBuffer.push(c);
+
+    if (c == '\n') {
+        _inputLines++;
+        System::scheduler().wakeThreads(_inputBlocker);
+    }
+
+    return true;
+}
+
+void Terminal::handleOutput(char c) {
     // Start or continuance of an escape sequence
     if (!_outputBuffer.empty()) {
         // If the escape sequence is too long, it's invalid
@@ -768,7 +792,7 @@ ssize_t Terminal::write(OpenFileDescription&, const void* buffer, size_t count) 
     const char* src = static_cast<const char*>(buffer);
 
     for (size_t i = 0; i < count; ++i) {
-        handleChar(*src++);
+        handleOutput(*src++);
     }
 
     return count;

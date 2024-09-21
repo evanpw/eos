@@ -24,7 +24,8 @@ private:
     friend class System;
     Terminal(KeyboardDevice& keyboard, Screen& screen);
 
-    void handleChar(char c);
+    bool handleInput(char c);
+    void handleOutput(char c);
     void handleEscapeSequence();
     bool parseEscapeSequence();
     void echo(char c);
