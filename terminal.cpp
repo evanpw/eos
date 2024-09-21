@@ -661,6 +661,22 @@ bool Terminal::parseEscapeSequence() {
                         _fg = Screen::Cyan;
                     } else if (arg == 37) {
                         _fg = Screen::LightGrey;
+                    } else if (arg == 90) {
+                        _fg = Screen::DarkGrey;
+                    } else if (arg == 91) {
+                        _fg = Screen::LightRed;
+                    } else if (arg == 92) {
+                        _fg = Screen::LightGreen;
+                    } else if (arg == 93) {
+                        _fg = Screen::Yellow;
+                    } else if (arg == 94) {
+                        _fg = Screen::LightBlue;
+                    } else if (arg == 95) {
+                        _fg = Screen::LightMagenta;
+                    } else if (arg == 96) {
+                        _fg = Screen::LightCyan;
+                    } else if (arg == 97) {
+                        _fg = Screen::White;
                     } else if (arg == 40) {
                         _bg = Screen::Black;
                     } else if (arg == 41) {
@@ -677,6 +693,22 @@ bool Terminal::parseEscapeSequence() {
                         _bg = Screen::Cyan;
                     } else if (arg == 47) {
                         _bg = Screen::LightGrey;
+                    } else if (arg == 100) {
+                        _bg = Screen::DarkGrey;
+                    } else if (arg == 101) {
+                        _bg = Screen::LightRed;
+                    } else if (arg == 102) {
+                        _bg = Screen::LightGreen;
+                    } else if (arg == 103) {
+                        _bg = Screen::Yellow;
+                    } else if (arg == 104) {
+                        _bg = Screen::LightBlue;
+                    } else if (arg == 105) {
+                        _bg = Screen::LightMagenta;
+                    } else if (arg == 106) {
+                        _bg = Screen::LightCyan;
+                    } else if (arg == 107) {
+                        _bg = Screen::White;
                     }
                 }
 

@@ -38,15 +38,17 @@ int main() {
     char buffer[64];
 
     int fd = open("/etc/version.txt", 0);
-    ssize_t bytesRead = read(fd, buffer, 63);
-    buffer[bytesRead] = '\0';
-    print("\033[31;42m{}\033[m", buffer);
+    size_t bytesRead;
+    while ((bytesRead = read(fd, buffer, 63)) > 0) {
+        buffer[bytesRead] = '\0';
+        print("{}", buffer);
+    }
     close(fd);
 
     while (true) {
         // Include the cwd in the prompt
         if (getcwd(buffer, 64)) {
-            print("[eos:{}]$ ", buffer);
+            print("\033[36m{}\033[97m$\033[0m ", buffer);
         } else {
             print("$ ");
         }

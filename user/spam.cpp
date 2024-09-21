@@ -11,5 +11,6 @@ int main() {
         sleep(20);
     }
 
-    return 12;
+    print("\033[s\033[0;80H \033[u");
+    return 1;
 }
