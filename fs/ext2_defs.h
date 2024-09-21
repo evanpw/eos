@@ -180,6 +180,8 @@ struct __attribute__((packed)) Inode {
             return size32;
         }
     }
+
+    bool isDirectory() const { return (mode & 0xF000) == S_IFDIR; }
 };
 
 static_assert(sizeof(Inode) == 128);

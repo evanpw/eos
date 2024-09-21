@@ -12,10 +12,15 @@ public:
     ~Ext2FileSystem();
 
     // High-level interface
-    estd::unique_ptr<ext2::Inode> lookup(const char* path);
+    uint32_t lookup(uint32_t cwdIno, const char* path);
+    uint32_t getParent(const ext2::Inode& inode);
+    int getPath(uint32_t ino, char* path, size_t pathSize);
     bool readFullFile(const ext2::Inode& inode, uint8_t* dest);
     ssize_t readFromFile(const ext2::Inode& inode, uint8_t* dest, uint32_t size,
                          uint32_t offset = 0);
+
+    // Medium-level interface
+    estd::unique_ptr<ext2::Inode> readInode(uint32_t ino);
 
 private:
     Ext2FileSystem(DiskDevice& disk);
@@ -25,12 +30,9 @@ private:
     size_t numBlockGroups() const;
     size_t sectorsPerBlock() const;
 
-    // Medium-level interface
+    // Low-level interface
     bool readSuperBlock();
     bool readBlockGroupDescriptorTable();
-    estd::unique_ptr<ext2::Inode> readInode(uint32_t ino);
-
-    // Low-level interface
     bool readBlock(void* dest, uint32_t blockId);
     bool readBlock(void* dest, uint32_t blockId, uint32_t maxBytes);
     bool readRange(void* dest, uint32_t blockId, uint32_t numBytes, uint32_t offset = 0);

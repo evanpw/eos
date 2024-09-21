@@ -15,6 +15,9 @@ pid_t getpid();
 [[noreturn]] void _exit(int status);
 void* sbrk(intptr_t incr);
 
+int chdir(const char* path);
+char* getcwd(char* buffer, size_t size);
+
 // Non-standard
 int sleep(int ticks);
 void launch(const char* path);

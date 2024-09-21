@@ -68,26 +68,31 @@ pid_t sys_getpid() {
     __builtin_unreachable();
 }
 
-int sys_sleep(int ticks) {
+int64_t sys_sleep(int ticks) {
     // Will block the current thread and allow other threads to run
     System::timer().sleep(ticks);
     return 0;
 }
 
-int sys_open(const char* path, int /*oflag*/) {
+int64_t sys_open(const char* path, int /*oflag*/) {
     // TODO: handle flags correctly
     Process& process = *currentThread->process;
 
-    auto inode = System::fs().lookup(path);
-    if (!inode) {
+    uint32_t ino = System::fs().lookup(process.cwdIno, path);
+    if (ino == ext2::BAD_INO) {
         return -ENOENT;
+    }
+
+    auto inode = System::fs().readInode(ino);
+    if (!inode) {
+        return -EIO;
     }
 
     estd::shared_ptr<Ext2File> file(new Ext2File(System::fs(), move(inode)));
     return process.open(file);
 }
 
-int sys_close(int fd) {
+int64_t sys_close(int fd) {
     Process& process = *currentThread->process;
     return process.close(fd);
 }
@@ -108,6 +113,33 @@ VirtualAddress sys_sbrk(intptr_t incr) {
     return process.heapStart();
 }
 
+int64_t sys_getcwd(char* buffer, size_t size) {
+    Process& process = *currentThread->process;
+    return System::fs().getPath(process.cwdIno, buffer, size);
+}
+
+int64_t sys_chdir(const char* path) {
+    Process& process = *currentThread->process;
+
+    uint32_t ino = System::fs().lookup(process.cwdIno, path);
+    if (ino == ext2::BAD_INO) {
+        return -ENOENT;
+    }
+
+    auto inode = System::fs().readInode(ino);
+    if (!inode) {
+        return -EIO;
+    }
+
+    if (!inode->isDirectory()) {
+        return -ENOTDIR;
+    }
+
+    // TODO: process needs a lock
+    process.cwdIno = ino;
+    return 0;
+}
+
 // We don't have static initialization, so this is initialized at runtime
 SyscallHandler syscallTable[MAX_SYSCALL_NO + 1];
 
@@ -121,8 +153,10 @@ extern "C" void syscallEntry(TrapRegisters& regs) {
         return;
     }
 
-    regs.rax =
-        syscallTable[regs.rax](regs.rdi, regs.rsi, regs.rdx, regs.r10, regs.r8, regs.r9);
+    auto fn = syscallTable[regs.rax];
+    ASSERT(fn);
+
+    regs.rax = fn(regs.rdi, regs.rsi, regs.rdx, regs.r10, regs.r8, regs.r9);
 }
 
 // Model-Specific Registers (MSRs)
@@ -158,6 +192,8 @@ void initSyscalls() {
     syscallTable[SYS_launch] = bit_cast<SyscallHandler>((void*)sys_launch);
     syscallTable[SYS_read_dir] = bit_cast<SyscallHandler>((void*)sys_read_dir);
     syscallTable[SYS_sbrk] = bit_cast<SyscallHandler>((void*)sys_sbrk);
+    syscallTable[SYS_getcwd] = bit_cast<SyscallHandler>((void*)sys_getcwd);
+    syscallTable[SYS_chdir] = bit_cast<SyscallHandler>((void*)sys_chdir);
 
     println("syscall: init complete");
 }

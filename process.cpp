@@ -38,13 +38,15 @@ void ProcessTable::destroy(Process* process) {
     panic("process not found");
 }
 
-Process::Process(pid_t pid, const char* filename) : pid(pid) {
+Process::Process(pid_t pid, const char* filename) : pid(pid), cwdIno(ext2::ROOT_INO) {
     open(System::terminal());  // stdin
     open(System::terminal());  // stdout
     open(System::terminal());  // stderr
 
     // Look up the executable on disk
-    auto inode = System::fs().lookup(filename);
+    uint32_t ino = System::fs().lookup(cwdIno, filename);
+    ASSERT(ino != ext2::BAD_INO);
+    auto inode = System::fs().readInode(ino);
     ASSERT(inode);
 
     // Allocate a fresh piece of page-aligned physical memory to store it

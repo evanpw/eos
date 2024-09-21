@@ -56,6 +56,8 @@ public:
 
     pid_t pid;
     estd::unique_ptr<OpenFileDescription> openFiles[RLIMIT_NOFILE] = {};
+    uint32_t cwdIno;
+
     estd::unique_ptr<UserAddressSpace> addressSpace;
     estd::unique_ptr<Thread> thread;
 

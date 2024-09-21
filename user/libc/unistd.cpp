@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #include "errno.h"
+#include "estd/print.h"
 #include "sys/types.h"
 #include "syscall.h"
 
@@ -44,6 +45,28 @@ void* sbrk(intptr_t incr) {
     }
 
     return (void*)result;
+}
+
+int chdir(const char* path) {
+    int64_t result = __syscall(SYS_chdir, (uint64_t)path);
+
+    if (result < 0) {
+        errno = -result;
+        return -1;
+    }
+
+    return 0;
+}
+
+char* getcwd(char* buffer, size_t size) {
+    int64_t result = __syscall(SYS_getcwd, (uint64_t)buffer, size);
+
+    if (result < 0) {
+        errno = -result;
+        return nullptr;
+    }
+
+    return buffer;
 }
 
 // Non-standard

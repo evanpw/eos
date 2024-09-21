@@ -33,14 +33,16 @@ int strncmp(const char* s1, const char* s2, size_t n) {
 
     if (n == 0) return 0;
 
-    for (size_t i = 0; i < n; ++i) {
-        if (*lhs == 0 || *rhs == 0 || *lhs != *rhs) break;
+    for (size_t i = 0; i < n && (*lhs || *rhs); ++i) {
+        if (*lhs != *rhs) {
+            return (unsigned char)(*lhs) - (unsigned char)(*rhs);
+        }
 
         ++lhs;
         ++rhs;
     }
 
-    return (unsigned char)(*lhs) - (unsigned char)(*rhs);
+    return 0;
 }
 
 int strcmp(const char* s1, const char* s2) {
@@ -65,4 +67,14 @@ char* strncpy(char* dest, const char* src, size_t n) {
     }
 
     return dest;
+}
+
+const char* strchr(const char* s, int c) {
+    for (const char* p = s; *p; ++p) {
+        if (*p == c) {
+            return p;
+        }
+    }
+
+    return nullptr;
 }

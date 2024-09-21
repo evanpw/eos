@@ -218,7 +218,7 @@ bool Ext2FileSystem::init() {
         return false;
     }
 
-    if ((_rootInode->mode & 0xF000) != ext2::S_IFDIR) {
+    if (!_rootInode->isDirectory()) {
         println("ext2: root directory is not a directory");
         return false;
     }
@@ -234,9 +234,18 @@ bool Ext2FileSystem::init() {
     return true;
 }
 
-estd::unique_ptr<ext2::Inode> Ext2FileSystem::lookup(const char* path) {
+uint32_t Ext2FileSystem::lookup(uint32_t cwdIno, const char* path) {
     // TODO: check path pointer points to valid memory
-    estd::unique_ptr<ext2::Inode> current = readInode(ext2::ROOT_INO);
+
+    // If the path is absolute, start at the root directory rather than the cwd
+    uint32_t currentIno;
+    if (path[0] == '/') {
+        currentIno = ext2::ROOT_INO;
+    } else {
+        currentIno = cwdIno;
+    }
+
+    estd::unique_ptr<ext2::Inode> current = readInode(currentIno);
 
     const char* p = path;
     while (true) {
@@ -246,7 +255,7 @@ estd::unique_ptr<ext2::Inode> Ext2FileSystem::lookup(const char* path) {
 
         // If we've reached the end of the path, we're done
         if (*p == '\0') {
-            return current;
+            return currentIno;
         }
 
         // Find the next component of the path
@@ -256,14 +265,14 @@ estd::unique_ptr<ext2::Inode> Ext2FileSystem::lookup(const char* path) {
         }
 
         // Make sure that current location is a directory
-        if ((current->mode & 0xF000) != ext2::S_IFDIR) {
-            return {};
+        if (!current->isDirectory()) {
+            return ext2::BAD_INO;
         }
 
         Buffer dirBuffer(current->size());
         if (!readFullFile(*current, dirBuffer.get())) {
             println("ext2: corrupt filesystem when looking up '{}'", path);
-            return {};
+            return ext2::BAD_INO;
         }
 
         // Search for the next component in the current directory
@@ -283,17 +292,131 @@ estd::unique_ptr<ext2::Inode> Ext2FileSystem::lookup(const char* path) {
         }
 
         if (!foundEntry) {
-            return {};
+            return ext2::BAD_INO;
         }
 
         // Load the inode for the next component
-        current = readInode(foundEntry->inode);
+        currentIno = foundEntry->inode;
+        current = readInode(currentIno);
         if (!current) {
             println("ext2: corrupt filesystem when looking up '{}'", path);
-            return {};
+            return ext2::BAD_INO;
         }
 
         p = next;
+    }
+}
+
+static int prependString(char* dest, const char* src, size_t srcLength, size_t n) {
+    size_t destLen = strlen(dest);
+    if (srcLength + destLen + 1 > n) {
+        return -ENAMETOOLONG;
+    }
+
+    memmove(dest + srcLength, dest, destLen + 1);
+    memcpy(dest, src, srcLength);
+    return 0;
+}
+
+uint32_t Ext2FileSystem::getParent(const ext2::Inode& inode) {
+    ASSERT(inode.isDirectory());
+
+    // Read the contents of the current directory
+    Buffer dirBuffer(inode.size());
+    if (!readFullFile(inode, dirBuffer.get())) {
+        return -1;
+    }
+
+    // Search for the parent directory ".."
+    uint64_t offset = 0;
+    while (offset < inode.size()) {
+        ext2::DirectoryEntry* dirEntry =
+            reinterpret_cast<ext2::DirectoryEntry*>(&dirBuffer[offset]);
+
+        if (dirEntry->name_len == 2 &&
+            strncmp(dirEntry->name, "..", dirEntry->name_len) == 0) {
+            return dirEntry->inode;
+        }
+
+        offset += dirEntry->rec_len;
+    }
+
+    return ext2::BAD_INO;
+}
+
+int Ext2FileSystem::getPath(uint32_t ino, char* path, size_t pathSize) {
+    if (pathSize == 0) {
+        return -EINVAL;
+    }
+
+    path[0] = '\0';
+
+    if (ino == ext2::ROOT_INO) {
+        return prependString(path, "/", 1, pathSize);
+    }
+
+    estd::unique_ptr<ext2::Inode> inode = readInode(ino);
+    if (!inode) {
+        return -EIO;
+    }
+
+    uint32_t currentIno = ino;
+    while (true) {
+        if (!inode->isDirectory()) {
+            return -ENOTDIR;
+        }
+
+        uint32_t parentIno = getParent(*inode);
+        if (parentIno == ext2::BAD_INO) {
+            return -EIO;
+        }
+
+        estd::unique_ptr<ext2::Inode> parent = readInode(parentIno);
+        if (!parent) {
+            return -EIO;
+        }
+
+        // Search the parent directory for an entry pointing to currentIno
+        Buffer dirBuffer(parent->size());
+        if (!readFullFile(*parent, dirBuffer.get())) {
+            return -EIO;
+        }
+
+        ext2::DirectoryEntry* foundEntry = nullptr;
+        uint64_t offset = 0;
+        while (offset < parent->size()) {
+            ext2::DirectoryEntry* dirEntry =
+                reinterpret_cast<ext2::DirectoryEntry*>(&dirBuffer[offset]);
+
+            if (dirEntry->inode == currentIno) {
+                foundEntry = dirEntry;
+                break;
+            }
+
+            offset += dirEntry->rec_len;
+        }
+
+        if (!foundEntry) {
+            return -ENOENT;
+        }
+
+        // Add the name of the current directory to the beginning of the path, preceded by
+        // a forward slash
+        if (prependString(path, foundEntry->name, foundEntry->name_len, pathSize) < 0) {
+            return -ENAMETOOLONG;
+        }
+
+        if (prependString(path, "/", 1, pathSize) < 0) {
+            return -ENAMETOOLONG;
+        }
+
+        // Terminate once we reach the root directory
+        if (parentIno == ext2::ROOT_INO) {
+            return 0;
+        }
+
+        currentIno = parentIno;
+        inode = estd::move(parent);
     }
 }
 
