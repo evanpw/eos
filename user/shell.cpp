@@ -20,6 +20,8 @@ void ls(const char* path) {
     }
 }
 
+void echo(const char* arg) { println("{}", arg); }
+
 // Just split at the first space and return a pointer to the arguments
 const char* parseCommand(char* buffer) {
     char* space = const_cast<char*>(strchr(buffer, ' '));
@@ -39,8 +41,6 @@ int main() {
     buffer[bytesRead] = '\0';
     print("\033[31;42m{}\033[m", buffer);
     close(fd);
-
-    println("pid={}", getpid());
 
     while (true) {
         // Include the cwd in the prompt
@@ -91,6 +91,8 @@ int main() {
             } else {
                 println("pwd: no such file or directory");
             }
+        } else if (strcmp(cmd, "echo") == 0) {
+            echo(args);
         } else {
             println("no such command: {}", buffer);
         }
