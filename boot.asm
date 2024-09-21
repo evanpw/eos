@@ -5,7 +5,9 @@ BITS 16
 ; Useful constants
 SECTOR_SIZE     equ 512
 PAGE_SIZE       equ 4096
-MiB             equ 1024 * 1024
+KiB             equ 1024
+MiB             equ 1024 * KiB
+SEGMENT_SIZE    equ 64 * KiB
 
 ; Fixed memory locations
 MEMORY_MAP      equ 0x01000
@@ -64,7 +66,7 @@ main:
     mov ecx, 24
     mov edx, 'PAMS'
     int 0x15
-    jc .e820finished
+    jc .loadKernel
 
 .e820Entry:
     cmp ecx, 24
@@ -79,14 +81,31 @@ main:
     test ebx, ebx
     jne .e820loop
 
-.e820finished:
+.loadKernel:
+    mov cx, word [dap.size]
+
+    ; If the kernel is too large to fit in one segment, read 64k at a time
+    cmp cx, SEGMENT_SIZE / SECTOR_SIZE
+    jl .readSectors
+    mov word [dap.size], SEGMENT_SIZE / SECTOR_SIZE
+
     ; Load the kernel from disk
+.readSectors:
     mov si, dap  ; data structure describing read
     mov ah, 0x42 ; extended read
     mov dl, byte [driveNumber] ; boot drive
     int 0x13
     jc error
 
+    sub cx, word [dap.size]
+    jz .finishedLoadKernel
+
+    mov word [dap.size], cx
+    add word [dap.segment], SEGMENT_SIZE / 16
+    add dword [dap.offset], SEGMENT_SIZE / SECTOR_SIZE
+    jmp .loadKernel
+
+.finishedLoadKernel:
     ; Identity map the first 2MiB into virtual memory using a single large page
 
     ; Clear space for the entire page map
@@ -170,6 +189,8 @@ BITS 64
     ; If there was an error during boot, fill the screen with red
 error:
     cld
+    mov al, 'E'
+    out 0xE9, al
     mov ax, VIDEO_MEM_TEXT / 16
     mov es, ax
     mov di, 0
@@ -210,8 +231,9 @@ dap:
     db 0                       ; always zero
     .size:
     dw 0                       ; number of sectors to transfer (each is 512 bytes)
-    dw KERNEL_START            ; destination offset (right after boot sector)
-    dw 0x0                     ; destination segment
+    dw 0                       ; destination offset
+    .segment:
+    dw KERNEL_START / 16       ; destination segment (right after the boot sector)
     .offset:
     dd 0                       ; lower 32-bits of starting LBA
     dd 0                       ; upper 16-bits of starting LBA
