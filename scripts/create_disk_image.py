@@ -9,6 +9,8 @@ import tempfile
 
 src_dir = sys.argv[1]
 build_dir = sys.argv[2]
+user_files = sys.argv[3:]
+
 output_filename = f"{build_dir}/diskimg"
 
 
@@ -109,8 +111,9 @@ with tempfile.TemporaryDirectory() as tmpdir:
     os.mkdir(f"{tmpdir}/etc")
 
     try:
-        for filename in glob.glob(f"{build_dir}/user/*.bin"):
-            shutil.copy(filename, f"{tmpdir}/bin")
+        for filename in user_files:
+            dest_name = os.path.basename(filename).removesuffix(".bin")
+            shutil.copy(filename, f"{tmpdir}/bin/{dest_name}")
 
         shutil.copy(f"{src_dir}/version.txt", f"{tmpdir}/etc")
     finally:

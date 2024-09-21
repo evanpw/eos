@@ -8,7 +8,7 @@
 
 void clear() { print("\033[J"); }
 
-void spam() { launch("/bin/spam.bin", nullptr); }
+void spam() { launch("/bin/spam", nullptr); }
 
 void ls(const char* path) {
     DIR* dir = opendir(path);
@@ -103,7 +103,7 @@ int main() {
             if (*args != '\0') {
                 argv[0] = args;
             }
-            pid_t child = launch("/bin/cat.bin", argv);
+            pid_t child = launch("/bin/cat", argv);
             waitpid(child, nullptr, 0);
         } else {
             println("no such command: {}", buffer);

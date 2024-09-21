@@ -51,7 +51,7 @@ macro(make_user_target name)
         POST_BUILD
         COMMAND ${CMAKE_OBJCOPY}
             -O binary ${CMAKE_CURRENT_BINARY_DIR}/${name}.elf
-            ${CMAKE_CURRENT_BINARY_DIR}/${name}.bin
+            ${CMAKE_CURRENT_BINARY_DIR}/${name}
             --set-section-flags .bss=alloc,load,contents
     )
 endmacro()
@@ -69,8 +69,8 @@ add_custom_target(
 )
 
 set(USERLAND_BINARIES
-    ${CMAKE_CURRENT_BINARY_DIR}/shell.bin
-    ${CMAKE_CURRENT_BINARY_DIR}/spam.bin
-    ${CMAKE_CURRENT_BINARY_DIR}/cat.bin
+    ${CMAKE_CURRENT_BINARY_DIR}/shell
+    ${CMAKE_CURRENT_BINARY_DIR}/spam
+    ${CMAKE_CURRENT_BINARY_DIR}/cat
     PARENT_SCOPE
 )

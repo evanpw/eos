@@ -19,10 +19,9 @@
 void System::run() {
     System system;
 
-    Process::create("/bin/shell.bin", nullptr);
-    Process::create("/bin/spam.bin", nullptr);
-
+    Process::create("/bin/shell", nullptr);
     system._scheduler->start();
+
     __builtin_unreachable();
 }
 

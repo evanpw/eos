@@ -135,4 +135,5 @@ add_custom_command(
         ${CMAKE_SOURCE_DIR}/scripts/create_disk_image.py
         ${CMAKE_SOURCE_DIR}
         ${CMAKE_BINARY_DIR}
+        ${USERLAND_BINARIES}
 )
