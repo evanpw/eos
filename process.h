@@ -6,6 +6,7 @@
 #include "estd/memory.h"
 #include "estd/vector.h"
 #include "file.h"
+#include "fs/ext2.h"
 #include "page_map.h"
 #include "scheduler.h"
 #include "spinlock.h"
@@ -30,7 +31,7 @@ public:
 private:
     static ProcessTable* _instance;
 
-    Process* create(const char* path, const char* argv[]);
+    Process* create(const char* path, const char* argv[], uint32_t initialCwdIno);
     void destroy(Process* process);
 
     Spinlock _lock;
@@ -57,8 +58,9 @@ public:
     ~Process();
 
     // Actually performed by ProcessTable, but access from Process for clarity
-    static Process* create(const char* path, const char* argv[]) {
-        return ProcessTable::the().create(path, argv);
+    static Process* create(const char* path, const char* argv[],
+                           uint32_t initialCwdIno = ext2::ROOT_INO) {
+        return ProcessTable::the().create(path, argv, initialCwdIno);
     }
     static void destroy(Process* process) { ProcessTable::the().destroy(process); }
 
@@ -88,5 +90,5 @@ public:
     int close(int fd);
 
 private:
-    Process(pid_t pid, const char* path, const char* argv[]);
+    Process(pid_t pid, const char* path, const char* argv[], uint32_t initialCwdIno);
 };

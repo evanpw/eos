@@ -2,7 +2,7 @@
 #include "disk.h"
 #include "estd/buffer.h"
 #include "estd/memory.h"
-#include "fs/ext2_defs.h"
+#include "fs/ext2_defs.h"  // IWYU pragma: export
 #include "sys/types.h"
 
 class Ext2FileSystem {

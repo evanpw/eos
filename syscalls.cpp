@@ -98,7 +98,9 @@ int64_t sys_close(int fd) {
 }
 
 pid_t sys_launch(const char* path, const char* argv[]) {
-    Process* child = Process::create(path, argv);
+    Process& process = *currentThread->process;
+
+    Process* child = Process::create(path, argv, process.cwdIno);
     return child->pid;
 }
 

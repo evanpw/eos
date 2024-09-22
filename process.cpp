@@ -18,10 +18,11 @@ void ProcessTable::init() {
     _instance = new ProcessTable;
 }
 
-Process* ProcessTable::create(const char* path, const char* argv[]) {
+Process* ProcessTable::create(const char* path, const char* argv[],
+                              uint32_t initialCwdIno) {
     SpinlockLocker locker(_lock);
 
-    Process* process = new Process(_nextPid++, path, argv);
+    Process* process = new Process(_nextPid++, path, argv, initialCwdIno);
     // TODO: write an emplace_back function for vector
     _processes.push_back(estd::move(estd::unique_ptr<Process>(process)));
     return process;
@@ -76,8 +77,8 @@ int ProcessTable::waitProcess(pid_t pid) {
     return 0;
 }
 
-Process::Process(pid_t pid, const char* path, const char* argv[])
-: pid(pid), cwdIno(ext2::ROOT_INO) {
+Process::Process(pid_t pid, const char* path, const char* argv[], uint32_t initialCwdIno)
+: pid(pid), cwdIno(initialCwdIno) {
     open(System::terminal());  // stdin
     open(System::terminal());  // stdout
     open(System::terminal());  // stderr
