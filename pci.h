@@ -45,6 +45,8 @@ public:
     bool multifunction() const { return highBits(readConfigByte(0x0E), 1) != 0; }
     uint8_t bist() const { return readConfigByte(0x0F); }
 
+    void enableBusMastering() { writeConfigWord(0x04, setBit(commandWord(), 2)); }
+
     // Applicable to headerType 0x00 (General Device)
     uint32_t bar0() const { return readConfigDword(0x10); }
     uint32_t bar1() const { return readConfigDword(0x14); }
@@ -73,6 +75,9 @@ private:
     uint32_t readConfigDword(uint8_t offset) const;
     uint16_t readConfigWord(uint8_t offset) const;
     uint8_t readConfigByte(uint8_t offset) const;
+
+    void writeConfigDword(uint8_t offset, uint32_t value);
+    void writeConfigWord(uint8_t offset, uint16_t value);
 };
 
 class PCIDevices {

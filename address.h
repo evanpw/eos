@@ -2,8 +2,10 @@
 // to distinguish one from another in places where it matter (e.g., paging
 // infrastructure)
 #pragma once
+#include <stddef.h>
 #include <stdint.h>
 
+#include "estd/assertions.h"
 #include "estd/bits.h"
 #include "units.h"
 

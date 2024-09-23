@@ -349,7 +349,6 @@ IDEController::IDEController() {
     PCIDevice* pciDevice = System::pciDevices().findByClass(PCIDeviceClass::StorageIDE);
 
     if (!pciDevice) {
-        println("ide: no ide controller found");
         return;
     }
 

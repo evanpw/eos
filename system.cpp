@@ -1,6 +1,7 @@
 #include "system.h"
 
 #include "acpi.h"
+#include "e1000.h"
 #include "fs/ext2.h"
 #include "ide.h"
 #include "interrupts.h"
@@ -39,6 +40,7 @@ System::System() {
     initSyscalls();
     _pciDevices.assign(new PCIDevices);
     _ideController.assign(new IDEController);
+    _nic.assign(new E1000Device);
     initACPI();
     _scheduler.assign(new Scheduler);
     _timer.assign(new Timer);

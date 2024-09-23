@@ -30,6 +30,8 @@ set(ESTD_SOURCES
 set(KERNEL_SOURCES
     acpi.cpp
     aml.cpp
+    entry.S
+    e1000.cpp
     file.cpp
     fs/ext2.cpp
     fs/ext2_file.cpp
@@ -51,7 +53,6 @@ set(KERNEL_SOURCES
     terminal.cpp
     thread.cpp
     timer.cpp
-    entry.S
     ${ESTD_SOURCES}
 )
 

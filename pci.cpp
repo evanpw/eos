@@ -71,6 +71,32 @@ uint8_t PCIDevice::readConfigByte(uint8_t offset) const {
     return bitRange(result32, 8 * offsetRemainder, 8);
 }
 
+void PCIDevice::writeConfigDword(uint8_t offset, uint32_t value) {
+    // Must be dword-aligned
+    ASSERT(lowBits(offset, 2) == 0);
+
+    // Tell the PCI controller which dword to write and then write it
+    PCIConfigAddress address(bus, device, function, offset);
+    outl(PCI_CONFIG_ADDRESS, address);
+    outl(PCI_CONFIG_DATA, value);
+}
+
+void PCIDevice::writeConfigWord(uint8_t offset, uint16_t value) {
+    // Must be word-aligned
+    ASSERT(lowBits(offset, 1) == 0);
+
+    // Round down the address to be dword-aligned
+    uint8_t dwordOffset = clearLowBits(offset, 2);
+    uint8_t offsetRemainder = offset - dwordOffset;
+
+    // Combine the previous value for the other word with the new value for this word
+    uint32_t prev32 = readConfigDword(dwordOffset);
+    uint32_t value32 = setBitRange(prev32, 8 * offsetRemainder, 16, value);
+
+    // Write it out as a dword
+    writeConfigDword(dwordOffset, value32);
+}
+
 void PCIDevices::checkFunction(uint8_t bus, uint8_t device, uint8_t function) {
     if (!PCIDevice::exists(bus, device, function)) return;
 

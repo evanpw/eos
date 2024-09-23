@@ -1,7 +1,6 @@
+// IWYU pragma: always_keep
 // https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/errno.h.html
 #pragma once
-
-// IWYU pragma: always_keep
 
 #define ENOENT 2         // No such file or directory
 #define EIO 5            // I/O error

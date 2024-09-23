@@ -3,7 +3,6 @@
 #include <stdint.h>
 
 #include "errno.h"
-#include "estd/print.h"
 #include "sys/types.h"
 #include "syscall.h"
 
