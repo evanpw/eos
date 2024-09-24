@@ -16,12 +16,17 @@ MARK_AS_ADVANCED(CMAKE_CXX_FLAGS_STANDARD CMAKE_C_FLAGS_STANDARD CMAKE_EXE_LINKE
 
 project(eos LANGUAGES CXX ASM_NASM ASM)
 
-
-# Share between kernel and userland
+# Shared between kernel and userland
 set(ESTD_SOURCES
     ${CMAKE_SOURCE_DIR}/estd/assertions.cpp
     ${CMAKE_SOURCE_DIR}/estd/new.cpp
     ${CMAKE_SOURCE_DIR}/estd/print.cpp
+)
+
+# Parts of libc that are safe to use in the kernel
+set(KLIBC_SOURCES
+    ${CMAKE_SOURCE_DIR}/user/libc/string.cpp
+    ${CMAKE_SOURCE_DIR}/user/libc/arpa/inet.cpp
 )
 
 
@@ -30,17 +35,17 @@ set(ESTD_SOURCES
 set(KERNEL_SOURCES
     acpi.cpp
     aml.cpp
-    entry.S
     e1000.cpp
+    entry.S
     file.cpp
     fs/ext2.cpp
     fs/ext2_file.cpp
     ide.cpp
     interrupts.cpp
     keyboard.cpp
-    klibc.cpp
     kmain.cpp
     mem.cpp
+    net.cpp
     page_map.cpp
     panic.cpp
     pci.cpp
@@ -54,6 +59,7 @@ set(KERNEL_SOURCES
     thread.cpp
     timer.cpp
     ${ESTD_SOURCES}
+    ${KLIBC_SOURCES}
 )
 
 add_executable(kernel.elf ${KERNEL_SOURCES})

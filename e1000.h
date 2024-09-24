@@ -2,6 +2,8 @@
 #pragma once
 
 #include "address.h"
+#include "estd/buffer.h"
+#include "net.h"
 #include "network_device.h"
 #include "pci.h"
 
@@ -9,8 +11,9 @@ class E1000Device : public NicDevice {
 public:
     E1000Device();
 
+    const MacAddress& macAddress() const { return _macAddress; }
     void sendPacket(PhysicalAddress buffer, size_t length);
-    size_t recvPacket(PhysicalAddress buffer);
+    Buffer recvPacket();
 
 private:
     template <typename T>
@@ -22,7 +25,7 @@ private:
 
     PCIDevice* _pciDev;
     RegisterSpace* _regs;
-    uint16_t _macAddress[3];
+    MacAddress _macAddress;
     uint8_t _irqNumber;
 
     // Transmit descriptor ring

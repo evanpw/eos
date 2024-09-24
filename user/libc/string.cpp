@@ -78,3 +78,22 @@ const char* strchr(const char* s, int c) {
 
     return nullptr;
 }
+
+void* memmove(void* dest, const void* src, size_t n) {
+    uint8_t* d = static_cast<uint8_t*>(dest);
+    const uint8_t* s = static_cast<const uint8_t*>(src);
+
+    if (d < s) {
+        for (size_t i = 0; i < n; ++i) {
+            *d++ = *s++;
+        }
+    } else {
+        d += n;
+        s += n;
+        for (size_t i = 0; i < n; ++i) {
+            *--d = *--s;
+        }
+    }
+
+    return dest;
+}

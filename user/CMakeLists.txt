@@ -26,6 +26,7 @@ include_directories(
 add_library(
     libc
     libc/_start.cpp
+    libc/arpa/inet.cpp
     libc/dirent.cpp
     libc/errno.cpp
     libc/fcntl.cpp
@@ -33,9 +34,9 @@ add_library(
     libc/stdio.cpp
     libc/stdlib.cpp
     libc/string.cpp
+    libc/sys/wait.cpp
     libc/syscall.cpp
     libc/unistd.cpp
-    libc/sys/wait.cpp
 )
 
 add_library(estd_user ${ESTD_SOURCES})

@@ -6,6 +6,7 @@
 #include "estd/new.h"  // IWYU pragma: keep
 #include "estd/print.h"
 #include "io.h"
+#include "net.h"
 #include "panic.h"
 #include "system.h"
 
@@ -163,13 +164,20 @@ E1000Device::E1000Device() {
     resetDevice();
     initEEPROM();
 
-    println("e1000: mac address: {:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}",
-            lowBits(_macAddress[0], 8), highBits(_macAddress[0], 8),
-            lowBits(_macAddress[1], 8), highBits(_macAddress[1], 8),
-            lowBits(_macAddress[2], 8), highBits(_macAddress[2], 8));
+    print("e1000: mac address: ");
+    printMacAddress(_macAddress);
+    println("");
 
     initTxRing();
     initRxRing();
+
+    // Receive and send a packet for testing purposes
+    Buffer packetBuffer = recvPacket();
+    handlePacket(this, packetBuffer.get(), packetBuffer.size());
+
+    packetBuffer = recvPacket();
+    handlePacket(this, packetBuffer.get(), packetBuffer.size());
+
     println("e1000: init complete");
 }
 
@@ -189,8 +197,7 @@ void E1000Device::initPCI() {
 
     // The register space of the device is mapped to physical memory, so we overlay a
     // struct on top of it to access the registers
-    void* memBaseAddr = System::mm().physicalToVirtual(memBase);
-    _regs = new (memBaseAddr) RegisterSpace;
+    _regs = System::mm().physicalToVirtual(memBase).ptr<RegisterSpace>();
 }
 
 void E1000Device::resetDevice() {
@@ -208,9 +215,12 @@ void E1000Device::initEEPROM() {
     }
 
     // Read the MAC address from EEPROM
-    _macAddress[0] = readEEPROM(0);
-    _macAddress[1] = readEEPROM(1);
-    _macAddress[2] = readEEPROM(2);
+    uint16_t macAddress[3] = {
+        readEEPROM(0),
+        readEEPROM(1),
+        readEEPROM(2),
+    };
+    memcpy(&_macAddress, &macAddress, sizeof(MacAddress));
 }
 
 uint16_t E1000Device::readEEPROM(uint8_t addr) {
@@ -233,7 +243,6 @@ uint16_t E1000Device::readEEPROM(uint8_t addr) {
 }
 
 void E1000Device::initTxRing() {
-    // TODO: make sure this is in DMA-available memory
     _txDescBase = System::mm().pageAlloc(1);
 
     // Default-construct the descriptors and get a pointer to the tx ring
@@ -250,12 +259,6 @@ void E1000Device::initTxRing() {
 
     // Enable transmission
     _regs->tctl = _regs->tctl | TCTL_EN;
-
-    // Create a fake test packet to send
-    PhysicalAddress packetBase = System::mm().pageAlloc(1);
-    void* packetAddr = System::mm().physicalToVirtual(packetBase);
-    memcpy(packetAddr, "hello, world!", 13);
-    sendPacket(packetBase, 13);
 }
 
 void E1000Device::sendPacket(PhysicalAddress buffer, size_t length) {
@@ -277,58 +280,15 @@ void E1000Device::sendPacket(PhysicalAddress buffer, size_t length) {
     // Increment the tail pointer to tell the device to start transmitting
     _regs->tdt = nextIdx;
 
+    // Wait for the packet to be sent by the device
     while (_regs->tdh != _regs->tdt) {
         iowait();
-        // TODO: add a timeout
     }
 
     ASSERT(_txRing[idx].descriptorDone());
 }
 
-enum class EtherType : uint16_t {
-    Ipv4 = 0x0008,
-    ARP = 0x0608,
-    Ipv6 = 0xDD86,
-};
-
-struct __attribute__((packed)) EthernetHeader {
-    uint8_t dest[6];
-    uint8_t src[6];
-    EtherType type;
-};
-
-void parsePacket(uint8_t* buffer, size_t size) {
-    if (size < sizeof(EthernetHeader)) {
-        println("malformed ethernet packet: too short");
-        return;
-    }
-
-    EthernetHeader* header = reinterpret_cast<EthernetHeader*>(buffer);
-    println("src: {:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}", header->src[0],
-            header->src[1], header->src[2], header->src[3], header->src[4],
-            header->src[5]);
-    println("dest: {:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}", header->dest[0],
-            header->dest[1], header->dest[2], header->dest[3], header->dest[4],
-            header->dest[5]);
-
-    switch (header->type) {
-        case EtherType::Ipv4:
-            println("type: IPv4");
-            break;
-        case EtherType::ARP:
-            println("type: ARP");
-            break;
-        case EtherType::Ipv6:
-            println("type: IPv6");
-            break;
-        default:
-            println("type: unknown");
-            break;
-    }
-}
-
 void E1000Device::initRxRing() {
-    // TODO: make sure this is in DMA-available memory
     _rxDescBase = System::mm().pageAlloc(1);
 
     // Default-construct the descriptors and get a pointer to the rx ring
@@ -339,34 +299,43 @@ void E1000Device::initRxRing() {
     // Tell the device the location and size of the rx ring
     _regs->rdbal = lowBits(_rxDescBase.value, 32);
     _regs->rdbah = highBits(_rxDescBase.value, 32);
-    _regs->rdlen = _txDescCount * sizeof(TransmitDescriptor);
+    _regs->rdlen = _rxDescCount * sizeof(TransmitDescriptor);
     _regs->rdh = 0;
     _regs->rdt = 0;
+
+    // Allocate receive buffers for each descriptor and fill the ring
+    PhysicalAddress packetsBase = System::mm().pageAlloc(_rxDescCount);
+    for (size_t i = 0; i < _rxDescCount; i++) {
+        _rxRing[i].bufferAddress = packetsBase + i * PAGE_SIZE;
+        _rxRing[i].clearFlags();
+    }
 
     // Enable receive, set the buffer size, and accept broadcast packets
     _regs->rctl = _regs->rctl | RCTL_EN | RCTL_BSIZE_4096 | RCTL_BAM;
 
-    // Receive a packet for testing purposes
-    PhysicalAddress packetBase = System::mm().pageAlloc(1);
-    uint8_t* packetAddr = System::mm().physicalToVirtual(packetBase).ptr<uint8_t>();
-    size_t size = recvPacket(packetBase);
-
-    parsePacket(packetAddr, size);
+    // Hand the ready descriptors over to the device
+    _regs->rdt = _rxDescCount - 1;
 }
 
-size_t E1000Device::recvPacket(PhysicalAddress buffer) {
-    // Set up the next descriptor in the ring to point to the packet
-    _rxRing[0].bufferAddress = buffer;
-    _rxRing[0].clearFlags();
+Buffer E1000Device::recvPacket() {
+    size_t idx = (_regs->rdt + 1) % _rxDescCount;
 
-    // Increment the tail
-    _regs->rdt = 1;
-
-    while (_regs->rdh != _regs->rdt) {
+    // Wait for at least one descriptor to be filled
+    while (_regs->rdh == idx) {
         iowait();
-        // TODO: add a timeout
     }
 
-    ASSERT(_rxRing[0].descriptorDone());
-    return _rxRing[0].length();
+    ASSERT(_rxRing[idx].descriptorDone());
+    ASSERT(_rxRing[idx].endOfPacket());
+
+    // Copy the data out of the static packet buffer
+    Buffer buffer(_rxRing[idx].length());
+    void* descBuffer = System::mm().physicalToVirtual(_rxRing[idx].bufferAddress);
+    memcpy(buffer.get(), descBuffer, buffer.size());
+
+    // Make the descriptor available to the hardware again
+    _rxRing[idx].clearFlags();
+    _regs->rdt = idx;
+
+    return buffer;
 }
