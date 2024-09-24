@@ -2,10 +2,11 @@
 #pragma once
 
 #include "address.h"
-#include "estd/buffer.h"
 #include "net.h"
 #include "network_device.h"
 #include "pci.h"
+
+struct TrapRegisters;
 
 class E1000Device : public NicDevice {
 public:
@@ -13,7 +14,10 @@ public:
 
     const MacAddress& macAddress() const { return _macAddress; }
     void sendPacket(PhysicalAddress buffer, size_t length);
-    Buffer recvPacket();
+    void flushRx();
+
+    // For use by the irq handler
+    uint32_t icr() const;
 
 private:
     template <typename T>
@@ -38,9 +42,13 @@ private:
     ReceiveDescriptor* _rxRing;
     size_t _rxDescCount;
 
+    struct TrapRegisters;
+    friend void e1000IrqHandler(TrapRegisters&);
+
     void initPCI();
     void resetDevice();
     void initEEPROM();
+    void initIrq();
     void initTxRing();
     void initRxRing();
 

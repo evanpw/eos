@@ -3,24 +3,37 @@
 #include <string.h>
 
 #include "estd/bits.h"
+#include "estd/buffer.h"
 #include "estd/new.h"  // IWYU pragma: keep
 #include "estd/print.h"
+#include "interrupts.h"
 #include "io.h"
 #include "net.h"
 #include "panic.h"
 #include "system.h"
+#include "trap.h"
 
 struct E1000Device::RegisterSpace {
     volatile uint32_t ctrl;
     alignas(8) volatile uint32_t status;
     alignas(8) volatile uint32_t eecd;
     volatile uint32_t eerd;
-    volatile uint32_t _unused1[0x3A];
+
+    volatile uint32_t _unused1[0x2A];
+
+    // Interrupt control
+    volatile uint32_t icr;
+    volatile uint32_t itr;
+    volatile uint32_t ics;
+    alignas(8) volatile uint32_t ims;
+    alignas(8) volatile uint32_t imc;
+
+    volatile uint32_t _unused2[0x9];
     volatile uint32_t rctl;
-    volatile uint32_t _unused2[0xBF];
+    volatile uint32_t _unused3[0xBF];
     volatile uint32_t tctl;
 
-    volatile uint32_t _unused3[0x8FF];
+    volatile uint32_t _unused4[0x8FF];
 
     // Receive descriptor ring
     volatile uint32_t rdbal;
@@ -28,8 +41,9 @@ struct E1000Device::RegisterSpace {
     volatile uint32_t rdlen;
     alignas(8) volatile uint32_t rdh;
     alignas(8) volatile uint32_t rdt;
+    alignas(8) volatile uint32_t rdtr;
 
-    volatile uint32_t _unused4[0x3F9];
+    volatile uint32_t _unused5[0x3F7];
 
     // Transmit descriptor ring
     volatile uint32_t tdbal;
@@ -38,7 +52,7 @@ struct E1000Device::RegisterSpace {
     alignas(8) volatile uint32_t tdh;
     alignas(8) volatile uint32_t tdt;
 
-    volatile uint32_t _unused5[0x6F9];
+    volatile uint32_t _unused6[0x6F9];
 
     volatile uint32_t ral;
     volatile uint32_t rah;
@@ -50,6 +64,13 @@ void E1000Device::staticAssert<E1000Device::RegisterSpace>() {
     static_assert(offsetof(RegisterSpace, status) == 0x00008);
     static_assert(offsetof(RegisterSpace, eecd) == 0x00010);
     static_assert(offsetof(RegisterSpace, eerd) == 0x00014);
+
+    static_assert(offsetof(RegisterSpace, icr) == 0x000C0);
+    static_assert(offsetof(RegisterSpace, itr) == 0x000C4);
+    static_assert(offsetof(RegisterSpace, ics) == 0x000C8);
+    static_assert(offsetof(RegisterSpace, ims) == 0x000D0);
+    static_assert(offsetof(RegisterSpace, imc) == 0x000D8);
+
     static_assert(offsetof(RegisterSpace, rctl) == 0x00100);
     static_assert(offsetof(RegisterSpace, tctl) == 0x00400);
 
@@ -58,6 +79,7 @@ void E1000Device::staticAssert<E1000Device::RegisterSpace>() {
     static_assert(offsetof(RegisterSpace, rdlen) == 0x02808);
     static_assert(offsetof(RegisterSpace, rdh) == 0x02810);
     static_assert(offsetof(RegisterSpace, rdt) == 0x02818);
+    static_assert(offsetof(RegisterSpace, rdtr) == 0x02820);
 
     static_assert(offsetof(RegisterSpace, tdbal) == 0x03800);
     static_assert(offsetof(RegisterSpace, tdbah) == 0x03804);
@@ -83,6 +105,22 @@ enum : uint32_t {
     EERD_DONE = 1 << 4,
 
     TCTL_EN = 1 << 1,
+
+    IMR_TXDW = 1 << 0,
+    IMR_TXQE = 1 << 1,
+    IMR_LSC = 1 << 2,
+    IMR_RXSEQ = 1 << 3,
+    IMR_RXDMT = 1 << 4,
+    IMR_RXO = 1 << 6,
+    IMR_RXT = 1 << 7,
+
+    IMS_TXDW = 1 << 0,
+    IMS_TXQE = 1 << 1,
+    IMS_LSC = 1 << 2,
+    IMS_RXSEQ = 1 << 3,
+    IMS_RXDMT = 1 << 4,
+    IMS_RXO = 1 << 6,
+    IMS_RXT = 1 << 7,
 
     RCTL_EN = 1 << 1,
     RCTL_BSIZE_SHIFT = 16,
@@ -168,15 +206,9 @@ E1000Device::E1000Device() {
     printMacAddress(_macAddress);
     println("");
 
+    initIrq();
     initTxRing();
     initRxRing();
-
-    // Receive and send a packet for testing purposes
-    Buffer packetBuffer = recvPacket();
-    handlePacket(this, packetBuffer.get(), packetBuffer.size());
-
-    packetBuffer = recvPacket();
-    handlePacket(this, packetBuffer.get(), packetBuffer.size());
 
     println("e1000: init complete");
 }
@@ -240,6 +272,26 @@ uint16_t E1000Device::readEEPROM(uint8_t addr) {
         iowait();
         // TODO: add a timeout
     }
+}
+
+// Makes the ICR register accessible to the irq handler
+uint32_t E1000Device::icr() const { return _regs->icr; }
+
+void e1000IrqHandler(TrapRegisters&) {
+    E1000Device& nic = static_cast<E1000Device&>(System::nic());
+    uint32_t cause = nic.icr();
+
+    if (cause & IMR_RXT) {
+        nic.flushRx();
+    }
+
+    outb(PIC2_COMMAND, EOI);
+    outb(PIC1_COMMAND, EOI);
+}
+
+void E1000Device::initIrq() {
+    // Register the IRQ handler for the device
+    registerIrqHandler(_irqNumber, e1000IrqHandler);
 }
 
 void E1000Device::initTxRing() {
@@ -313,29 +365,38 @@ void E1000Device::initRxRing() {
     // Enable receive, set the buffer size, and accept broadcast packets
     _regs->rctl = _regs->rctl | RCTL_EN | RCTL_BSIZE_4096 | RCTL_BAM;
 
+    // Disable the packet timer
+    _regs->rdtr = 0;
+
+    // Unmask receive interrupts
+    _regs->imc = ~(uint32_t)1;
+    _regs->ims = IMS_RXT | IMS_RXO | IMS_RXDMT | IMS_RXSEQ | IMS_LSC;
+
+    // Clear the interrupt cause register
+    (void)_regs->imc;
+
     // Hand the ready descriptors over to the device
     _regs->rdt = _rxDescCount - 1;
 }
 
-Buffer E1000Device::recvPacket() {
+void E1000Device::flushRx() {
     size_t idx = (_regs->rdt + 1) % _rxDescCount;
 
-    // Wait for at least one descriptor to be filled
-    while (_regs->rdh == idx) {
-        iowait();
+    while (_regs->rdh != idx) {
+        ASSERT(_rxRing[idx].descriptorDone());
+        ASSERT(_rxRing[idx].endOfPacket());
+
+        // Copy the data out of the static packet buffer
+        Buffer buffer(_rxRing[idx].length());
+        void* descBuffer = System::mm().physicalToVirtual(_rxRing[idx].bufferAddress);
+        memcpy(buffer.get(), descBuffer, buffer.size());
+
+        // Make the descriptor available to the hardware again
+        _rxRing[idx].clearFlags();
+        _regs->rdt = idx;
+
+        handlePacket(this, buffer.get(), buffer.size());
+
+        idx = (idx + 1) % _rxDescCount;
     }
-
-    ASSERT(_rxRing[idx].descriptorDone());
-    ASSERT(_rxRing[idx].endOfPacket());
-
-    // Copy the data out of the static packet buffer
-    Buffer buffer(_rxRing[idx].length());
-    void* descBuffer = System::mm().physicalToVirtual(_rxRing[idx].bufferAddress);
-    memcpy(buffer.get(), descBuffer, buffer.size());
-
-    // Make the descriptor available to the hardware again
-    _rxRing[idx].clearFlags();
-    _regs->rdt = idx;
-
-    return buffer;
 }
