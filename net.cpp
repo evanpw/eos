@@ -161,6 +161,13 @@ void handleArp(E1000Device* nic, EthernetHeader* ethHeader, uint8_t* buffer,
     System::mm().pageFree(packetBase);
 }
 
+enum class IpProtocol : uint8_t {
+    Icmp = 1,
+    Igmp = 2,
+    Tcp = 6,
+    Udp = 17,
+};
+
 class __attribute__((packed)) IpHeader {
     uint8_t _headerLen : 4;
     uint8_t _version : 4;
@@ -186,7 +193,7 @@ public:
     uint16_t fragmentOffset() { return ntohs(_fragmentOffset); }
     uint16_t flags() { return ntohs(_flags); }
     uint8_t ttl() { return _ttl; }
-    uint8_t protocol() { return _protocol; }
+    IpProtocol protocol() { return (IpProtocol)_protocol; }
     uint16_t checksum() { return ntohs(_checksum); }
 
     IpAddress sourceIp() {
@@ -200,8 +207,32 @@ public:
         memcpy(&result, &_destIp, 4);
         return result;
     }
+
+    uint16_t computeChecksum();
+    void setChecksum() { _checksum = htons(computeChecksum()); }
 };
 static_assert(sizeof(IpHeader) == 20);
+
+uint16_t IpHeader::computeChecksum() {
+    uint32_t sum = 0;
+
+    uint8_t* bytes = reinterpret_cast<uint8_t*>(this);
+    for (size_t i = 0; i < headerLen() * 4; i += 2) {
+        uint16_t word = (bytes[i] << 8) | bytes[i + 1];
+        sum += word;
+    }
+
+    // Subtract off the embedded checksum
+    sum -= ntohs(_checksum);
+
+    // Include the overflow
+    while (sum >> 16) {
+        sum = (sum & 0xFFFF) + (sum >> 16);
+    }
+
+    // Ones complement
+    return ~sum;
+}
 
 class __attribute__((packed)) UdpHeader {
     uint16_t _sourcePort;
@@ -218,6 +249,79 @@ public:
     uint8_t* data() { return _data; }
 };
 
+class __attribute__((packed)) TcpHeader {
+    uint16_t _sourcePort;
+    uint16_t _destPort;
+    uint32_t _seqNum;
+    uint32_t _ackNum;
+    [[maybe_unused]] uint8_t _reserved : 4;
+    uint8_t _dataOffset : 4;
+    uint8_t _fin : 1;
+    uint8_t _syn : 1;
+    uint8_t _rst : 1;
+    uint8_t _psh : 1;
+    uint8_t _ack : 1;
+    uint8_t _urg : 1;
+    uint8_t _ece : 1;
+    uint8_t _cwr : 1;
+    uint16_t _windowSize;
+    uint16_t _checksum;
+    uint16_t _urgentPointer;
+    uint8_t _data[];
+
+public:
+    uint16_t sourcePort() { return ntohs(_sourcePort); }
+    uint16_t destPort() { return ntohs(_destPort); }
+    uint32_t seqNum() { return ntohl(_seqNum); }
+    uint32_t ackNum() { return ntohl(_ackNum); }
+    uint8_t dataOffset() { return _dataOffset; }
+    uint8_t fin() { return _fin; }
+    uint8_t syn() { return _syn; }
+    uint8_t rst() { return _rst; }
+    uint8_t psh() { return _psh; }
+    uint8_t ack() { return _ack; }
+    uint8_t urg() { return _urg; }
+    uint8_t ece() { return _ece; }
+    uint8_t cwr() { return _cwr; }
+    uint16_t windowSize() { return ntohs(_windowSize); }
+    uint16_t checksum() { return ntohs(_checksum); }
+    uint16_t urgentPointer() { return ntohs(_urgentPointer); }
+    uint8_t* data() { return _data; }
+};
+
+void handleTcp(uint8_t* buffer, size_t size) {
+    if (size < sizeof(TcpHeader)) {
+        println("net: malformed tcp packet: too short");
+        return;
+    }
+
+    TcpHeader* tcpHeader = reinterpret_cast<TcpHeader*>(buffer);
+    size_t dataLen = size - sizeof(TcpHeader);
+
+    println("tcp: src port: {}", tcpHeader->sourcePort());
+    println("tcp: dest port: {}", tcpHeader->destPort());
+    println("tcp: seq num: {}", tcpHeader->seqNum());
+    println("tcp: ack num: {}", tcpHeader->ackNum());
+    println("tcp: data offset: {}", tcpHeader->dataOffset());
+    println("tcp: fin: {}", tcpHeader->fin());
+    println("tcp: syn: {}", tcpHeader->syn());
+    println("tcp: rst: {}", tcpHeader->rst());
+    println("tcp: psh: {}", tcpHeader->psh());
+    println("tcp: ack: {}", tcpHeader->ack());
+    println("tcp: urg: {}", tcpHeader->urg());
+    println("tcp: ece: {}", tcpHeader->ece());
+    println("tcp: cwr: {}", tcpHeader->cwr());
+    println("tcp: window size: {}", tcpHeader->windowSize());
+    println("tcp: checksum: {}", tcpHeader->checksum());
+    println("tcp: urgent pointer: {}", tcpHeader->urgentPointer());
+
+    char* s = new char[dataLen + 1];
+    memcpy(s, buffer + tcpHeader->dataOffset() * 4, dataLen);
+    s[dataLen] = '\0';
+
+    println("tcp net message: {}", s);
+}
+
 void handleUdp(uint8_t* buffer, size_t size) {
     if (size < sizeof(UdpHeader)) {
         println("net: malformed udp packet: too short");
@@ -231,7 +335,7 @@ void handleUdp(uint8_t* buffer, size_t size) {
     memcpy(s, udpHeader->data(), dataLen);
     s[dataLen] = '\0';
 
-    println("net message: {}", s);
+    println("udp net message: {}", s);
 }
 
 void handleIp(uint8_t* buffer, size_t size) {
@@ -245,8 +349,12 @@ void handleIp(uint8_t* buffer, size_t size) {
     size = ipHeader->totalLen() - ipHeader->headerLen() * 4;
 
     switch (ipHeader->protocol()) {
-        case 17:  // UDP
+        case IpProtocol::Udp:
             handleUdp(buffer, size);
+            break;
+
+        case IpProtocol::Tcp:
+            handleTcp(buffer, size);
             break;
 
         default:
