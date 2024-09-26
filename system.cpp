@@ -8,6 +8,7 @@
 #include "keyboard.h"
 #include "mem.h"
 #include "net/arp.h"
+#include "net/tcp.h"
 #include "pci.h"
 #include "process.h"
 #include "processor.h"
@@ -42,6 +43,7 @@ System::System() {
     _pciDevices.assign(new PCIDevices);
     _ideController.assign(new IDEController);
     arpInit();
+    tcpInit();
     _nic.assign(new E1000Device);
     initACPI();
     _scheduler.assign(new Scheduler);

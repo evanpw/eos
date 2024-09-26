@@ -88,7 +88,7 @@ void ipRecv(NicDevice* nic, uint8_t* buffer, size_t size) {
             break;
 
         case IpProtocol::Tcp:
-            tcpRecv(nic, buffer, size);
+            tcpRecv(nic, ipHeader, buffer, size);
             break;
 
         default:
@@ -116,7 +116,7 @@ void ipSend(NicDevice* nic, IpAddress destIp, IpProtocol protocol, void* buffer,
     ipHeader->setDestIp(destIp);
     ipHeader->fillChecksum();
 
-    // TODO: fill in UDP checksum
+    // TODO: fill in UDP or TCP checksum
 
     memcpy(packet + sizeof(IpHeader), buffer, size);
     ethSend(nic, destMac, EtherType::Ipv4, packet, totalSize);
