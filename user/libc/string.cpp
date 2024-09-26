@@ -21,6 +21,41 @@ void* memset(void* s, int c, size_t n) {
     return s;
 }
 
+void* memmove(void* dest, const void* src, size_t n) {
+    uint8_t* d = static_cast<uint8_t*>(dest);
+    const uint8_t* s = static_cast<const uint8_t*>(src);
+
+    if (d < s) {
+        for (size_t i = 0; i < n; ++i) {
+            *d++ = *s++;
+        }
+    } else {
+        d += n;
+        s += n;
+        for (size_t i = 0; i < n; ++i) {
+            *--d = *--s;
+        }
+    }
+
+    return dest;
+}
+
+int memcmp(const void* p1, const void* p2, size_t n) {
+    const uint8_t* lhs = static_cast<const uint8_t*>(p1);
+    const uint8_t* rhs = static_cast<const uint8_t*>(p2);
+
+    for (size_t i = 0; i < n; ++i) {
+        if (*lhs != *rhs) {
+            return *lhs - *rhs;
+        }
+
+        ++lhs;
+        ++rhs;
+    }
+
+    return 0;
+}
+
 size_t strlen(const char* s) {
     const char* p = s;
     while (*p) ++p;
@@ -77,23 +112,4 @@ const char* strchr(const char* s, int c) {
     }
 
     return nullptr;
-}
-
-void* memmove(void* dest, const void* src, size_t n) {
-    uint8_t* d = static_cast<uint8_t*>(dest);
-    const uint8_t* s = static_cast<const uint8_t*>(src);
-
-    if (d < s) {
-        for (size_t i = 0; i < n; ++i) {
-            *d++ = *s++;
-        }
-    } else {
-        d += n;
-        s += n;
-        for (size_t i = 0; i < n; ++i) {
-            *--d = *--s;
-        }
-    }
-
-    return dest;
 }

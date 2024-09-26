@@ -49,6 +49,7 @@ public:
                  uint64_t flags = 0);
 
     VirtualAddress physicalToVirtual(PhysicalAddress physAddr);
+    PhysicalAddress virtualToPhysical(VirtualAddress virtAddr);
 
     estd::unique_ptr<UserAddressSpace> makeUserAddressSpace();
 

@@ -2,8 +2,9 @@
 #pragma once
 
 #include "address.h"
-#include "net.h"
-#include "network_device.h"
+#include "net/ethernet.h"
+#include "net/ip.h"
+#include "net/nic_device.h"
 #include "pci.h"
 
 struct TrapRegisters;
@@ -12,11 +13,13 @@ class E1000Device : public NicDevice {
 public:
     E1000Device();
 
-    const MacAddress& macAddress() const { return _macAddress; }
-    void sendPacket(PhysicalAddress buffer, size_t length);
-    void flushRx();
+    const MacAddress& macAddress() const override { return _macAddress; }
+    const IpAddress& ipAddress() const override { return _ipAddress; }
+
+    void sendPacket(uint8_t* buffer, size_t length) override;
 
     // For use by the irq handler
+    void flushRx();
     uint32_t icr() const;
 
 private:
@@ -30,6 +33,7 @@ private:
     PCIDevice* _pciDev;
     RegisterSpace* _regs;
     MacAddress _macAddress;
+    IpAddress _ipAddress;
     uint8_t _irqNumber;
 
     // Transmit descriptor ring

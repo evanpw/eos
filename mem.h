@@ -66,6 +66,15 @@ public:
         return _kaddressSpace.physicalToVirtual(physAddr);
     }
 
+    // Returns the physical address corresponding to the given virtual address in the
+    // linearly-mapped kernel address space, or 0 if the address is out of range
+    PhysicalAddress virtualToPhysical(VirtualAddress virtAddr) {
+        return _kaddressSpace.virtualToPhysical(virtAddr);
+    }
+    PhysicalAddress virtualToPhysical(void* ptr) {
+        return virtualToPhysical((uint64_t)ptr);
+    }
+
     KernelAddressSpace& kaddressSpace() { return _kaddressSpace; }
 
     void* kmalloc(size_t size);

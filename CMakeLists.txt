@@ -45,7 +45,11 @@ set(KERNEL_SOURCES
     keyboard.cpp
     kmain.cpp
     mem.cpp
-    net.cpp
+    net/arp.cpp
+    net/ethernet.cpp
+    net/ip.cpp
+    net/tcp.cpp
+    net/udp.cpp
     page_map.cpp
     panic.cpp
     pci.cpp

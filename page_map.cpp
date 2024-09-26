@@ -86,6 +86,15 @@ VirtualAddress KernelAddressSpace::physicalToVirtual(PhysicalAddress physAddr) {
     return VirtualAddress(physAddr.value);
 }
 
+PhysicalAddress KernelAddressSpace::virtualToPhysical(VirtualAddress physAddr) {
+    if (physAddr < _linearMapOffset ||
+        physAddr >= _linearMapOffset + _linearMapEnd.value) {
+        return 0;
+    }
+
+    return PhysicalAddress(physAddr.value - _linearMapOffset.value);
+}
+
 void KernelAddressSpace::buildLinearMemoryMap(uint64_t physicalMemoryRange) {
     // Linearly map all physical memory to high virtual memory
     uint64_t current = 0;

@@ -8,7 +8,7 @@
 #include "estd/print.h"
 #include "interrupts.h"
 #include "io.h"
-#include "net.h"
+#include "net/ethernet.h"
 #include "panic.h"
 #include "system.h"
 #include "trap.h"
@@ -203,7 +203,13 @@ E1000Device::E1000Device() {
     initEEPROM();
 
     print("e1000: mac address: ");
-    printMacAddress(_macAddress);
+    _macAddress.print();
+    println("");
+
+    // TODO: get this via DHCP rather than hardcoding it
+    _ipAddress = IpAddress{10, 0, 2, 15};
+    print("e1000: ip address: ");
+    _ipAddress.print();
     println("");
 
     initIrq();
@@ -313,7 +319,7 @@ void E1000Device::initTxRing() {
     _regs->tctl = _regs->tctl | TCTL_EN;
 }
 
-void E1000Device::sendPacket(PhysicalAddress buffer, size_t length) {
+void E1000Device::sendPacket(uint8_t* buffer, size_t length) {
     size_t idx = _regs->tdt;
     size_t nextIdx = (idx + 1) % _txDescCount;
 
@@ -323,7 +329,7 @@ void E1000Device::sendPacket(PhysicalAddress buffer, size_t length) {
     }
 
     // Set up the next descriptor in the ring to point to the packet
-    _txRing[idx].bufferAddress = buffer;
+    _txRing[idx].bufferAddress = System::mm().virtualToPhysical(buffer);
     _txRing[idx].clearFlags();
     _txRing[idx].setLength(length);
     _txRing[idx].setEndOfPacket();
@@ -395,7 +401,7 @@ void E1000Device::flushRx() {
         _rxRing[idx].clearFlags();
         _regs->rdt = idx;
 
-        handlePacket(this, buffer.get(), buffer.size());
+        ethRecv(this, buffer.get(), buffer.size());
 
         idx = (idx + 1) % _rxDescCount;
     }
