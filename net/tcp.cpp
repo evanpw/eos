@@ -5,6 +5,7 @@
 
 #include "estd/print.h"
 #include "net/ip.h"
+#include "net/nic_device.h"
 #include "spinlock.h"
 
 uint16_t TcpHeader::computeChecksum(IpAddress srcIp, IpAddress destIp, size_t totalLen) {
@@ -104,11 +105,14 @@ enum class TcpState {
 
 struct TcpControlBlock {
     TcpState state;
-    uint16_t localPort;
-    uint16_t remotePort;
-    IpAddress remoteIp;
 
-    TcpControlBlock* next = nullptr;
+    IpAddress localIp;
+    uint16_t localPort;
+
+    IpAddress remoteIp;
+    uint16_t remotePort;
+
+    TcpControlBlock* next;
 };
 
 static TcpControlBlock* tcbList = nullptr;
@@ -121,8 +125,9 @@ void tcpInit() {
     TcpControlBlock* tcb = new TcpControlBlock;
     tcb->state = TcpState::LISTEN;
     tcb->localPort = 22;
-    tcb->remotePort = 0;
     tcb->remoteIp = 0;
+    tcb->remotePort = 0;
+    tcb->next = nullptr;
 
     tcbList = tcb;
 }
@@ -148,6 +153,94 @@ TcpControlBlock* tcpLookup(uint16_t localPort, IpAddress remoteIp, uint16_t remo
     return nullptr;
 }
 
+void tcpRecvListen(NicDevice* nic, TcpControlBlock* tcb, IpHeader* ipHeader,
+                   TcpHeader* tcpHeader, uint8_t*, size_t) {
+    // TODO: reset on error
+    if (!tcpHeader->syn()) return;
+
+    tcb->state = TcpState::SYN_RECEIVED;
+    tcb->localIp = nic->ipAddress();
+    tcb->remotePort = tcpHeader->sourcePort();
+    tcb->remoteIp = ipHeader->sourceIp();
+
+    TcpHeader response;
+    response.setSourcePort(tcb->localPort);
+    response.setDestPort(tcb->remotePort);
+    response.setSeqNum(0);
+    response.setAckNum(tcpHeader->seqNum() + 1);
+    response.setSyn();
+    response.setAck();
+    response.setWindowSize(64 * KiB - 1);
+    response.fillChecksum(tcb->localIp, tcb->remoteIp, sizeof(TcpHeader));
+    ipSend(nic, tcb->remoteIp, IpProtocol::Tcp, &response, sizeof(TcpHeader));
+}
+
+void tcpRecvSynReceived(NicDevice*, TcpControlBlock* tcb, TcpHeader* tcpHeader, uint8_t*,
+                        size_t) {
+    // TODO: reset on error
+    if (!tcpHeader->ack()) return;
+
+    tcb->state = TcpState::ESTABLISHED;
+}
+
+void tcpRecvEstablished(NicDevice* nic, TcpControlBlock* tcb, TcpHeader* tcpHeader,
+                        uint8_t* data, size_t dataLen) {
+    // Echo the message to the console
+    char* s = new char[dataLen + 1];
+    memcpy(s, data, dataLen);
+    s[dataLen] = '\0';
+    println("tcp net message: {}", s);
+
+    // Acknowledge the message
+    TcpHeader response;
+    response.setSourcePort(tcb->localPort);
+    response.setDestPort(tcb->remotePort);
+    response.setSeqNum(1);
+    response.setAckNum(tcpHeader->seqNum() + dataLen);
+    response.setAck();
+    response.setFin();
+    response.setWindowSize(64 * KiB - 1);
+    response.fillChecksum(tcb->localIp, tcb->remoteIp, sizeof(TcpHeader));
+    ipSend(nic, tcb->remoteIp, IpProtocol::Tcp, &response, sizeof(TcpHeader));
+
+    tcb->state = TcpState::FIN_WAIT_1;
+}
+
+void tcpRecvFinWait2(NicDevice* nic, TcpControlBlock* tcb, TcpHeader* tcpHeader,
+                     uint8_t* data, size_t dataLen);
+
+void tcpRecvFinWait1(NicDevice* nic, TcpControlBlock* tcb, TcpHeader* tcpHeader,
+                     uint8_t* data, size_t dataLen) {
+    // TODO: reset on error
+    if (!tcpHeader->ack()) return;
+
+    tcb->state = TcpState::FIN_WAIT_2;
+
+    // The remote side can send the ACK and FIN in the same packet
+    if (tcpHeader->fin()) {
+        tcpRecvFinWait2(nic, tcb, tcpHeader, data, dataLen);
+    }
+}
+
+void tcpRecvFinWait2(NicDevice* nic, TcpControlBlock* tcb, TcpHeader* tcpHeader, uint8_t*,
+                     size_t dataLen) {
+    // TODO: reset on error
+    if (!tcpHeader->fin()) return;
+
+    // Acknowledge the final FIN
+    TcpHeader response;
+    response.setSourcePort(tcb->localPort);
+    response.setDestPort(tcb->remotePort);
+    response.setSeqNum(2);
+    response.setAckNum(tcpHeader->seqNum() + dataLen + 1);
+    response.setAck();
+    response.setWindowSize(64 * KiB - 1);
+    response.fillChecksum(tcb->localIp, tcb->remoteIp, sizeof(TcpHeader));
+    ipSend(nic, tcb->remoteIp, IpProtocol::Tcp, &response, sizeof(TcpHeader));
+
+    tcb->state = TcpState::TIME_WAIT;
+}
+
 void tcpRecv(NicDevice* nic, IpHeader* ipHeader, uint8_t* buffer, size_t size) {
     if (size < sizeof(TcpHeader)) {
         return;
@@ -161,82 +254,32 @@ void tcpRecv(NicDevice* nic, IpHeader* ipHeader, uint8_t* buffer, size_t size) {
         tcpLookup(tcpHeader->destPort(), ipHeader->sourceIp(), tcpHeader->sourcePort());
     if (!tcb) return;
 
-    if (tcb->state == TcpState::LISTEN) {
-        if (tcpHeader->syn()) {
-            tcb->state = TcpState::SYN_RECEIVED;
-            tcb->remotePort = tcpHeader->sourcePort();
-            tcb->remoteIp = ipHeader->sourceIp();
+    size_t headerSize = tcpHeader->dataOffset() * 4;
+    uint8_t* data = buffer + headerSize;
+    size_t dataLen = size - headerSize;
 
-            TcpHeader response;
-            response.setSourcePort(tcb->localPort);
-            response.setDestPort(tcb->remotePort);
-            response.setSeqNum(0);
-            response.setAckNum(tcpHeader->seqNum() + 1);
-            response.setSyn();
-            response.setAck();
-            response.setWindowSize(64 * KiB - 1);
-            response.fillChecksum(ipHeader->destIp(), ipHeader->sourceIp(),
-                                  sizeof(TcpHeader));
+    switch (tcb->state) {
+        case TcpState::LISTEN:
+            tcpRecvListen(nic, tcb, ipHeader, tcpHeader, data, dataLen);
+            break;
 
-            ipSend(nic, ipHeader->sourceIp(), IpProtocol::Tcp, &response,
-                   sizeof(TcpHeader));
-            return;
-        }
-    } else if (tcb->state == TcpState::SYN_RECEIVED) {
-        if (tcpHeader->ack()) {
-            tcb->state = TcpState::ESTABLISHED;
-            return;
-        }
-    } else if (tcb->state == TcpState::ESTABLISHED) {
-        tcb->state = TcpState::FIN_WAIT_1;
+        case TcpState::SYN_RECEIVED:
+            tcpRecvSynReceived(nic, tcb, tcpHeader, data, dataLen);
+            break;
 
-        // Echo the message to the console
-        size_t dataLen = size - sizeof(TcpHeader);
-        char* s = new char[dataLen + 1];
-        memcpy(s, buffer + tcpHeader->dataOffset() * 4, dataLen);
-        s[dataLen] = '\0';
-        println("tcp net message: {}", s);
+        case TcpState::ESTABLISHED:
+            tcpRecvEstablished(nic, tcb, tcpHeader, data, dataLen);
+            break;
 
-        // Acknowledge the message and close the connection
-        TcpHeader response;
-        response.setSourcePort(tcb->localPort);
-        response.setDestPort(tcb->remotePort);
-        response.setSeqNum(1);
-        response.setAckNum(tcpHeader->seqNum() + dataLen);
-        response.setAck();
-        response.setFin();
-        response.setWindowSize(64 * KiB - 1);
-        response.fillChecksum(ipHeader->destIp(), ipHeader->sourceIp(),
-                              sizeof(TcpHeader));
-        ipSend(nic, ipHeader->sourceIp(), IpProtocol::Tcp, &response, sizeof(TcpHeader));
-        return;
-    } else if (tcb->state == TcpState::FIN_WAIT_1 || tcb->state == TcpState::FIN_WAIT_2) {
-        bool acked = false;
-        if (tcb->state == TcpState::FIN_WAIT_1 && tcpHeader->ack()) {
-            tcb->state = TcpState::FIN_WAIT_2;
-            acked = true;
-        }
+        case TcpState::FIN_WAIT_1:
+            tcpRecvFinWait1(nic, tcb, tcpHeader, data, dataLen);
+            break;
 
-        if (tcb->state == TcpState::FIN_WAIT_2 && tcpHeader->fin()) {
-            tcb->state = TcpState::TIME_WAIT;
+        case TcpState::FIN_WAIT_2:
+            tcpRecvFinWait2(nic, tcb, tcpHeader, data, dataLen);
+            break;
 
-            // Acknowledge the final FIN
-            TcpHeader response;
-            response.setSourcePort(tcb->localPort);
-            response.setDestPort(tcb->remotePort);
-            response.setSeqNum(2);
-            response.setAckNum(tcpHeader->seqNum() + size - sizeof(TcpHeader) + 1);
-            response.setAck();
-            response.setWindowSize(64 * KiB - 1);
-            response.fillChecksum(ipHeader->destIp(), ipHeader->sourceIp(),
-                                  sizeof(TcpHeader));
-            ipSend(nic, ipHeader->sourceIp(), IpProtocol::Tcp, &response,
-                   sizeof(TcpHeader));
-            return;
-        } else if (acked) {
-            return;
-        }
+        default:
+            break;
     }
-
-    println("tcp error");
 }
