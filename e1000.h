@@ -13,8 +13,8 @@ class E1000Device : public NicDevice {
 public:
     E1000Device();
 
-    const MacAddress& macAddress() const override { return _macAddress; }
-    const IpAddress& ipAddress() const override { return _ipAddress; }
+    MacAddress macAddress() const override { return _macAddress; }
+    IpAddress ipAddress() const override { return _ipAddress; }
 
     void sendPacket(uint8_t* buffer, size_t length) override;
 

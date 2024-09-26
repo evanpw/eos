@@ -46,6 +46,10 @@ inline uint32_t concatBits(uint16_t high, uint16_t low) {
     return ((uint32_t)high << 16) | low;
 }
 
+inline uint32_t concatBits(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
+    return (a << 24) | (b << 16) | (c << 8) | d;
+}
+
 template <typename T>
 inline bool checkBit(T value, uint8_t bit) {
     return value & (T(1) << bit);

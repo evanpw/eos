@@ -5,21 +5,26 @@
 class NicDevice;
 
 struct MacAddress {
-    uint8_t bytes[6];
+    uint8_t bytes[6] = {};
 
-    static MacAddress broadcast();
+    MacAddress() = default;
+    MacAddress(uint8_t* bytes);
+
+    MacAddress(const MacAddress& other);
+    MacAddress& operator=(const MacAddress& other);
 
     bool operator==(const MacAddress& other) const;
 
+    static MacAddress broadcast();
     void print();
 };
 
 static_assert(sizeof(MacAddress) == 6);
 
 enum class EtherType : uint16_t {
-    Ipv4 = 0x0800,
-    Arp = 0x0806,
-    Ipv6 = 0x86DD,
+    // Values are in network byte order
+    Ipv4 = 0x0008,
+    Arp = 0x0608,
 };
 
 class EthernetHeader {
@@ -29,12 +34,11 @@ class EthernetHeader {
 
 public:
     MacAddress destMac();
-    void setDestMac(MacAddress value);
-
     MacAddress srcMac();
-    void setSrcMac(MacAddress value);
-
     EtherType etherType();
+
+    void setDestMac(MacAddress value);
+    void setSrcMac(MacAddress value);
     void setEtherType(EtherType value);
 };
 

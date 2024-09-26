@@ -9,12 +9,14 @@ struct IpAddress;
 class EthernetHeader;
 
 enum class ArpHardwareType : uint16_t {
-    Ethernet = 1,
+    // Values are in network byte order
+    Ethernet = 0x0100,
 };
 
 enum class ArpOperation : uint16_t {
-    Request = 1,
-    Reply = 2,
+    // Values are in network byte order
+    Request = 0x0100,
+    Reply = 0x0200,
 };
 
 class __attribute__((packed)) ArpHeader {
@@ -30,30 +32,23 @@ class __attribute__((packed)) ArpHeader {
 
 public:
     ArpHardwareType hardwareType();
-    void setHardwareType(ArpHardwareType value);
-
     EtherType protocolType();
-    void setProtocolType(EtherType value);
-
     uint8_t hardwareLen();
-    void setHardwareLen(uint8_t value);
-
     uint8_t protocolLen();
-    void setProtocolLen(uint8_t value);
-
     ArpOperation operation();
-    void setOperation(ArpOperation value);
-
     MacAddress senderMac();
-    void setSenderMac(MacAddress value);
-
     IpAddress senderIp();
-    void setSenderIp(IpAddress value);
-
     MacAddress targetMac();
-    void setTargetMac(MacAddress value);
-
     IpAddress targetIp();
+
+    void setHardwareType(ArpHardwareType value);
+    void setProtocolType(EtherType value);
+    void setHardwareLen(uint8_t value);
+    void setProtocolLen(uint8_t value);
+    void setOperation(ArpOperation value);
+    void setSenderMac(MacAddress value);
+    void setSenderIp(IpAddress value);
+    void setTargetMac(MacAddress value);
     void setTargetIp(IpAddress value);
 };
 

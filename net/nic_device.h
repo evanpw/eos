@@ -10,8 +10,8 @@ class NicDevice {
 public:
     virtual ~NicDevice() = default;
 
-    virtual const MacAddress& macAddress() const;
-    virtual const IpAddress& ipAddress() const;
+    virtual MacAddress macAddress() const;
+    virtual IpAddress ipAddress() const;
 
     virtual void sendPacket(uint8_t* buffer, size_t length);
 };

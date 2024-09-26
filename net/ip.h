@@ -5,12 +5,17 @@
 class NicDevice;
 
 struct IpAddress {
-    uint8_t bytes[4];
+    // Network byte order
+    uint32_t value = 0;
 
-    static IpAddress broadcast();
+    IpAddress() = default;
+    IpAddress(uint32_t value) : value(value) {}
+    IpAddress(uint8_t a, uint8_t b, uint8_t c, uint8_t d);
 
-    bool operator==(const IpAddress& other) const;
+    operator uint32_t() const { return value; }
+    bool operator==(const IpAddress& other) const { return value == other.value; }
 
+    static IpAddress broadcast() { return IpAddress(0xFFFFFFFF); }
     void print();
 };
 
@@ -39,29 +44,25 @@ class IpHeader {
     uint16_t computeChecksum();
 
 public:
+    bool verifyChecksum();
+    void fillChecksum();
+
     uint8_t headerLen();
     uint8_t version();
     uint8_t ecn();
     uint8_t dscp();
-
     uint16_t totalLen();
-    void setTotalLen(uint16_t value);
-
     uint16_t identification();
     uint16_t fragmentOffset();
     uint16_t flags();
     uint8_t ttl();
-
     IpProtocol protocol();
-    void setProtocol(IpProtocol value);
-
-    bool verifyChecksum();
-    void fillChecksum();
-
     IpAddress sourceIp();
-    void setSourceIp(IpAddress value);
-
     IpAddress destIp();
+
+    void setTotalLen(uint16_t value);
+    void setProtocol(IpProtocol value);
+    void setSourceIp(IpAddress value);
     void setDestIp(IpAddress value);
 };
 

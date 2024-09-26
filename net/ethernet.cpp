@@ -9,14 +9,28 @@
 #include "net/ip.h"
 #include "net/nic_device.h"
 
-MacAddress MacAddress::broadcast() {
-    MacAddress result;
-    memset(result.bytes, 0xFF, sizeof(MacAddress));
-    return result;
+MacAddress::MacAddress(const MacAddress& other) {
+    memcpy(bytes, other.bytes, sizeof(MacAddress));
+}
+
+MacAddress::MacAddress(uint8_t* bytes) { memcpy(this->bytes, bytes, sizeof(MacAddress)); }
+
+MacAddress& MacAddress::operator=(const MacAddress& other) {
+    if (this != &other) {
+        memcpy(bytes, other.bytes, sizeof(MacAddress));
+    }
+
+    return *this;
 }
 
 bool MacAddress::operator==(const MacAddress& other) const {
     return memcmp(bytes, other.bytes, sizeof(MacAddress)) == 0;
+}
+
+MacAddress MacAddress::broadcast() {
+    MacAddress result;
+    memset(result.bytes, 0xFF, sizeof(MacAddress));
+    return result;
 }
 
 void MacAddress::print() {
@@ -24,30 +38,18 @@ void MacAddress::print() {
             bytes[3], bytes[4], bytes[5]);
 }
 
-MacAddress EthernetHeader::destMac() {
-    MacAddress result;
-    memcpy(&result, &_destMac, sizeof(MacAddress));
-    return result;
-}
+MacAddress EthernetHeader::destMac() { return MacAddress(_destMac); }
+MacAddress EthernetHeader::srcMac() { return MacAddress(_srcMac); }
+EtherType EthernetHeader::etherType() { return (EtherType)_etherType; }
+
+void EthernetHeader::setEtherType(EtherType value) { _etherType = (uint16_t)value; }
 
 void EthernetHeader::setDestMac(MacAddress value) {
     memcpy(&_destMac, &value, sizeof(MacAddress));
 }
 
-MacAddress EthernetHeader::srcMac() {
-    MacAddress result;
-    memcpy(&result, &_srcMac, sizeof(MacAddress));
-    return result;
-}
-
 void EthernetHeader::setSrcMac(MacAddress value) {
     memcpy(&_srcMac, &value, sizeof(MacAddress));
-}
-
-EtherType EthernetHeader::etherType() { return (EtherType)ntohs(_etherType); }
-
-void EthernetHeader::setEtherType(EtherType value) {
-    _etherType = htons((uint16_t)value);
 }
 
 void ethRecv(NicDevice* nic, uint8_t* buffer, size_t size) {

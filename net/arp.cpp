@@ -9,70 +9,33 @@
 #include "net/nic_device.h"
 #include "spinlock.h"
 
-ArpHardwareType ArpHeader::hardwareType() {
-    return (ArpHardwareType)ntohs(_hardwareType);
-}
-
-void ArpHeader::setHardwareType(ArpHardwareType value) {
-    _hardwareType = htons((uint16_t)value);
-}
-
-EtherType ArpHeader::protocolType() { return (EtherType)ntohs(_protocolType); }
-
-void ArpHeader::setProtocolType(EtherType value) {
-    _protocolType = htons((uint16_t)value);
-}
-
+EtherType ArpHeader::protocolType() { return (EtherType)_protocolType; }
 uint8_t ArpHeader::hardwareLen() { return _hardwareLen; }
+uint8_t ArpHeader::protocolLen() { return _protocolLen; }
+ArpOperation ArpHeader::operation() { return (ArpOperation)_operation; }
+MacAddress ArpHeader::senderMac() { return MacAddress(_senderMac); }
+MacAddress ArpHeader::targetMac() { return MacAddress(_targetMac); }
+IpAddress ArpHeader::senderIp() { return IpAddress(_senderIp); }
+IpAddress ArpHeader::targetIp() { return IpAddress(_targetIp); }
+ArpHardwareType ArpHeader::hardwareType() { return (ArpHardwareType)_hardwareType; }
 
 void ArpHeader::setHardwareLen(uint8_t value) { _hardwareLen = value; }
-
-uint8_t ArpHeader::protocolLen() { return _protocolLen; }
-
 void ArpHeader::setProtocolLen(uint8_t value) { _protocolLen = value; }
+void ArpHeader::setOperation(ArpOperation value) { _operation = (uint16_t)value; }
+void ArpHeader::setSenderIp(IpAddress value) { _senderIp = value; }
+void ArpHeader::setTargetIp(IpAddress value) { _targetIp = value; }
+void ArpHeader::setProtocolType(EtherType value) { _protocolType = (uint16_t)value; }
 
-ArpOperation ArpHeader::operation() { return (ArpOperation)ntohs(_operation); }
-
-void ArpHeader::setOperation(ArpOperation value) { _operation = htons((uint16_t)value); }
-
-MacAddress ArpHeader::senderMac() {
-    MacAddress result;
-    memcpy(&result, &_senderMac, sizeof(MacAddress));
-    return result;
+void ArpHeader::setHardwareType(ArpHardwareType value) {
+    _hardwareType = (uint16_t)value;
 }
 
 void ArpHeader::setSenderMac(MacAddress value) {
     memcpy(&_senderMac, &value, sizeof(MacAddress));
 }
 
-IpAddress ArpHeader::senderIp() {
-    IpAddress result;
-    memcpy(&result, &_senderIp, sizeof(IpAddress));
-    return result;
-}
-
-void ArpHeader::setSenderIp(IpAddress value) {
-    memcpy(&_senderIp, &value, sizeof(IpAddress));
-}
-
-MacAddress ArpHeader::targetMac() {
-    MacAddress result;
-    memcpy(&result, &_targetMac, sizeof(MacAddress));
-    return result;
-}
-
 void ArpHeader::setTargetMac(MacAddress value) {
     memcpy(&_targetMac, &value, sizeof(MacAddress));
-}
-
-IpAddress ArpHeader::targetIp() {
-    IpAddress result;
-    memcpy(&result, &_targetIp, sizeof(IpAddress));
-    return result;
-}
-
-void ArpHeader::setTargetIp(IpAddress value) {
-    memcpy(&_targetIp, &value, sizeof(IpAddress));
 }
 
 struct ArpEntry {

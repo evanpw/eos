@@ -9,22 +9,15 @@
 #include "net/nic_device.h"
 
 uint16_t UdpHeader::sourcePort() { return ntohs(_sourcePort); }
+uint16_t UdpHeader::destPort() { return ntohs(_destPort); }
+uint16_t UdpHeader::length() { return ntohs(_length); }
+uint16_t UdpHeader::checksum() { return ntohs(_checksum); }
+uint8_t* UdpHeader::data() { return _data; }
 
 void UdpHeader::setSourcePort(uint16_t value) { _sourcePort = htons(value); }
-
-uint16_t UdpHeader::destPort() { return ntohs(_destPort); }
-
 void UdpHeader::setDestPort(uint16_t value) { _destPort = htons(value); }
-
-uint16_t UdpHeader::length() { return ntohs(_length); }
-
 void UdpHeader::setLength(uint16_t value) { _length = htons(value); }
-
-uint16_t UdpHeader::checksum() { return ntohs(_checksum); }
-
 void UdpHeader::setChecksum(uint16_t value) { _checksum = htons(value); }
-
-uint8_t* UdpHeader::data() { return _data; }
 
 void udpRecv(NicDevice* nic, IpHeader* ipHeader, uint8_t* buffer, size_t size) {
     if (size < sizeof(UdpHeader)) {
