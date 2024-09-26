@@ -59,5 +59,7 @@ public:
 
 static_assert(sizeof(ArpHeader) == 28);
 
+void arpInit();
+bool arpLookup(IpAddress ip, MacAddress* result);
 void arpRecv(NicDevice* nic, uint8_t* buffer, size_t size);
 void arpReply(NicDevice* nic, MacAddress destMac, IpAddress destIp);

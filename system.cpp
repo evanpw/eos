@@ -7,6 +7,7 @@
 #include "interrupts.h"
 #include "keyboard.h"
 #include "mem.h"
+#include "net/arp.h"
 #include "pci.h"
 #include "process.h"
 #include "processor.h"
@@ -40,6 +41,7 @@ System::System() {
     initSyscalls();
     _pciDevices.assign(new PCIDevices);
     _ideController.assign(new IDEController);
+    arpInit();
     _nic.assign(new E1000Device);
     initACPI();
     _scheduler.assign(new Scheduler);

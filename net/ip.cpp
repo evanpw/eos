@@ -3,10 +3,19 @@
 #include <arpa/inet.h>
 #include <string.h>
 
+#include "estd/new.h"
 #include "estd/print.h"
+#include "net/arp.h"
+#include "net/ethernet.h"
 #include "net/nic_device.h"
 #include "net/tcp.h"
 #include "net/udp.h"
+
+IpAddress IpAddress::broadcast() {
+    IpAddress result;
+    memset(result.bytes, 0xFF, sizeof(IpAddress));
+    return result;
+}
 
 bool IpAddress::operator==(const IpAddress& other) const {
     return memcmp(bytes, other.bytes, sizeof(IpAddress)) == 0;
@@ -14,40 +23,6 @@ bool IpAddress::operator==(const IpAddress& other) const {
 
 void IpAddress::print() {
     ::print("{}.{}.{}.{}", bytes[0], bytes[1], bytes[2], bytes[3]);
-}
-
-uint8_t IpHeader::headerLen() { return _headerLen; }
-
-uint8_t IpHeader::version() { return _version; }
-
-uint8_t IpHeader::ecn() { return _ecn; }
-
-uint8_t IpHeader::dscp() { return _dscp; }
-
-uint16_t IpHeader::totalLen() { return ntohs(_totalLen); }
-
-uint16_t IpHeader::identification() { return ntohs(_identification); }
-
-uint16_t IpHeader::fragmentOffset() { return ntohs(_fragmentOffset); }
-
-uint16_t IpHeader::flags() { return ntohs(_flags); }
-
-uint8_t IpHeader::ttl() { return _ttl; }
-
-IpProtocol IpHeader::protocol() { return (IpProtocol)_protocol; }
-
-uint16_t IpHeader::checksum() { return ntohs(_checksum); }
-
-IpAddress IpHeader::sourceIp() {
-    IpAddress result;
-    memcpy(&result, &_sourceIp, 4);
-    return result;
-}
-
-IpAddress IpHeader::destIp() {
-    IpAddress result;
-    memcpy(&result, &_destIp, 4);
-    return result;
 }
 
 uint16_t IpHeader::computeChecksum() {
@@ -71,6 +46,52 @@ uint16_t IpHeader::computeChecksum() {
     return ~sum;
 }
 
+uint8_t IpHeader::headerLen() { return _headerLen; }
+
+uint8_t IpHeader::version() { return _version; }
+
+uint8_t IpHeader::ecn() { return _ecn; }
+
+uint8_t IpHeader::dscp() { return _dscp; }
+
+uint16_t IpHeader::totalLen() { return ntohs(_totalLen); }
+
+void IpHeader::setTotalLen(uint16_t value) { _totalLen = htons(value); }
+
+uint16_t IpHeader::identification() { return ntohs(_identification); }
+
+uint16_t IpHeader::fragmentOffset() { return ntohs(_fragmentOffset); }
+
+uint16_t IpHeader::flags() { return ntohs(_flags); }
+
+uint8_t IpHeader::ttl() { return _ttl; }
+
+IpProtocol IpHeader::protocol() { return (IpProtocol)_protocol; }
+
+void IpHeader::setProtocol(IpProtocol value) { _protocol = (uint8_t)value; }
+
+bool IpHeader::verifyChecksum() { return computeChecksum() == ntohs(_checksum); }
+
+void IpHeader::fillChecksum() { _checksum = htons(computeChecksum()); }
+
+IpAddress IpHeader::sourceIp() {
+    IpAddress result;
+    memcpy(&result, &_sourceIp, 4);
+    return result;
+}
+
+void IpHeader::setSourceIp(IpAddress value) {
+    memcpy(&_sourceIp, &value, sizeof(IpAddress));
+}
+
+IpAddress IpHeader::destIp() {
+    IpAddress result;
+    memcpy(&result, &_destIp, 4);
+    return result;
+}
+
+void IpHeader::setDestIp(IpAddress value) { memcpy(&_destIp, &value, sizeof(IpAddress)); }
+
 void ipRecv(NicDevice* nic, uint8_t* buffer, size_t size) {
     if (size < sizeof(IpHeader)) {
         println("net: malformed ipv4 packet: too short");
@@ -82,7 +103,7 @@ void ipRecv(NicDevice* nic, uint8_t* buffer, size_t size) {
     if (ipHeader->headerLen() < 5) return;
     if (ipHeader->totalLen() < ipHeader->headerLen() * 4) return;
     if (ipHeader->totalLen() > size) return;
-    if (ipHeader->computeChecksum() != ipHeader->checksum()) return;
+    // if (ipHeader->verifyChecksum()) return;
     if (ipHeader->destIp() != nic->ipAddress()) return;
 
     buffer += ipHeader->headerLen() * 4;
@@ -90,7 +111,7 @@ void ipRecv(NicDevice* nic, uint8_t* buffer, size_t size) {
 
     switch (ipHeader->protocol()) {
         case IpProtocol::Udp:
-            udpRecv(nic, buffer, size);
+            udpRecv(nic, ipHeader, buffer, size);
             break;
 
         case IpProtocol::Tcp:
@@ -100,4 +121,30 @@ void ipRecv(NicDevice* nic, uint8_t* buffer, size_t size) {
         default:
             break;
     }
+}
+
+void ipSend(NicDevice* nic, IpAddress destIp, IpProtocol protocol, void* buffer,
+            size_t size) {
+    MacAddress destMac;
+    if (!arpLookup(destIp, &destMac)) {
+        print("net: arp lookup failed for ip ");
+        destIp.print();
+        println("");
+        return;
+    }
+
+    size_t totalSize = sizeof(IpHeader) + size;
+    uint8_t* packet = new uint8_t[totalSize];
+
+    IpHeader* ipHeader = new (packet) IpHeader;
+    ipHeader->setTotalLen(totalSize);
+    ipHeader->setProtocol(protocol);
+    ipHeader->setSourceIp(nic->ipAddress());
+    ipHeader->setDestIp(destIp);
+    ipHeader->fillChecksum();
+
+    // TODO: fill in UDP checksum
+
+    memcpy(packet + sizeof(IpHeader), buffer, size);
+    ethSend(nic, destMac, EtherType::Ipv4, packet, totalSize);
 }

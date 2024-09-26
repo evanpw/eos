@@ -7,6 +7,7 @@
 #include "net/ethernet.h"
 #include "net/ip.h"
 #include "net/nic_device.h"
+#include "spinlock.h"
 
 ArpHardwareType ArpHeader::hardwareType() {
     return (ArpHardwareType)ntohs(_hardwareType);
@@ -74,6 +75,55 @@ void ArpHeader::setTargetIp(IpAddress value) {
     memcpy(&_targetIp, &value, sizeof(IpAddress));
 }
 
+struct ArpEntry {
+    IpAddress ip;
+    MacAddress mac;
+    ArpEntry* next;
+};
+
+static ArpEntry* arpCache = nullptr;
+static Spinlock* arpLock = nullptr;
+
+void arpInit() { arpLock = new Spinlock(); }
+
+bool arpLookup(IpAddress ip, MacAddress* result) {
+    SpinlockLocker locker(*arpLock);
+
+    ArpEntry* entry = arpCache;
+    while (entry != nullptr) {
+        if (entry->ip == ip) {
+            *result = entry->mac;
+            return true;
+        }
+
+        entry = entry->next;
+    }
+
+    return false;
+}
+
+static void arpInsert(IpAddress ip, MacAddress mac) {
+    SpinlockLocker locker(*arpLock);
+
+    // If we already have an entry for this ip, just update the mac
+    ArpEntry* entry = arpCache;
+    while (entry != nullptr) {
+        if (entry->ip == ip) {
+            entry->mac = mac;
+            return;
+        }
+
+        entry = entry->next;
+    }
+
+    // Otherwise, add it to the list
+    ArpEntry* newEntry = new ArpEntry;
+    newEntry->ip = ip;
+    newEntry->mac = mac;
+    newEntry->next = arpCache;
+    arpCache = newEntry;
+}
+
 void arpRecv(NicDevice* nic, uint8_t* buffer, size_t size) {
     if (size < sizeof(ArpHeader)) {
         return;
@@ -89,7 +139,7 @@ void arpRecv(NicDevice* nic, uint8_t* buffer, size_t size) {
     if (arpPacket->operation() != ArpOperation::Request) return;
     if (arpPacket->targetIp() != nic->ipAddress()) return;
 
-    // TODO: store the sender's IP and MAC in a cache
+    arpInsert(arpPacket->senderIp(), arpPacket->senderMac());
     arpReply(nic, arpPacket->senderMac(), arpPacket->senderIp());
 }
 

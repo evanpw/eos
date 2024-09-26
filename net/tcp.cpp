@@ -47,10 +47,12 @@ void tcpRecv(NicDevice*, uint8_t* buffer, size_t size) {
     TcpHeader* tcpHeader = reinterpret_cast<TcpHeader*>(buffer);
     if (tcpHeader->dataOffset() * 4 > size) return;
 
-    // Echo the message to the console
-    size_t dataLen = size - sizeof(TcpHeader);
-    char* s = new char[dataLen + 1];
-    memcpy(s, buffer + tcpHeader->dataOffset() * 4, dataLen);
-    s[dataLen] = '\0';
-    println("tcp net message: {}", s);
+    if (tcpHeader->destPort() == 22) {
+        // Echo the message to the console
+        size_t dataLen = size - sizeof(TcpHeader);
+        char* s = new char[dataLen + 1];
+        memcpy(s, buffer + tcpHeader->dataOffset() * 4, dataLen);
+        s[dataLen] = '\0';
+        println("tcp net message: {}", s);
+    }
 }
