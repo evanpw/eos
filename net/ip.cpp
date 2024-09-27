@@ -99,7 +99,14 @@ void ipRecv(NicDevice* nic, uint8_t* buffer, size_t size) {
 void ipSend(NicDevice* nic, IpAddress destIp, IpProtocol protocol, void* buffer,
             size_t size) {
     MacAddress destMac;
-    if (!arpLookup(destIp, &destMac)) {
+
+    // TODO: do a real local-network test here
+    if (destIp != IpAddress(10, 0, 2, 15)) {
+        if (!arpLookup(IpAddress(10, 0, 2, 2), &destMac)) {
+            println("net: arp lookup failed for gateway");
+            return;
+        }
+    } else if (!arpLookup(destIp, &destMac)) {
         print("net: arp lookup failed for ip ");
         destIp.print();
         println("");

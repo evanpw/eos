@@ -47,7 +47,16 @@ struct ArpEntry {
 static ArpEntry* arpCache = nullptr;
 static Spinlock* arpLock = nullptr;
 
-void arpInit() { arpLock = new Spinlock(); }
+static void arpInsert(IpAddress ip, MacAddress mac);
+
+void arpInit() {
+    arpLock = new Spinlock();
+
+    // Default gateway
+    // TODO: look this up the right way
+    uint8_t gatewayMac[6] = {0x52, 0x55, 0x0A, 0x00, 0x02, 0x02};
+    arpInsert(IpAddress(10, 0, 2, 2), MacAddress(gatewayMac));
+}
 
 bool arpLookup(IpAddress ip, MacAddress* result) {
     SpinlockLocker locker(*arpLock);
@@ -104,6 +113,21 @@ void arpRecv(NicDevice* nic, uint8_t* buffer, size_t size) {
 
     arpInsert(arpPacket->senderIp(), arpPacket->senderMac());
     arpReply(nic, arpPacket->senderMac(), arpPacket->senderIp());
+}
+
+void arpRequest(NicDevice* nic, IpAddress destIp) {
+    ArpHeader arpHeader;
+    arpHeader.setHardwareType(ArpHardwareType::Ethernet);
+    arpHeader.setProtocolType(EtherType::Ipv4);
+    arpHeader.setHardwareLen(sizeof(MacAddress));
+    arpHeader.setProtocolLen(sizeof(IpAddress));
+    arpHeader.setOperation(ArpOperation::Request);
+    arpHeader.setSenderMac(nic->macAddress());
+    arpHeader.setSenderIp(nic->ipAddress());
+    arpHeader.setTargetMac(MacAddress());
+    arpHeader.setTargetIp(destIp);
+
+    ethSend(nic, MacAddress::broadcast(), EtherType::Arp, &arpHeader, sizeof(ArpHeader));
 }
 
 void arpReply(NicDevice* nic, MacAddress destMac, IpAddress destIp) {
