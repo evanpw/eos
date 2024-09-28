@@ -12,7 +12,7 @@ public:
     Timer();
 
     uint64_t tickCount() { return _tickCount.load(); }
-    void sleep(uint64_t duration);
+    void sleep(uint64_t duration, Spinlock* lock = nullptr);
 
 private:
     AtomicInt _tickCount = 0;

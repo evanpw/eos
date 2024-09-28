@@ -23,19 +23,32 @@
 #include "timer.h"
 
 void testNetwork() {
+    NetworkInterface* netif = &System::netif();
+
     // Wait for DHCP to finish
-    while (!System::netif().isConfigured()) {
+    while (!netif->isConfigured()) {
         System::timer().sleep(10);
     }
 
     // Send a request to gh.evanpw.com
     IpAddress destIp(185, 199, 110, 153);
-    const char* payload =
-        "GET /boot.asm HTTP/1.1\r\nHost: gh.evanpw.com\r\nConnection: close\r\n\r\n";
+    const char* request =
+        "GET / HTTP/1.1\r\nHost: gh.evanpw.com\r\nConnection: close\r\n\r\n";
 
-    TcpControlBlock* tcb = tcpConnect(&System::netif(), destIp, 80);
-    tcpSend(&System::netif(), tcb, reinterpret_cast<const uint8_t*>(payload),
-            strlen(payload));
+    TcpControlBlock* tcb = tcpConnect(netif, destIp, 80);
+    tcpWrite(netif, tcb, reinterpret_cast<const uint8_t*>(request), strlen(request));
+
+    char* buffer = new char[1024];
+    while (true) {
+        size_t bytesRead = tcpRead(netif, tcb, reinterpret_cast<uint8_t*>(buffer), 1023);
+        if (bytesRead == 0) {
+            break;
+        }
+
+        buffer[bytesRead] = '\0';
+        print(buffer);
+    }
+    delete[] buffer;
 
     System::scheduler().stopThread(currentThread);
 }

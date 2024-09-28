@@ -5,6 +5,7 @@
 
 #include "estd/new.h"
 #include "estd/print.h"
+#include "klibc.h"
 #include "net/ip.h"
 #include "net/network_interface.h"
 #include "spinlock.h"
@@ -106,8 +107,9 @@ enum class TcpState {
     TIME_WAIT
 };
 
-// TODO: needs a lock
 struct TcpControlBlock {
+    Spinlock lock;
+
     TcpState state;
 
     IpAddress localIp;
@@ -131,6 +133,14 @@ struct TcpControlBlock {
         uint32_t window;  // size of the receive window
     } recv;
 
+    static constexpr size_t RECV_BUFFER_SIZE = 64 * KiB - 1;
+
+    uint8_t recvBuffer[RECV_BUFFER_SIZE];
+    uint32_t recvBufferUsed() { return sizeof(recvBuffer) - recv.window; }
+
+    // This flag is set if we receive a PSH flag or if the receive buffer is full
+    bool dataReady = false;
+
     TcpControlBlock* next;
 };
 
@@ -149,6 +159,8 @@ void tcpInit() {
     tcb->remoteIp = 0;
     tcb->remotePort = 0;
     tcbInsert(tcb);
+
+    println("tcp: init complete");
 }
 
 void tcbInsert(TcpControlBlock* tcb) {
@@ -163,6 +175,7 @@ TcpControlBlock* tcbLookup(uint16_t localPort, IpAddress remoteIp, uint16_t remo
 
     TcpControlBlock* tcb = tcbList;
     while (tcb != nullptr) {
+        SpinlockLocker tcbLocker(tcb->lock);
         if (tcb->localPort == localPort) {
             if (tcb->state == TcpState::LISTEN) {
                 return tcb;
@@ -181,6 +194,7 @@ TcpControlBlock* tcbLookup(uint16_t localPort, IpAddress remoteIp, uint16_t remo
 
 void tcpRecvListen(NetworkInterface* netif, TcpControlBlock* tcb, IpHeader* ipHeader,
                    TcpHeader* tcpHeader, uint8_t*, size_t) {
+    SpinlockLocker tcbLocker(tcb->lock);
     ASSERT(tcpHeader->syn());
 
     // Setup the new connection
@@ -194,7 +208,8 @@ void tcpRecvListen(NetworkInterface* netif, TcpControlBlock* tcb, IpHeader* ipHe
     tcb->send.window = tcpHeader->windowSize();
     tcb->irs = tcpHeader->seqNum();
     tcb->recv.next = tcb->irs + 1;  // SYN consumes one sequence number
-    tcb->recv.window = 64 * KiB - 1;
+    tcb->recv.window = TcpControlBlock::RECV_BUFFER_SIZE;
+    tcb->dataReady = false;
 
     // Reply with SYN-ACK
     TcpHeader response;
@@ -217,6 +232,7 @@ void tcpRecvEstablished(NetworkInterface* netif, TcpControlBlock* tcb,
 
 void tcpRecvSynReceived(NetworkInterface* netif, TcpControlBlock* tcb,
                         TcpHeader* tcpHeader, uint8_t* data, size_t dataLen) {
+    SpinlockLocker tcbLocker(tcb->lock);
     ASSERT(tcpHeader->ack());
     ASSERT(tcpHeader->seqNum() == tcb->recv.next);
     ASSERT(tcpHeader->ackNum() == tcb->send.next);
@@ -233,15 +249,22 @@ void tcpRecvSynReceived(NetworkInterface* netif, TcpControlBlock* tcb,
 
 void tcpRecvEstablished(NetworkInterface* netif, TcpControlBlock* tcb,
                         TcpHeader* tcpHeader, uint8_t* data, size_t dataLen) {
+    SpinlockLocker tcbLocker(tcb->lock);
     ASSERT(tcpHeader->seqNum() == tcb->recv.next);
     ASSERT(tcpHeader->ackNum() == tcb->send.next);
 
+    // If we received more data than we can store, just truncate (and ACK only the
+    // portion that we handled)
+    size_t origDataLen = dataLen;
+    dataLen = min<size_t>(dataLen, tcb->recv.window);
+
     if (dataLen > 0) {
-        // Echo the message to the console
-        char* s = new char[dataLen + 1];
-        memcpy(s, data, dataLen);
-        s[dataLen] = '\0';
-        println("tcp net message: {}", s);
+        memcpy(tcb->recvBuffer + tcb->recvBufferUsed(), data, dataLen);
+        tcb->recv.window -= dataLen;
+
+        if (tcpHeader->psh() || tcb->recv.window == 0) {
+            tcb->dataReady = true;
+        }
     }
 
     tcb->state = TcpState::ESTABLISHED;
@@ -250,7 +273,7 @@ void tcpRecvEstablished(NetworkInterface* netif, TcpControlBlock* tcb,
     tcb->recv.next += dataLen;
 
     // If we get a simple ACK with no data and no FIN, then we don't need to reply
-    if (dataLen == 0 && !tcpHeader->fin()) {
+    if (origDataLen == 0 && !tcpHeader->fin()) {
         ASSERT(tcpHeader->ack());
         return;
     }
@@ -266,8 +289,8 @@ void tcpRecvEstablished(NetworkInterface* netif, TcpControlBlock* tcb,
 
     // If the remote side has sent a FIN, start tearing down the connection
     if (tcpHeader->fin()) {
-        tcb->state = TcpState::LAST_ACK;
-        tcb->recv.next++;  // received FIN consumes one sequence number
+        tcb->state = TcpState::CLOSE_WAIT;
+        tcb->recv.next++;  // FIN consumes one sequence number
         tcb->send.next++;  // sent FIN also consumes one sequence number
 
         // Acknowledge their FIN and send our own
@@ -284,6 +307,7 @@ void tcpRecvFinWait2(NetworkInterface* netif, TcpControlBlock* tcb, TcpHeader* t
 
 void tcpRecvFinWait1(NetworkInterface* netif, TcpControlBlock* tcb, TcpHeader* tcpHeader,
                      uint8_t* data, size_t dataLen) {
+    SpinlockLocker tcbLocker(tcb->lock);
     ASSERT(tcpHeader->ack());
     ASSERT(tcpHeader->seqNum() == tcb->recv.next);
     ASSERT(tcpHeader->ackNum() == tcb->send.next);
@@ -300,6 +324,7 @@ void tcpRecvFinWait1(NetworkInterface* netif, TcpControlBlock* tcb, TcpHeader* t
 
 void tcpRecvFinWait2(NetworkInterface* netif, TcpControlBlock* tcb, TcpHeader* tcpHeader,
                      uint8_t*, size_t) {
+    SpinlockLocker tcbLocker(tcb->lock);
     ASSERT(tcpHeader->fin());
     ASSERT(tcpHeader->seqNum() == tcb->recv.next);
 
@@ -320,6 +345,7 @@ void tcpRecvFinWait2(NetworkInterface* netif, TcpControlBlock* tcb, TcpHeader* t
 
 void tcpRecvLastAck(NetworkInterface*, TcpControlBlock* tcb, TcpHeader* tcpHeader,
                     uint8_t*, size_t) {
+    SpinlockLocker tcbLocker(tcb->lock);
     ASSERT(tcpHeader->ack());
     ASSERT(tcpHeader->seqNum() == tcb->recv.next);
     ASSERT(tcpHeader->ackNum() == tcb->send.next);
@@ -330,6 +356,7 @@ void tcpRecvLastAck(NetworkInterface*, TcpControlBlock* tcb, TcpHeader* tcpHeade
 
 void tcpRecvSynSent(NetworkInterface* netif, TcpControlBlock* tcb, TcpHeader* tcpHeader,
                     uint8_t*, size_t) {
+    SpinlockLocker tcbLocker(tcb->lock);
     ASSERT(tcpHeader->syn());
     ASSERT(tcpHeader->ack());
     ASSERT(tcpHeader->ackNum() == tcb->send.next);
@@ -439,11 +466,12 @@ TcpControlBlock* tcpConnect(NetworkInterface* netif, IpAddress destIp,
     return tcb;
 }
 
-void tcpSend(NetworkInterface* netif, TcpControlBlock* tcb, const uint8_t* data,
-             size_t size) {
-    // TODO: this is a race condition
+void tcpWrite(NetworkInterface* netif, TcpControlBlock* tcb, const void* data,
+              size_t size) {
+    SpinlockLocker tcbLocker(tcb->lock);
     while (tcb->state != TcpState::ESTABLISHED) {
-        System::timer().sleep(1);
+        // TODO: create a thread blocker for this situation
+        System::timer().sleep(1, &tcb->lock);
     }
 
     // Construct the tcp header and send the data
@@ -466,6 +494,7 @@ void tcpSend(NetworkInterface* netif, TcpControlBlock* tcb, const uint8_t* data,
 }
 
 void tcpClose(NetworkInterface* netif, TcpControlBlock* tcb) {
+    SpinlockLocker tcbLocker(tcb->lock);
     if (tcb->state == TcpState::CLOSED) return;
 
     ASSERT(tcb->state == TcpState::ESTABLISHED);
@@ -483,4 +512,48 @@ void tcpClose(NetworkInterface* netif, TcpControlBlock* tcb) {
     ipSend(netif, tcb->remoteIp, IpProtocol::Tcp, &response, sizeof(TcpHeader), true);
 
     tcb->send.next++;  // FIN consumes on sequence number
+}
+
+size_t tcpRead(NetworkInterface*, TcpControlBlock* tcb, void* buffer, size_t size) {
+    SpinlockLocker tcbLocker(tcb->lock);
+
+    switch (tcb->state) {
+        // The connection is closed or in the process of closing
+        case TcpState::CLOSED:
+        case TcpState::CLOSING:
+        case TcpState::LAST_ACK:
+        case TcpState::TIME_WAIT:
+            return -1;
+
+        // The connection is closed from the other side, so we can only read data that's
+        // already in the receive buffer
+        case TcpState::CLOSE_WAIT:
+            if (tcb->recvBufferUsed() == 0) return 0;
+            tcb->dataReady = true;
+            break;
+
+        default:
+            break;
+    }
+
+    // If we're in a normal state but no data is currently available, wait for some
+    while (!tcb->dataReady) {
+        // TODO: create a thread blocker for this situation
+        System::timer().sleep(1, &tcb->lock);
+    }
+
+    // Copy the data from the receive buffer to the caller's buffer
+    size_t readSize = min<size_t>(size, tcb->recvBufferUsed());
+    memcpy(buffer, tcb->recvBuffer, readSize);
+
+    // Shift the remaining data to the front of the buffer
+    memcpy(tcb->recvBuffer, tcb->recvBuffer + readSize, tcb->recvBufferUsed() - readSize);
+    tcb->recv.window += readSize;
+
+    // If we've emptied the recieve buffer, start buffering again
+    if (tcb->recvBufferUsed() == 0) {
+        tcb->dataReady = false;
+    }
+
+    return readSize;
 }

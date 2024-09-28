@@ -194,6 +194,7 @@ void Scheduler::sleepThread(const estd::shared_ptr<Blocker>& blocker, Spinlock* 
         yield();
 
         // Re-acquire the lock before returning to the previous context
+        // TODO: this should be relock()
         if (lock) lock->lock();
         return;
     }

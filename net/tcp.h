@@ -76,6 +76,7 @@ void tcpRecv(NetworkInterface* netif, IpHeader* ipHeader, uint8_t* buffer, size_
 struct TcpControlBlock;
 TcpControlBlock* tcpConnect(NetworkInterface* netif, IpAddress destIp, uint16_t destPort);
 
-void tcpSend(NetworkInterface* netif, TcpControlBlock* tcb, const uint8_t* data,
-             size_t size);
+void tcpWrite(NetworkInterface* netif, TcpControlBlock* tcb, const void* data,
+              size_t size);
+size_t tcpRead(NetworkInterface* netif, TcpControlBlock* tcb, void* buffer, size_t size);
 void tcpClose(NetworkInterface* netif, TcpControlBlock* tcb);

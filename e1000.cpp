@@ -206,12 +206,6 @@ E1000Device::E1000Device() {
     _macAddress.print();
     println("");
 
-    // TODO: get this via DHCP rather than hardcoding it
-    _ipAddress = IpAddress{10, 0, 2, 15};
-    print("e1000: ip address: ");
-    _ipAddress.print();
-    println("");
-
     initIrq();
     initTxRing();
     initRxRing();
