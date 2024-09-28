@@ -3,7 +3,7 @@
 #include <stdint.h>
 
 enum class EtherType : uint16_t;
-class NicDevice;
+class NetworkInterface;
 struct MacAddress;
 struct IpAddress;
 class EthernetHeader;
@@ -55,7 +55,11 @@ public:
 static_assert(sizeof(ArpHeader) == 28);
 
 void arpInit();
-bool arpLookup(IpAddress ip, MacAddress* result);
-void arpRecv(NicDevice* nic, uint8_t* buffer, size_t size);
-void arpRequest(NicDevice* nic, IpAddress destIp);
-void arpReply(NicDevice* nic, MacAddress destMac, IpAddress destIp);
+
+// arpLookupCached does not block, arpLookup may
+bool arpLookupCached(IpAddress ip, MacAddress* result);
+MacAddress arpLookup(NetworkInterface* netif, IpAddress ip);
+
+void arpRecv(NetworkInterface* netif, uint8_t* buffer, size_t size);
+void arpRequest(NetworkInterface* netif, IpAddress destIp);
+void arpReply(NetworkInterface* netif, MacAddress destMac, IpAddress destIp);

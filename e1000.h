@@ -4,12 +4,12 @@
 #include "address.h"
 #include "net/ethernet.h"
 #include "net/ip.h"
-#include "net/nic_device.h"
+#include "net/network_interface.h"
 #include "pci.h"
 
 struct TrapRegisters;
 
-class E1000Device : public NicDevice {
+class E1000Device : public NetworkInterface {
 public:
     E1000Device();
 

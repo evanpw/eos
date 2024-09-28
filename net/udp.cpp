@@ -7,7 +7,7 @@
 #include "estd/print.h"
 #include "net/dhcp.h"
 #include "net/ip.h"
-#include "net/nic_device.h"
+#include "net/network_interface.h"
 
 uint16_t UdpHeader::sourcePort() { return ntohs(_sourcePort); }
 uint16_t UdpHeader::destPort() { return ntohs(_destPort); }
@@ -21,7 +21,7 @@ void UdpHeader::setDestPort(uint16_t value) { _destPort = htons(value); }
 void UdpHeader::setLength(uint16_t value) { _length = htons(value); }
 void UdpHeader::setChecksum(uint16_t value) { _checksum = htons(value); }
 
-void udpRecv(NicDevice* nic, IpHeader* ipHeader, uint8_t* buffer, size_t size) {
+void udpRecv(NetworkInterface* netif, IpHeader* ipHeader, uint8_t* buffer, size_t size) {
     if (size < sizeof(UdpHeader)) {
         return;
     }
@@ -38,15 +38,15 @@ void udpRecv(NicDevice* nic, IpHeader* ipHeader, uint8_t* buffer, size_t size) {
         println("udp net message: {}", s);
 
         // Echo the message back
-        udpSend(nic, ipHeader->sourceIp(), 22, udpHeader->sourcePort(), udpHeader->data(),
-                dataLen);
-    } else if (udpHeader->destPort() == 68) {
-        dhcpRecv(nic, ipHeader, udpHeader->data(), udpHeader->dataLen());
+        udpSend(netif, ipHeader->sourceIp(), 22, udpHeader->sourcePort(),
+                udpHeader->data(), dataLen);
+    } else if (udpHeader->destPort() == DHCP_CLIENT_PORT) {
+        dhcpRecv(netif, ipHeader, udpHeader->data(), udpHeader->dataLen());
     }
 }
 
-void udpSend(NicDevice* nic, IpAddress destIp, uint16_t sourcePort, uint16_t destPort,
-             uint8_t* buffer, uint8_t size) {
+void udpSend(NetworkInterface* netif, IpAddress destIp, uint16_t sourcePort,
+             uint16_t destPort, uint8_t* buffer, uint8_t size) {
     size_t totalSize = sizeof(UdpHeader) + size;
     uint8_t* packet = new uint8_t[totalSize];
 
@@ -57,7 +57,7 @@ void udpSend(NicDevice* nic, IpAddress destIp, uint16_t sourcePort, uint16_t des
     udpHeader->setChecksum(0);
 
     memcpy(udpHeader->data(), buffer, size);
-    ipSend(nic, destIp, IpProtocol::Udp, packet, totalSize);
+    ipSend(netif, destIp, IpProtocol::Udp, packet, totalSize);
 
     delete[] packet;
 }

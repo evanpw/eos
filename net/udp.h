@@ -2,7 +2,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-class NicDevice;
+class NetworkInterface;
 struct IpAddress;
 struct IpHeader;
 
@@ -30,6 +30,6 @@ public:
 
 static_assert(sizeof(UdpHeader) == 8);
 
-void udpRecv(NicDevice* nic, IpHeader* ipHeader, uint8_t* buffer, size_t size);
-void udpSend(NicDevice* nic, IpAddress destIp, uint16_t sourcePort, uint16_t destPort,
-             uint8_t* buffer, uint8_t size);
+void udpRecv(NetworkInterface* netif, IpHeader* ipHeader, uint8_t* buffer, size_t size);
+void udpSend(NetworkInterface* netif, IpAddress destIp, uint16_t sourcePort,
+             uint16_t destPort, uint8_t* buffer, uint8_t size);

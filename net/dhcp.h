@@ -10,7 +10,7 @@
 #include "estd/vector.h"
 #include "net/ethernet.h"
 
-class NicDevice;
+class NetworkInterface;
 struct IpAddress;
 struct IpHeader;
 
@@ -36,7 +36,9 @@ enum class DhcpMessageType : uint8_t {
 };
 
 // Network byte order
-static constexpr uint32_t DHCP_MAGIC = 0x63538263;
+static constexpr uint32_t DHCP_MAGIC = 0x63538263;  // network byte order
+static constexpr uint16_t DHCP_SERVER_PORT = 67;
+static constexpr uint16_t DHCP_CLIENT_PORT = 68;
 
 enum class DhcpOption : uint8_t {
     Pad = 0,
@@ -113,5 +115,5 @@ public:
     estd::vector<uint8_t> createDiscoverOptions();
 };
 
-void dhcpRecv(NicDevice* nic, IpHeader* ipHeader, uint8_t* buffer, size_t size);
-void dhcpRequest(NicDevice* nic);
+void dhcpInit(NetworkInterface* netif);
+void dhcpRecv(NetworkInterface* netif, IpHeader* ipHeader, uint8_t* buffer, size_t size);

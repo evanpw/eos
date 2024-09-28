@@ -2,7 +2,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-class NicDevice;
+class NetworkInterface;
 
 struct MacAddress {
     uint8_t bytes[6] = {};
@@ -44,6 +44,6 @@ public:
 
 static_assert(sizeof(EthernetHeader) == 14);
 
-void ethRecv(NicDevice* nic, uint8_t* buffer, size_t size);
-void ethSend(NicDevice* nic, MacAddress destMac, EtherType ethType, void* buffer,
+void ethRecv(NetworkInterface* netif, uint8_t* buffer, size_t size);
+void ethSend(NetworkInterface* netif, MacAddress destMac, EtherType ethType, void* buffer,
              size_t size);

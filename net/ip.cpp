@@ -8,7 +8,7 @@
 #include "estd/print.h"
 #include "net/arp.h"
 #include "net/ethernet.h"
-#include "net/nic_device.h"
+#include "net/network_interface.h"
 #include "net/tcp.h"
 #include "net/udp.h"
 
@@ -65,7 +65,7 @@ void IpHeader::setProtocol(IpProtocol value) { _protocol = (uint8_t)value; }
 void IpHeader::setDestIp(IpAddress value) { _destIp = value; }
 void IpHeader::setSourceIp(IpAddress value) { _sourceIp = value; }
 
-void ipRecv(NicDevice* nic, uint8_t* buffer, size_t size) {
+void ipRecv(NetworkInterface* netif, uint8_t* buffer, size_t size) {
     if (size < sizeof(IpHeader)) {
         println("net: malformed ipv4 packet: too short");
         return;
@@ -77,7 +77,7 @@ void ipRecv(NicDevice* nic, uint8_t* buffer, size_t size) {
     if (ipHeader->totalLen() < ipHeader->headerLen() * 4) return;
     if (ipHeader->totalLen() > size) return;
     if (!ipHeader->verifyChecksum()) return;
-    if (ipHeader->destIp() != nic->ipAddress() &&
+    if (ipHeader->destIp() != netif->ipAddress() &&
         ipHeader->destIp() != IpAddress::broadcast())
         return;
 
@@ -86,11 +86,11 @@ void ipRecv(NicDevice* nic, uint8_t* buffer, size_t size) {
 
     switch (ipHeader->protocol()) {
         case IpProtocol::Udp:
-            udpRecv(nic, ipHeader, buffer, size);
+            udpRecv(netif, ipHeader, buffer, size);
             break;
 
         case IpProtocol::Tcp:
-            tcpRecv(nic, ipHeader, buffer, size);
+            tcpRecv(netif, ipHeader, buffer, size);
             break;
 
         default:
@@ -98,22 +98,29 @@ void ipRecv(NicDevice* nic, uint8_t* buffer, size_t size) {
     }
 }
 
-void ipSend(NicDevice* nic, IpAddress destIp, IpProtocol protocol, void* buffer,
-            size_t size) {
-    MacAddress destMac;
-
-    // TODO: do a real local-network test here
-    if (destIp != IpAddress(10, 0, 2, 15)) {
-        if (!arpLookup(IpAddress(10, 0, 2, 2), &destMac)) {
-            println("net: arp lookup failed for gateway");
-            return;
-        }
-    } else if (!arpLookup(destIp, &destMac)) {
-        print("net: arp lookup failed for ip ");
-        destIp.print();
-        println("");
-        return;
+// Extremely basic IP routing
+bool findRoute(NetworkInterface* netif, IpAddress destIp, MacAddress* destMac,
+               bool blocking) {
+    if (destIp == IpAddress::broadcast()) {
+        *destMac = MacAddress::broadcast();
+        return true;
     }
+
+    if (!netif->isConfigured()) return false;
+
+    IpAddress nextHop = netif->isLocal(destIp) ? destIp : netif->gateway();
+    if (blocking) {
+        *destMac = arpLookup(netif, nextHop);
+        return true;
+    }
+
+    return arpLookupCached(nextHop, destMac);
+}
+
+bool ipSend(NetworkInterface* netif, IpAddress destIp, IpProtocol protocol, void* buffer,
+            size_t size, bool blocking) {
+    MacAddress destMac;
+    if (!findRoute(netif, destIp, &destMac, blocking)) return false;
 
     size_t totalSize = sizeof(IpHeader) + size;
     uint8_t* packet = new uint8_t[totalSize];
@@ -121,12 +128,11 @@ void ipSend(NicDevice* nic, IpAddress destIp, IpProtocol protocol, void* buffer,
     IpHeader* ipHeader = new (packet) IpHeader;
     ipHeader->setTotalLen(totalSize);
     ipHeader->setProtocol(protocol);
-    ipHeader->setSourceIp(nic->ipAddress());
+    ipHeader->setSourceIp(netif->ipAddress());
     ipHeader->setDestIp(destIp);
     ipHeader->fillChecksum();
 
-    // TODO: fill in UDP or TCP checksum
-
     memcpy(packet + sizeof(IpHeader), buffer, size);
-    ethSend(nic, destMac, EtherType::Ipv4, packet, totalSize);
+    ethSend(netif, destMac, EtherType::Ipv4, packet, totalSize);
+    return true;
 }

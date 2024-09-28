@@ -23,20 +23,19 @@
 #include "timer.h"
 
 void testNetwork() {
-    // Look up gateway MAC address
-    // arpRequest(System::nic(), IpAddress(10, 0, 2, 2));
+    // Wait for DHCP to finish
+    while (!System::netif().isConfigured()) {
+        System::timer().sleep(10);
+    }
 
     // Send a request to gh.evanpw.com
-    // IpAddress destIp(185, 199, 110, 153);
-    // const char* payload =
-    //     "GET /boot.asm HTTP/1.1\r\nHost: gh.evanpw.com\r\nConnection: close\r\n\r\n";
+    IpAddress destIp(185, 199, 110, 153);
+    const char* payload =
+        "GET /boot.asm HTTP/1.1\r\nHost: gh.evanpw.com\r\nConnection: close\r\n\r\n";
 
-    // TcpControlBlock* tcb = tcpConnect(&System::nic(), destIp, 80);
-    // tcpSend(&System::nic(), tcb, reinterpret_cast<const uint8_t*>(payload),
-    //         strlen(payload));
-
-    // Send a DHCP request
-    dhcpRequest(&System::nic());
+    TcpControlBlock* tcb = tcpConnect(&System::netif(), destIp, 80);
+    tcpSend(&System::netif(), tcb, reinterpret_cast<const uint8_t*>(payload),
+            strlen(payload));
 
     System::scheduler().stopThread(currentThread);
 }
@@ -67,9 +66,10 @@ System::System() {
     initSyscalls();
     _pciDevices.assign(new PCIDevices);
     _ideController.assign(new IDEController);
+    _netif.assign(new E1000Device);
     arpInit();
     tcpInit();
-    _nic.assign(new E1000Device);
+    dhcpInit(_netif.get());
     initACPI();
     _scheduler.assign(new Scheduler);
     _timer.assign(new Timer);

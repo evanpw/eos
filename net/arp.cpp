@@ -6,8 +6,10 @@
 #include "estd/new.h"
 #include "net/ethernet.h"
 #include "net/ip.h"
-#include "net/nic_device.h"
+#include "net/network_interface.h"
 #include "spinlock.h"
+#include "system.h"
+#include "timer.h"
 
 EtherType ArpHeader::protocolType() { return (EtherType)_protocolType; }
 uint8_t ArpHeader::hardwareLen() { return _hardwareLen; }
@@ -49,16 +51,9 @@ static Spinlock* arpLock = nullptr;
 
 static void arpInsert(IpAddress ip, MacAddress mac);
 
-void arpInit() {
-    arpLock = new Spinlock();
+void arpInit() { arpLock = new Spinlock(); }
 
-    // Default gateway
-    // TODO: look this up the right way
-    uint8_t gatewayMac[6] = {0x52, 0x55, 0x0A, 0x00, 0x02, 0x02};
-    arpInsert(IpAddress(10, 0, 2, 2), MacAddress(gatewayMac));
-}
-
-bool arpLookup(IpAddress ip, MacAddress* result) {
+bool arpLookupCached(IpAddress ip, MacAddress* result) {
     SpinlockLocker locker(*arpLock);
 
     ArpEntry* entry = arpCache;
@@ -72,6 +67,24 @@ bool arpLookup(IpAddress ip, MacAddress* result) {
     }
 
     return false;
+}
+
+MacAddress arpLookup(NetworkInterface* netif, IpAddress ip) {
+    MacAddress result;
+    if (arpLookupCached(ip, &result)) {
+        return result;
+    }
+
+    // Not in cache, we have to send an arp request
+    arpRequest(netif, ip);
+
+    // Wait for the reply
+    do {
+        System::timer().sleep(10);
+        // TODO: re-send after a timeout
+    } while (!arpLookupCached(ip, &result));
+
+    return result;
 }
 
 static void arpInsert(IpAddress ip, MacAddress mac) {
@@ -96,51 +109,54 @@ static void arpInsert(IpAddress ip, MacAddress mac) {
     arpCache = newEntry;
 }
 
-void arpRecv(NicDevice* nic, uint8_t* buffer, size_t size) {
+void arpRecv(NetworkInterface* netif, uint8_t* buffer, size_t size) {
     if (size < sizeof(ArpHeader)) {
         return;
     }
 
     ArpHeader* arpPacket = reinterpret_cast<ArpHeader*>(buffer);
 
-    // Look for ethernet->ipv4 arp request packets
+    // Look for ethernet->ipv4 arp request or reply packets
     if (arpPacket->hardwareType() != ArpHardwareType::Ethernet) return;
     if (arpPacket->protocolType() != EtherType::Ipv4) return;
     if (arpPacket->hardwareLen() != sizeof(MacAddress)) return;
     if (arpPacket->protocolLen() != sizeof(IpAddress)) return;
-    if (arpPacket->operation() != ArpOperation::Request) return;
-    if (arpPacket->targetIp() != nic->ipAddress()) return;
+    if (arpPacket->targetIp() != netif->ipAddress()) return;
 
     arpInsert(arpPacket->senderIp(), arpPacket->senderMac());
-    arpReply(nic, arpPacket->senderMac(), arpPacket->senderIp());
+
+    if (arpPacket->operation() == ArpOperation::Request) {
+        arpReply(netif, arpPacket->senderMac(), arpPacket->senderIp());
+    }
 }
 
-void arpRequest(NicDevice* nic, IpAddress destIp) {
+void arpRequest(NetworkInterface* netif, IpAddress destIp) {
     ArpHeader arpHeader;
     arpHeader.setHardwareType(ArpHardwareType::Ethernet);
     arpHeader.setProtocolType(EtherType::Ipv4);
     arpHeader.setHardwareLen(sizeof(MacAddress));
     arpHeader.setProtocolLen(sizeof(IpAddress));
     arpHeader.setOperation(ArpOperation::Request);
-    arpHeader.setSenderMac(nic->macAddress());
-    arpHeader.setSenderIp(nic->ipAddress());
+    arpHeader.setSenderMac(netif->macAddress());
+    arpHeader.setSenderIp(netif->ipAddress());
     arpHeader.setTargetMac(MacAddress());
     arpHeader.setTargetIp(destIp);
 
-    ethSend(nic, MacAddress::broadcast(), EtherType::Arp, &arpHeader, sizeof(ArpHeader));
+    ethSend(netif, MacAddress::broadcast(), EtherType::Arp, &arpHeader,
+            sizeof(ArpHeader));
 }
 
-void arpReply(NicDevice* nic, MacAddress destMac, IpAddress destIp) {
+void arpReply(NetworkInterface* netif, MacAddress destMac, IpAddress destIp) {
     ArpHeader arpHeader;
     arpHeader.setHardwareType(ArpHardwareType::Ethernet);
     arpHeader.setProtocolType(EtherType::Ipv4);
     arpHeader.setHardwareLen(sizeof(MacAddress));
     arpHeader.setProtocolLen(sizeof(IpAddress));
     arpHeader.setOperation(ArpOperation::Reply);
-    arpHeader.setSenderMac(nic->macAddress());
-    arpHeader.setSenderIp(nic->ipAddress());
+    arpHeader.setSenderMac(netif->macAddress());
+    arpHeader.setSenderIp(netif->ipAddress());
     arpHeader.setTargetMac(destMac);
     arpHeader.setTargetIp(destIp);
 
-    ethSend(nic, destMac, EtherType::Arp, &arpHeader, sizeof(ArpHeader));
+    ethSend(netif, destMac, EtherType::Arp, &arpHeader, sizeof(ArpHeader));
 }

@@ -5,7 +5,7 @@
 
 #include "estd/print.h"
 #include "net/ip.h"
-#include "net/nic_device.h"
+#include "net/network_interface.h"
 #include "net/udp.h"
 
 DhcpOperation DhcpHeader::op() { return (DhcpOperation)_op; }
@@ -130,7 +130,7 @@ estd::vector<uint8_t> DhcpHeader::createDiscoverOptions() {
     return estd::move(options);
 }
 
-void dhcpRecv(NicDevice* nic, IpHeader*, uint8_t* buffer, size_t size) {
+void dhcpRecv(NetworkInterface* netif, IpHeader*, uint8_t* buffer, size_t size) {
     if (size < sizeof(DhcpHeader)) {
         return;
     }
@@ -142,10 +142,11 @@ void dhcpRecv(NicDevice* nic, IpHeader*, uint8_t* buffer, size_t size) {
     if (dhcpHeader->hlen() != sizeof(MacAddress)) return;
     if (dhcpHeader->xid() != 0x12345678) return;
     if (dhcpHeader->messageType() != DhcpMessageType::Offer) return;
-    if (dhcpHeader->chaddr() != nic->macAddress()) return;
+    if (dhcpHeader->chaddr() != netif->macAddress()) return;
 
+    IpAddress ipAddress = dhcpHeader->yiaddr();
     print("dhcp: inet ");
-    dhcpHeader->yiaddr().print();
+    ipAddress.print();
 
     IpAddress subnetMask;
     if (dhcpHeader->subnetMask(&subnetMask)) {
@@ -153,16 +154,20 @@ void dhcpRecv(NicDevice* nic, IpHeader*, uint8_t* buffer, size_t size) {
         subnetMask.print();
     }
 
+    IpAddress gateway;
     estd::vector<IpAddress> routers = dhcpHeader->routers();
     if (!routers.empty()) {
+        gateway = routers[0];
         print(" gateway ");
-        routers[0].print();
+        gateway.print();
     }
 
     println("");
+
+    netif->configure(ipAddress, subnetMask, gateway);
 }
 
-void dhcpRequest(NicDevice* nic) {
+void dhcpRequest(NetworkInterface* netif) {
     estd::vector<uint8_t> options = DhcpHeader().createDiscoverOptions();
 
     size_t packetSize = sizeof(DhcpHeader) + options.size();
@@ -180,11 +185,14 @@ void dhcpRequest(NicDevice* nic) {
     request->setYiaddr(IpAddress());
     request->setSiaddr(IpAddress());
     request->setGiaddr(IpAddress());
-    request->setChaddr(nic->macAddress());
+    request->setChaddr(netif->macAddress());
     request->setSname("");
     request->setFile("");
     request->fillMagic();
     request->setOptions(options.data(), options.size());
 
-    udpSend(nic, IpAddress::broadcast(), 68, 67, packet, packetSize);
+    udpSend(netif, IpAddress::broadcast(), DHCP_CLIENT_PORT, DHCP_SERVER_PORT, packet,
+            packetSize);
 }
+
+void dhcpInit(NetworkInterface* netif) { dhcpRequest(netif); }

@@ -11,7 +11,7 @@ class IDEController;
 class Ext2FileSystem;
 struct Scheduler;
 class Timer;
-class NicDevice;
+class NetworkInterface;
 
 class System {
 public:
@@ -41,9 +41,9 @@ public:
         return *(instance()._fs);
     }
 
-    static NicDevice& nic() {
-        ASSERT(instance()._nic);
-        return *(instance()._nic);
+    static NetworkInterface& netif() {
+        ASSERT(instance()._netif);
+        return *(instance()._netif);
     }
 
     static Scheduler& scheduler() {
@@ -74,7 +74,7 @@ private:
     estd::shared_ptr<Terminal> _terminal;
     estd::unique_ptr<PCIDevices> _pciDevices;
     estd::unique_ptr<IDEController> _ideController;
-    estd::unique_ptr<NicDevice> _nic;
+    estd::unique_ptr<NetworkInterface> _netif;
     estd::unique_ptr<Ext2FileSystem> _fs;
     estd::unique_ptr<Scheduler> _scheduler;
     estd::unique_ptr<Timer> _timer;

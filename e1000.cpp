@@ -284,7 +284,7 @@ uint16_t E1000Device::readEEPROM(uint8_t addr) {
 uint32_t E1000Device::icr() const { return _regs->icr; }
 
 void e1000IrqHandler(TrapRegisters&) {
-    E1000Device& nic = static_cast<E1000Device&>(System::nic());
+    E1000Device& nic = static_cast<E1000Device&>(System::netif());
     uint32_t cause = nic.icr();
 
     if (cause & IMR_RXT) {

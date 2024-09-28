@@ -2,7 +2,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-class NicDevice;
+class NetworkInterface;
 
 struct IpAddress {
     // Network byte order
@@ -13,6 +13,7 @@ struct IpAddress {
     IpAddress(uint8_t a, uint8_t b, uint8_t c, uint8_t d);
 
     operator uint32_t() const { return value; }
+    explicit operator bool() const { return value != 0; }
     bool operator==(const IpAddress& other) const { return value == other.value; }
 
     static IpAddress broadcast() { return IpAddress(0xFFFFFFFF); }
@@ -68,6 +69,6 @@ public:
 
 static_assert(sizeof(IpHeader) == 20);
 
-void ipRecv(NicDevice* nic, uint8_t* buffer, size_t size);
-void ipSend(NicDevice* nic, IpAddress destIp, IpProtocol protocol, void* buffer,
-            size_t size);
+void ipRecv(NetworkInterface* netif, uint8_t* buffer, size_t size);
+bool ipSend(NetworkInterface* netif, IpAddress destIp, IpProtocol protocol, void* buffer,
+            size_t size, bool blocking = false);

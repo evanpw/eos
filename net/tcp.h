@@ -4,7 +4,7 @@
 
 struct IpAddress;
 struct IpHeader;
-class NicDevice;
+class NetworkInterface;
 
 class __attribute__((packed)) TcpHeader {
     uint16_t _sourcePort;
@@ -71,10 +71,11 @@ public:
 static_assert(sizeof(TcpHeader) == 20);
 
 void tcpInit();
-void tcpRecv(NicDevice* nic, IpHeader* ipHeader, uint8_t* buffer, size_t size);
+void tcpRecv(NetworkInterface* netif, IpHeader* ipHeader, uint8_t* buffer, size_t size);
 
 struct TcpControlBlock;
-TcpControlBlock* tcpConnect(NicDevice* nic, IpAddress destIp, uint16_t destPort);
+TcpControlBlock* tcpConnect(NetworkInterface* netif, IpAddress destIp, uint16_t destPort);
 
-void tcpSend(NicDevice* nic, TcpControlBlock* tcb, const uint8_t* data, size_t size);
-void tcpClose(NicDevice* nic, TcpControlBlock* tcb);
+void tcpSend(NetworkInterface* netif, TcpControlBlock* tcb, const uint8_t* data,
+             size_t size);
+void tcpClose(NetworkInterface* netif, TcpControlBlock* tcb);
