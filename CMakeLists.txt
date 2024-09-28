@@ -46,6 +46,7 @@ set(KERNEL_SOURCES
     kmain.cpp
     mem.cpp
     net/arp.cpp
+    net/dhcp.cpp
     net/ethernet.cpp
     net/ip.cpp
     net/tcp.cpp

@@ -77,7 +77,9 @@ void ipRecv(NicDevice* nic, uint8_t* buffer, size_t size) {
     if (ipHeader->totalLen() < ipHeader->headerLen() * 4) return;
     if (ipHeader->totalLen() > size) return;
     if (!ipHeader->verifyChecksum()) return;
-    if (ipHeader->destIp() != nic->ipAddress()) return;
+    if (ipHeader->destIp() != nic->ipAddress() &&
+        ipHeader->destIp() != IpAddress::broadcast())
+        return;
 
     buffer += ipHeader->headerLen() * 4;
     size = ipHeader->totalLen() - ipHeader->headerLen() * 4;

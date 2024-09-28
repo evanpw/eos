@@ -5,7 +5,8 @@
 
 #include "estd/new.h"
 #include "estd/print.h"
-#include "ip.h"
+#include "net/dhcp.h"
+#include "net/ip.h"
 #include "net/nic_device.h"
 
 uint16_t UdpHeader::sourcePort() { return ntohs(_sourcePort); }
@@ -13,6 +14,7 @@ uint16_t UdpHeader::destPort() { return ntohs(_destPort); }
 uint16_t UdpHeader::length() { return ntohs(_length); }
 uint16_t UdpHeader::checksum() { return ntohs(_checksum); }
 uint8_t* UdpHeader::data() { return _data; }
+uint16_t UdpHeader::dataLen() { return length() - sizeof(UdpHeader); }
 
 void UdpHeader::setSourcePort(uint16_t value) { _sourcePort = htons(value); }
 void UdpHeader::setDestPort(uint16_t value) { _destPort = htons(value); }
@@ -38,6 +40,8 @@ void udpRecv(NicDevice* nic, IpHeader* ipHeader, uint8_t* buffer, size_t size) {
         // Echo the message back
         udpSend(nic, ipHeader->sourceIp(), 22, udpHeader->sourcePort(), udpHeader->data(),
                 dataLen);
+    } else if (udpHeader->destPort() == 68) {
+        dhcpRecv(nic, ipHeader, udpHeader->data(), udpHeader->dataLen());
     }
 }
 

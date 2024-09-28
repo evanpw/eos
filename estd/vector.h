@@ -31,6 +31,66 @@ public:
         ::operator delete[](_data);
     }
 
+    vector(const vector& other) {
+        _capacity = other._capacity;
+        _size = other._size;
+        _data = static_cast<T*>(::operator new[](sizeof(T) * _capacity));
+
+        for (size_t i = 0; i < _size; ++i) {
+            new (&_data[i]) T(other._data[i]);
+        }
+    }
+
+    vector(vector&& other) {
+        _data = other._data;
+        _capacity = other._capacity;
+        _size = other._size;
+
+        other._data = nullptr;
+        other._capacity = 0;
+        other._size = 0;
+    }
+
+    vector& operator=(const vector& other) {
+        if (this == &other) return *this;
+
+        for (size_t i = 0; i < _size; ++i) {
+            _data[i].~T();
+        }
+
+        ::operator delete[](_data);
+
+        _capacity = other._capacity;
+        _size = other._size;
+        _data = static_cast<T*>(::operator new[](sizeof(T) * _capacity));
+
+        for (size_t i = 0; i < _size; ++i) {
+            new (&_data[i]) T(other._data[i]);
+        }
+
+        return *this;
+    }
+
+    vector& operator=(vector&& other) {
+        if (this == &other) return *this;
+
+        for (size_t i = 0; i < _size; ++i) {
+            _data[i].~T();
+        }
+
+        ::operator delete[](_data);
+
+        _data = other._data;
+        _capacity = other._capacity;
+        _size = other._size;
+
+        other._data = nullptr;
+        other._capacity = 0;
+        other._size = 0;
+
+        return *this;
+    }
+
     size_t size() const { return _size; }
     size_t capacity() const { return _capacity; }
     T* data() { return _data; }
@@ -103,12 +163,6 @@ public:
     iterator end() { return data() + size(); }
     const_iterator cbegin() { return data(); }
     const_iterator cend() { return data() + size(); }
-
-    // TODO: implement these
-    vector(const vector&) = delete;
-    vector(vector&&) = delete;
-    vector& operator=(const vector&) = delete;
-    vector& operator=(vector&&) = delete;
 
 private:
     T* _data;

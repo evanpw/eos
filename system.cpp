@@ -9,6 +9,7 @@
 #include "klibc.h"
 #include "mem.h"
 #include "net/arp.h"
+#include "net/dhcp.h"
 #include "net/ip.h"
 #include "net/tcp.h"
 #include "pci.h"
@@ -26,15 +27,16 @@ void testNetwork() {
     // arpRequest(System::nic(), IpAddress(10, 0, 2, 2));
 
     // Send a request to gh.evanpw.com
-    IpAddress googleIp(185, 199, 110, 153);
-    const char* payload = "GET /boot.asm HTTP/1.1\r\nHost: gh.evanpw.com\r\n\r\n";
+    // IpAddress destIp(185, 199, 110, 153);
+    // const char* payload =
+    //     "GET /boot.asm HTTP/1.1\r\nHost: gh.evanpw.com\r\nConnection: close\r\n\r\n";
 
-    TcpControlBlock* tcb = tcpConnect(&System::nic(), googleIp, 80);
-    tcpSend(&System::nic(), tcb, reinterpret_cast<const uint8_t*>(payload),
-            strlen(payload));
-    System::timer().sleep(40);
-    println("finished");
-    tcpClose(&System::nic(), tcb);
+    // TcpControlBlock* tcb = tcpConnect(&System::nic(), destIp, 80);
+    // tcpSend(&System::nic(), tcb, reinterpret_cast<const uint8_t*>(payload),
+    //         strlen(payload));
+
+    // Send a DHCP request
+    dhcpRequest(&System::nic());
 
     System::scheduler().stopThread(currentThread);
 }

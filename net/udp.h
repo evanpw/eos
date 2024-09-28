@@ -23,7 +23,9 @@ public:
     void setDestPort(uint16_t value);
     void setLength(uint16_t value);
     void setChecksum(uint16_t value);
+
     uint8_t* data();
+    uint16_t dataLen();
 };
 
 static_assert(sizeof(UdpHeader) == 8);

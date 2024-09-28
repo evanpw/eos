@@ -104,6 +104,19 @@ char* strncpy(char* dest, const char* src, size_t n) {
     return dest;
 }
 
+char* strcpy(char* dest, const char* src) {
+    char* d = dest;
+    const char* s = src;
+
+    while (*s) {
+        *d++ = *s++;
+    }
+
+    *d = '\0';
+
+    return dest;
+}
+
 const char* strchr(const char* s, int c) {
     for (const char* p = s; *p; ++p) {
         if (*p == c) {

@@ -325,12 +325,11 @@ void tcpRecvLastAck(NicDevice*, TcpControlBlock* tcb, TcpHeader* tcpHeader, uint
     ASSERT(tcpHeader->ackNum() == tcb->send.next);
 
     // Connection is closed, listen for a new connection
-    tcb->state = TcpState::LISTEN;
+    tcb->state = TcpState::CLOSED;
 }
 
 void tcpRecvSynSent(NicDevice* nic, TcpControlBlock* tcb, TcpHeader* tcpHeader, uint8_t*,
                     size_t) {
-    println("tcpRecvSynSent");
     ASSERT(tcpHeader->syn());
     ASSERT(tcpHeader->ack());
     ASSERT(tcpHeader->ackNum() == tcb->send.next);
@@ -353,7 +352,6 @@ void tcpRecvSynSent(NicDevice* nic, TcpControlBlock* tcb, TcpHeader* tcpHeader, 
     ipSend(nic, tcb->remoteIp, IpProtocol::Tcp, &response, sizeof(TcpHeader));
 
     tcb->state = TcpState::ESTABLISHED;
-    println("established");
 }
 
 void tcpRecv(NicDevice* nic, IpHeader* ipHeader, uint8_t* buffer, size_t size) {
@@ -446,8 +444,6 @@ void tcpSend(NicDevice* nic, TcpControlBlock* tcb, const uint8_t* data, size_t s
         System::timer().sleep(1);
     }
 
-    println("tcpSend");
-
     // Construct the tcp header and send the data
     size_t packetSize = sizeof(TcpHeader) + size;
     uint8_t* packet = new uint8_t[packetSize];
@@ -468,6 +464,8 @@ void tcpSend(NicDevice* nic, TcpControlBlock* tcb, const uint8_t* data, size_t s
 }
 
 void tcpClose(NicDevice* nic, TcpControlBlock* tcb) {
+    if (tcb->state == TcpState::CLOSED) return;
+
     ASSERT(tcb->state == TcpState::ESTABLISHED);
 
     // Send the initial FIN
