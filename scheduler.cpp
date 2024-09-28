@@ -157,7 +157,9 @@ void Scheduler::cleanupDeadThreads() {
             continue;
         }
 
-        Process::destroy(thread->process);
+        if (thread->process) {
+            Process::destroy(thread->process);
+        }
     }
 
     deadQueue.clear();

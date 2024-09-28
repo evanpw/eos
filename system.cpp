@@ -6,6 +6,7 @@
 #include "ide.h"
 #include "interrupts.h"
 #include "keyboard.h"
+#include "klibc.h"
 #include "mem.h"
 #include "net/arp.h"
 #include "net/ip.h"
@@ -20,34 +21,29 @@
 #include "thread.h"
 #include "timer.h"
 
+void testNetwork() {
+    // Look up gateway MAC address
+    // arpRequest(System::nic(), IpAddress(10, 0, 2, 2));
+
+    // Send a request to gh.evanpw.com
+    IpAddress googleIp(185, 199, 110, 153);
+    const char* payload = "GET /boot.asm HTTP/1.1\r\nHost: gh.evanpw.com\r\n\r\n";
+
+    TcpControlBlock* tcb = tcpConnect(&System::nic(), googleIp, 80);
+    tcpSend(&System::nic(), tcb, reinterpret_cast<const uint8_t*>(payload),
+            strlen(payload));
+    System::timer().sleep(40);
+    println("finished");
+    // tcpClose(&System::nic(), tcb);
+
+    System::scheduler().stopThread(currentThread);
+}
+
 void System::run() {
     System system;
 
-    // Look up gateway MAC address
-    // arpRequest(system._nic.get(), IpAddress(10, 0, 2, 2));
-
-    /*
-    // Send a request to google.com
-    IpAddress googleIp(142, 250, 80, 46);
-
-    const char* payload = "GET / HTTP/1.1\r\n\r\n";
-    size_t packetSize = sizeof(TcpHeader) + strlen(payload);
-    uint8_t* packet = new uint8_t[packetSize];
-
-    TcpHeader* tcpHeader = reinterpret_cast<TcpHeader*>(packet);
-    tcpHeader->setSourcePort(12345);
-    tcpHeader->setDestPort(80);
-    tcpHeader->setSeqNum(0);
-    tcpHeader->setAckNum(0);
-    tcpHeader->setDataOffset(5);
-    tcpHeader->setSyn();
-    tcpHeader->setWindowSize(64 * KiB - 1);
-    memcpy(tcpHeader->data(), payload, strlen(payload));
-    tcpHeader->fillChecksum(googleIp, system._nic->ipAddress(), packetSize);
-
-    ipSend(system._nic.get(), googleIp, IpProtocol::Tcp, packet,
-           sizeof(TcpHeader) + strlen(payload));
-    */
+    auto testThread = Thread::createKernelThread(bit_cast<uint64_t>(&testNetwork));
+    system._scheduler->startThread(testThread.get());
 
     Process::create("/bin/shell", nullptr);
     system._scheduler->start();

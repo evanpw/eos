@@ -10,7 +10,7 @@ class __attribute__((packed)) TcpHeader {
     uint16_t _sourcePort;
     uint16_t _destPort;
     uint32_t _seqNum;
-    uint32_t _ackNum;
+    uint32_t _ackNum = 0;
     [[maybe_unused]] uint8_t _reserved : 4 = 0;
     uint8_t _dataOffset : 4 = 5;
     uint8_t _fin : 1 = 0;
@@ -72,3 +72,9 @@ static_assert(sizeof(TcpHeader) == 20);
 
 void tcpInit();
 void tcpRecv(NicDevice* nic, IpHeader* ipHeader, uint8_t* buffer, size_t size);
+
+struct TcpControlBlock;
+TcpControlBlock* tcpConnect(NicDevice* nic, IpAddress destIp, uint16_t destPort);
+
+void tcpSend(NicDevice* nic, TcpControlBlock* tcb, const uint8_t* data, size_t size);
+void tcpClose(NicDevice* nic, TcpControlBlock* tcb);
