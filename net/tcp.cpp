@@ -477,7 +477,10 @@ void tcpClose(NicDevice* nic, TcpControlBlock* tcb) {
     response.setSeqNum(tcb->send.next);
     response.setAckNum(tcb->recv.next);
     response.setAck();
+    response.setFin();
     response.setWindowSize(tcb->recv.window);
     response.fillChecksum(tcb->localIp, tcb->remoteIp, sizeof(TcpHeader));
     ipSend(nic, tcb->remoteIp, IpProtocol::Tcp, &response, sizeof(TcpHeader));
+
+    tcb->send.next++;  // FIN consumes on sequence number
 }

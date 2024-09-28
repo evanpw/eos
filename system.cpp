@@ -34,7 +34,7 @@ void testNetwork() {
             strlen(payload));
     System::timer().sleep(40);
     println("finished");
-    // tcpClose(&System::nic(), tcb);
+    tcpClose(&System::nic(), tcb);
 
     System::scheduler().stopThread(currentThread);
 }
