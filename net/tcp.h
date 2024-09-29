@@ -1,6 +1,7 @@
 #pragma once
 #include <stddef.h>
 #include <stdint.h>
+#include <unistd.h>
 
 struct IpAddress;
 struct IpHeader;
@@ -70,6 +71,7 @@ public:
 
 static_assert(sizeof(TcpHeader) == 20);
 
+// Low-level API
 void tcpInit();
 void tcpRecv(NetworkInterface* netif, IpHeader* ipHeader, uint8_t* buffer, size_t size);
 
@@ -80,3 +82,16 @@ void tcpWrite(NetworkInterface* netif, TcpControlBlock* tcb, const void* data,
               size_t size);
 size_t tcpRead(NetworkInterface* netif, TcpControlBlock* tcb, void* buffer, size_t size);
 void tcpClose(NetworkInterface* netif, TcpControlBlock* tcb);
+
+using TcpHandle = uint64_t;
+
+/*
+// High-level kernel-mode API
+using TcpHandle = uint64_t;
+
+TcpHandle tcpConnect(NetworkInterface* netif, IpAddress destIp, uint16_t destPort);
+TcpHandle tcpListen(NetworkInterface* netif, uint16_t port);
+void tcpSend(TcpHandle handle, void* buffer, size_t size, bool push = false);
+ssize_t tcpRecv(TcpHandle handle, void* buffer, size_t size);
+void tcpClose(TcpHandle handle);
+*/

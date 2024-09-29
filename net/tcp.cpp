@@ -110,23 +110,23 @@ enum class TcpState {
 struct TcpControlBlock {
     Spinlock lock;
 
-    TcpState state;
+    // Used to identify a control block in the rest of the kernel, without exposing the
+    // internal details of the control block
+    TcpHandle handle;
 
+    TcpState state;
     IpAddress localIp;
     uint16_t localPort;
-
     IpAddress remoteIp;
     uint16_t remotePort;
-
     uint32_t iss;  // initial send sequence number
+    uint32_t irs;  // initial receive sequence number
 
     struct {
         uint32_t unacked;  // first unacknowledged sequence number
         uint32_t next;     // next sequence number to send
         uint32_t window;   // size of the send window
     } send;
-
-    uint32_t irs;  // initial receive sequence number
 
     struct {
         uint32_t next;    // next sequence number expected on an incoming segment
@@ -144,38 +144,49 @@ struct TcpControlBlock {
     TcpControlBlock* next;
 };
 
-static TcpControlBlock* tcbList = nullptr;
 static Spinlock* tcpLock = nullptr;
-
-void tcbInsert(TcpControlBlock* tcb);
+static TcpControlBlock* tcbList = nullptr;
+static TcpHandle nextHandle;
 
 void tcpInit() {
     tcpLock = new Spinlock();
-
-    // Open a socket for listening on port 22
-    TcpControlBlock* tcb = new TcpControlBlock;
-    tcb->state = TcpState::LISTEN;
-    tcb->localPort = 22;
-    tcb->remoteIp = 0;
-    tcb->remotePort = 0;
-    tcbInsert(tcb);
-
-    println("tcp: init complete");
+    nextHandle = 0;
 }
 
 void tcbInsert(TcpControlBlock* tcb) {
     SpinlockLocker locker(*tcpLock);
+    SpinlockLocker tcbLocker(tcb->lock);
 
     tcb->next = tcbList;
     tcbList = tcb;
 }
 
+// Returns the tcb in the locked state, must be unlocked by the caller
+TcpControlBlock* tcbLookup(TcpHandle handle) {
+    SpinlockLocker locker(*tcpLock);
+
+    TcpControlBlock* tcb = tcbList;
+    while (tcb != nullptr) {
+        tcb->lock.lock();
+        if (tcb->handle == handle) {
+            return tcb;
+        }
+
+        TcpControlBlock* next = tcb->next;
+        tcb->lock.unlock();
+        tcb = next;
+    }
+
+    return nullptr;
+}
+
+// Returns the tcb in the locked state, must be unlocked by the caller
 TcpControlBlock* tcbLookup(uint16_t localPort, IpAddress remoteIp, uint16_t remotePort) {
     SpinlockLocker locker(*tcpLock);
 
     TcpControlBlock* tcb = tcbList;
     while (tcb != nullptr) {
-        SpinlockLocker tcbLocker(tcb->lock);
+        tcb->lock.lock();
         if (tcb->localPort == localPort) {
             if (tcb->state == TcpState::LISTEN) {
                 return tcb;
@@ -186,7 +197,9 @@ TcpControlBlock* tcbLookup(uint16_t localPort, IpAddress remoteIp, uint16_t remo
             }
         }
 
-        tcb = tcb->next;
+        TcpControlBlock* next = tcb->next;
+        tcb->lock.unlock();
+        tcb = next;
     }
 
     return nullptr;
@@ -194,7 +207,7 @@ TcpControlBlock* tcbLookup(uint16_t localPort, IpAddress remoteIp, uint16_t remo
 
 void tcpRecvListen(NetworkInterface* netif, TcpControlBlock* tcb, IpHeader* ipHeader,
                    TcpHeader* tcpHeader, uint8_t*, size_t) {
-    SpinlockLocker tcbLocker(tcb->lock);
+    ASSERT(tcb->lock.isLocked());
     ASSERT(tcpHeader->syn());
 
     // Setup the new connection
@@ -232,7 +245,7 @@ void tcpRecvEstablished(NetworkInterface* netif, TcpControlBlock* tcb,
 
 void tcpRecvSynReceived(NetworkInterface* netif, TcpControlBlock* tcb,
                         TcpHeader* tcpHeader, uint8_t* data, size_t dataLen) {
-    SpinlockLocker tcbLocker(tcb->lock);
+    ASSERT(tcb->lock.isLocked());
     ASSERT(tcpHeader->ack());
     ASSERT(tcpHeader->seqNum() == tcb->recv.next);
     ASSERT(tcpHeader->ackNum() == tcb->send.next);
@@ -249,7 +262,7 @@ void tcpRecvSynReceived(NetworkInterface* netif, TcpControlBlock* tcb,
 
 void tcpRecvEstablished(NetworkInterface* netif, TcpControlBlock* tcb,
                         TcpHeader* tcpHeader, uint8_t* data, size_t dataLen) {
-    SpinlockLocker tcbLocker(tcb->lock);
+    ASSERT(tcb->lock.isLocked());
     ASSERT(tcpHeader->seqNum() == tcb->recv.next);
     ASSERT(tcpHeader->ackNum() == tcb->send.next);
 
@@ -307,7 +320,7 @@ void tcpRecvFinWait2(NetworkInterface* netif, TcpControlBlock* tcb, TcpHeader* t
 
 void tcpRecvFinWait1(NetworkInterface* netif, TcpControlBlock* tcb, TcpHeader* tcpHeader,
                      uint8_t* data, size_t dataLen) {
-    SpinlockLocker tcbLocker(tcb->lock);
+    ASSERT(tcb->lock.isLocked());
     ASSERT(tcpHeader->ack());
     ASSERT(tcpHeader->seqNum() == tcb->recv.next);
     ASSERT(tcpHeader->ackNum() == tcb->send.next);
@@ -324,7 +337,7 @@ void tcpRecvFinWait1(NetworkInterface* netif, TcpControlBlock* tcb, TcpHeader* t
 
 void tcpRecvFinWait2(NetworkInterface* netif, TcpControlBlock* tcb, TcpHeader* tcpHeader,
                      uint8_t*, size_t) {
-    SpinlockLocker tcbLocker(tcb->lock);
+    ASSERT(tcb->lock.isLocked());
     ASSERT(tcpHeader->fin());
     ASSERT(tcpHeader->seqNum() == tcb->recv.next);
 
@@ -345,7 +358,7 @@ void tcpRecvFinWait2(NetworkInterface* netif, TcpControlBlock* tcb, TcpHeader* t
 
 void tcpRecvLastAck(NetworkInterface*, TcpControlBlock* tcb, TcpHeader* tcpHeader,
                     uint8_t*, size_t) {
-    SpinlockLocker tcbLocker(tcb->lock);
+    ASSERT(tcb->lock.isLocked());
     ASSERT(tcpHeader->ack());
     ASSERT(tcpHeader->seqNum() == tcb->recv.next);
     ASSERT(tcpHeader->ackNum() == tcb->send.next);
@@ -356,7 +369,7 @@ void tcpRecvLastAck(NetworkInterface*, TcpControlBlock* tcb, TcpHeader* tcpHeade
 
 void tcpRecvSynSent(NetworkInterface* netif, TcpControlBlock* tcb, TcpHeader* tcpHeader,
                     uint8_t*, size_t) {
-    SpinlockLocker tcbLocker(tcb->lock);
+    ASSERT(tcb->lock.isLocked());
     ASSERT(tcpHeader->syn());
     ASSERT(tcpHeader->ack());
     ASSERT(tcpHeader->ackNum() == tcb->send.next);
@@ -430,6 +443,8 @@ void tcpRecv(NetworkInterface* netif, IpHeader* ipHeader, uint8_t* buffer, size_
         default:
             break;
     }
+
+    tcb->lock.unlock();
 }
 
 TcpControlBlock* tcpConnect(NetworkInterface* netif, IpAddress destIp,
@@ -557,3 +572,12 @@ size_t tcpRead(NetworkInterface*, TcpControlBlock* tcb, void* buffer, size_t siz
 
     return readSize;
 }
+
+/*
+//// High-level kernel-mode API
+TcpHandle tcpConnect(NetworkInterface* netif, IpAddress destIp, uint16_t destPort);
+TcpHandle tcpListen(NetworkInterface* netif, uint16_t port);
+void tcpSend(TcpHandle handle, void* buffer, size_t size, bool push);
+ssize_t tcpRecv(TcpHandle handle, void* buffer, size_t size);
+void tcpClose(TcpHandle handle);
+*/
