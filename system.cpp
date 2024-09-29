@@ -35,13 +35,16 @@ void testNetwork() {
     const char* request =
         "GET / HTTP/1.1\r\nHost: gh.evanpw.com\r\nConnection: close\r\n\r\n";
 
-    TcpControlBlock* tcb = tcpConnect(netif, destIp, 80);
-    tcpWrite(netif, tcb, reinterpret_cast<const uint8_t*>(request), strlen(request));
+    TcpHandle handle = tcpConnect(netif, destIp, 80);
+    tcpSend(netif, handle, request, strlen(request), true);
 
     char* buffer = new char[1024];
     while (true) {
-        size_t bytesRead = tcpRead(netif, tcb, reinterpret_cast<uint8_t*>(buffer), 1023);
-        if (bytesRead == 0) {
+        ssize_t bytesRead = tcpRecv(netif, handle, buffer, 1023);
+        if (bytesRead < 0) {
+            println("tcp error");
+            break;
+        } else if (bytesRead == 0) {
             break;
         }
 

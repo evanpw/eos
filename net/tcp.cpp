@@ -4,10 +4,10 @@
 #include <string.h>
 
 #include "estd/new.h"
-#include "estd/print.h"
 #include "klibc.h"
 #include "net/ip.h"
 #include "net/network_interface.h"
+#include "panic.h"
 #include "spinlock.h"
 #include "system.h"
 #include "timer.h"
@@ -108,6 +108,8 @@ enum class TcpState {
 };
 
 struct TcpControlBlock {
+    TcpControlBlock();
+
     Spinlock lock;
 
     // Used to identify a control block in the rest of the kernel, without exposing the
@@ -139,7 +141,7 @@ struct TcpControlBlock {
     uint32_t recvBufferUsed() { return sizeof(recvBuffer) - recv.window; }
 
     // This flag is set if we receive a PSH flag or if the receive buffer is full
-    bool dataReady = false;
+    bool dataReady;
 
     TcpControlBlock* next;
 };
@@ -147,10 +149,58 @@ struct TcpControlBlock {
 static Spinlock* tcpLock = nullptr;
 static TcpControlBlock* tcbList = nullptr;
 static TcpHandle nextHandle;
+static constexpr uint16_t MIN_EPHEMERAL_PORT = 32768;
+static constexpr uint16_t MAX_PORT = 65535;
 
 void tcpInit() {
     tcpLock = new Spinlock();
-    nextHandle = 0;
+    nextHandle = 1;
+}
+
+uint16_t getEphemeralPort() {
+    SpinlockLocker locker(*tcpLock);
+
+    // Scan over the ephemeral port range to find the next available port
+    for (uint32_t port = MIN_EPHEMERAL_PORT; port <= MAX_PORT; ++port) {
+        TcpControlBlock* tcb = tcbList;
+        bool found = false;
+        while (tcb != nullptr) {
+            SpinlockLocker tcbLocker(tcb->lock);
+            if (tcb->localPort == port) {
+                found = true;
+                break;
+            }
+
+            tcb = tcb->next;
+        }
+
+        if (!found) return port;
+    }
+
+    panic("no available ephemeral ports");
+}
+
+uint64_t createHandle() {
+    SpinlockLocker locker(*tcpLock);
+    return nextHandle++;
+}
+
+TcpControlBlock::TcpControlBlock() {
+    handle = createHandle();
+    state = TcpState::CLOSED;
+    localIp = IpAddress();
+    localPort = 0;
+    remoteIp = IpAddress();
+    remotePort = 0;
+    iss = 0;
+    irs = 0;
+    send.unacked = 0;
+    send.next = 0;
+    send.window = 0;
+    recv.next = 0;
+    recv.window = RECV_BUFFER_SIZE;
+    dataReady = false;
+    next = nullptr;
 }
 
 void tcbInsert(TcpControlBlock* tcb) {
@@ -161,6 +211,24 @@ void tcbInsert(TcpControlBlock* tcb) {
     tcbList = tcb;
 }
 
+void tcbRemove(TcpControlBlock* tcb) {
+    SpinlockLocker locker(*tcpLock);
+
+    if (tcbList == tcb) {
+        tcbList = tcb->next;
+        return;
+    }
+
+    TcpControlBlock* prev = tcbList;
+    while (prev && prev->next != tcb) {
+        prev = prev->next;
+    }
+
+    if (prev) {
+        prev->next = tcb->next;
+    }
+}
+
 // Returns the tcb in the locked state, must be unlocked by the caller
 TcpControlBlock* tcbLookup(TcpHandle handle) {
     SpinlockLocker locker(*tcpLock);
@@ -169,6 +237,25 @@ TcpControlBlock* tcbLookup(TcpHandle handle) {
     while (tcb != nullptr) {
         tcb->lock.lock();
         if (tcb->handle == handle) {
+            return tcb;
+        }
+
+        TcpControlBlock* next = tcb->next;
+        tcb->lock.unlock();
+        tcb = next;
+    }
+
+    return nullptr;
+}
+
+// Returns the tcb in the locked state, must be unlocked by the caller
+TcpControlBlock* tcbLookup(uint16_t localPort) {
+    SpinlockLocker locker(*tcpLock);
+
+    TcpControlBlock* tcb = tcbList;
+    while (tcb != nullptr) {
+        tcb->lock.lock();
+        if (tcb->localPort == localPort) {
             return tcb;
         }
 
@@ -447,23 +534,17 @@ void tcpRecv(NetworkInterface* netif, IpHeader* ipHeader, uint8_t* buffer, size_
     tcb->lock.unlock();
 }
 
-TcpControlBlock* tcpConnect(NetworkInterface* netif, IpAddress destIp,
-                            uint16_t destPort) {
-    // Setup the control block
+//// High-level kernel-mode API
+TcpHandle tcpConnect(NetworkInterface* netif, IpAddress destIp, uint16_t destPort) {
+    // Create and initialize the control block
     TcpControlBlock* tcb = new TcpControlBlock;
-    tcb->state = TcpState::SYN_SENT;
     tcb->localIp = netif->ipAddress();
-    tcb->localPort = 12345;
+    tcb->localPort = getEphemeralPort();
     tcb->remoteIp = destIp;
     tcb->remotePort = destPort;
-    tcb->iss = 0;
-    tcb->send.unacked = tcb->iss;
-    tcb->send.next = tcb->iss;
-    tcb->send.window = 0;
-    tcb->irs = 0;
-    tcb->recv.next = 0;
-    tcb->recv.window = 64 * KiB - 1;
     tcbInsert(tcb);
+
+    tcb->lock.lock();
 
     // Send the initial SYN
     TcpHeader header;
@@ -473,88 +554,134 @@ TcpControlBlock* tcpConnect(NetworkInterface* netif, IpAddress destIp,
     header.setSyn();
     header.setWindowSize(tcb->recv.window);
     header.fillChecksum(tcb->localIp, tcb->remoteIp, sizeof(TcpHeader));
+
+    tcb->state = TcpState::SYN_SENT;
+    tcb->send.next++;  // SYN consumes one sequence number
+    TcpHandle handle = tcb->handle;
+    tcb->lock.unlock();
+
+    // Will block until sent (may have to wait for ARP resolution)
     ipSend(netif, tcb->remoteIp, IpProtocol::Tcp, &header, sizeof(TcpHeader), true);
 
-    // The SYN consumes one sequence number
-    tcb->send.next++;
-
-    return tcb;
+    return handle;
 }
 
-void tcpWrite(NetworkInterface* netif, TcpControlBlock* tcb, const void* data,
-              size_t size) {
-    SpinlockLocker tcbLocker(tcb->lock);
-    while (tcb->state != TcpState::ESTABLISHED) {
-        // TODO: create a thread blocker for this situation
-        System::timer().sleep(1, &tcb->lock);
+TcpHandle tcpListen(NetworkInterface* netif, uint16_t port) {
+    // Make sure the port is available
+    TcpControlBlock* existing = tcbLookup(port);
+    if (existing) {
+        existing->lock.unlock();
+        return InvalidTcpHandle;
     }
 
-    // Construct the tcp header and send the data
+    // Create and initialize the control block
+    TcpControlBlock* tcb = new TcpControlBlock;
+    tcb->localIp = netif->ipAddress();
+    tcb->localPort = port;
+    tcbInsert(tcb);
+
+    SpinlockLocker tcbLocker(tcb->lock);
+
+    tcb->state = TcpState::LISTEN;
+    return tcb->handle;
+}
+
+bool tcpSend(NetworkInterface* netif, TcpHandle handle, const void* buffer, size_t size,
+             bool push) {
+    // Lookup the connection
+    TcpControlBlock* tcb = tcbLookup(handle);
+    if (!tcb) return false;
+
+    bool ready = false;
+    while (!ready) {
+        // TODO: add a timeout
+        switch (tcb->state) {
+            case TcpState::SYN_SENT:
+            case TcpState::SYN_RECEIVED:
+                // Wait for the connection to be established
+                // TODO: add a thread blocker for this situation
+                System::timer().sleep(1, &tcb->lock);
+                break;
+
+            case TcpState::ESTABLISHED:
+            case TcpState::CLOSE_WAIT:
+                // Send the data now
+                ready = true;
+                break;
+
+            default:
+                // Error: connection is closed or closing
+                return false;
+        }
+    }
+
     size_t packetSize = sizeof(TcpHeader) + size;
     uint8_t* packet = new uint8_t[packetSize];
 
+    // Construct the header
     TcpHeader* tcpHeader = new (packet) TcpHeader;
     tcpHeader->setSourcePort(tcb->localPort);
     tcpHeader->setDestPort(tcb->remotePort);
     tcpHeader->setSeqNum(tcb->send.next);
     tcpHeader->setAckNum(tcb->recv.next);
     tcpHeader->setAck();
-    tcpHeader->setPsh();
+    if (push) tcpHeader->setPsh();
     tcpHeader->setWindowSize(tcb->recv.window);
-    memcpy(tcpHeader->data(), data, size);
+
+    // Copy the payload into the packet
+    memcpy(tcpHeader->data(), buffer, size);
     tcpHeader->fillChecksum(tcb->localIp, tcb->remoteIp, packetSize);
-    ipSend(netif, tcb->remoteIp, IpProtocol::Tcp, packet, packetSize, true);
 
     tcb->send.next += size;
+    tcb->lock.unlock();
+
+    // Will block until sent (may have to wait for ARP resolution)
+    ipSend(netif, tcb->remoteIp, IpProtocol::Tcp, packet, packetSize, true);
+
+    return true;
 }
 
-void tcpClose(NetworkInterface* netif, TcpControlBlock* tcb) {
-    SpinlockLocker tcbLocker(tcb->lock);
-    if (tcb->state == TcpState::CLOSED) return;
+ssize_t tcpRecv(NetworkInterface*, TcpHandle handle, void* buffer, size_t size) {
+    // Lookup the connection
+    TcpControlBlock* tcb = tcbLookup(handle);
+    if (!tcb) return -1;
 
-    ASSERT(tcb->state == TcpState::ESTABLISHED);
+    bool ready = false;
+    while (!ready) {
+        // TODO: add a timeout
+        switch (tcb->state) {
+            case TcpState::LISTEN:
+            case TcpState::SYN_SENT:
+            case TcpState::SYN_RECEIVED:
+                // Wait for the connection to be established
+                // TODO: add a thread blocker for this situation
+                System::timer().sleep(1, &tcb->lock);
+                break;
 
-    // Send the initial FIN
-    TcpHeader response;
-    response.setSourcePort(tcb->localPort);
-    response.setDestPort(tcb->remotePort);
-    response.setSeqNum(tcb->send.next);
-    response.setAckNum(tcb->recv.next);
-    response.setAck();
-    response.setFin();
-    response.setWindowSize(tcb->recv.window);
-    response.fillChecksum(tcb->localIp, tcb->remoteIp, sizeof(TcpHeader));
-    ipSend(netif, tcb->remoteIp, IpProtocol::Tcp, &response, sizeof(TcpHeader), true);
+            case TcpState::ESTABLISHED:
+            case TcpState::FIN_WAIT_1:
+            case TcpState::FIN_WAIT_2:
+                // Wait until we receive a push or the recv window is full
+                if (tcb->dataReady) {
+                    ready = true;
+                } else {
+                    System::timer().sleep(1, &tcb->lock);
+                }
+                break;
 
-    tcb->send.next++;  // FIN consumes on sequence number
-}
+            case TcpState::CLOSE_WAIT:
+                // No more data is coming, but we can read what's left in the buffer
+                if (tcb->recvBufferUsed() != 0) {
+                    ready = true;
+                } else {
+                    return 0;
+                }
+                break;
 
-size_t tcpRead(NetworkInterface*, TcpControlBlock* tcb, void* buffer, size_t size) {
-    SpinlockLocker tcbLocker(tcb->lock);
-
-    switch (tcb->state) {
-        // The connection is closed or in the process of closing
-        case TcpState::CLOSED:
-        case TcpState::CLOSING:
-        case TcpState::LAST_ACK:
-        case TcpState::TIME_WAIT:
-            return -1;
-
-        // The connection is closed from the other side, so we can only read data that's
-        // already in the receive buffer
-        case TcpState::CLOSE_WAIT:
-            if (tcb->recvBufferUsed() == 0) return 0;
-            tcb->dataReady = true;
-            break;
-
-        default:
-            break;
-    }
-
-    // If we're in a normal state but no data is currently available, wait for some
-    while (!tcb->dataReady) {
-        // TODO: create a thread blocker for this situation
-        System::timer().sleep(1, &tcb->lock);
+            default:
+                // Error: connection is closed or closing
+                return -1;
+        }
     }
 
     // Copy the data from the receive buffer to the caller's buffer
@@ -570,14 +697,57 @@ size_t tcpRead(NetworkInterface*, TcpControlBlock* tcb, void* buffer, size_t siz
         tcb->dataReady = false;
     }
 
+    tcb->lock.unlock();
     return readSize;
 }
 
-/*
-//// High-level kernel-mode API
-TcpHandle tcpConnect(NetworkInterface* netif, IpAddress destIp, uint16_t destPort);
-TcpHandle tcpListen(NetworkInterface* netif, uint16_t port);
-void tcpSend(TcpHandle handle, void* buffer, size_t size, bool push);
-ssize_t tcpRecv(TcpHandle handle, void* buffer, size_t size);
-void tcpClose(TcpHandle handle);
-*/
+bool tcpClose(NetworkInterface* netif, TcpHandle handle) {
+    // Lookup the connection
+    TcpControlBlock* tcb = tcbLookup(handle);
+    if (!tcb) return false;
+
+    switch (tcb->state) {
+        case TcpState::LISTEN:
+        case TcpState::SYN_SENT:
+            // Delete the control block and enter CLOSED state (no need to send a FIN)
+            // Any pending reads or writes will return an error
+            // TODO: use shared ptrs for cleanup rather than leaking the TCB
+            tcbRemove(tcb);
+            tcb->state = TcpState::CLOSED;
+            tcb->lock.unlock();
+            return true;
+
+        case TcpState::SYN_RECEIVED:
+        case TcpState::ESTABLISHED:
+        case TcpState::CLOSE_WAIT:
+            break;
+
+        default:
+            // Error: already closed or closing
+            return false;
+    }
+
+    // Send a FIN and transition state to wait for remote side
+    TcpHeader header;
+    header.setSourcePort(tcb->localPort);
+    header.setDestPort(tcb->remotePort);
+    header.setSeqNum(tcb->send.next);
+    header.setAckNum(tcb->recv.next);
+    header.setAck();
+    header.setFin();
+    header.setWindowSize(tcb->recv.window);
+    header.fillChecksum(tcb->localIp, tcb->remoteIp, sizeof(TcpHeader));
+
+    if (tcb->state == TcpState::SYN_RECEIVED || tcb->state == TcpState::ESTABLISHED) {
+        tcb->state = TcpState::FIN_WAIT_1;
+    } else {
+        tcb->state = TcpState::LAST_ACK;
+    }
+    tcb->send.next++;  // FIN consumes on sequence number
+    tcb->lock.unlock();
+
+    // Will block until sent (may have to wait for ARP resolution)
+    ipSend(netif, tcb->remoteIp, IpProtocol::Tcp, &header, sizeof(TcpHeader), true);
+
+    return true;
+}

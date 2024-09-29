@@ -13,9 +13,6 @@ class E1000Device : public NetworkInterface {
 public:
     E1000Device();
 
-    MacAddress macAddress() const override { return _macAddress; }
-    IpAddress ipAddress() const override { return _ipAddress; }
-
     void sendPacket(uint8_t* buffer, size_t length) override;
 
     // For use by the irq handler
@@ -32,8 +29,6 @@ private:
 
     PCIDevice* _pciDev;
     RegisterSpace* _regs;
-    MacAddress _macAddress;
-    IpAddress _ipAddress;
     uint8_t _irqNumber;
 
     // Transmit descriptor ring
