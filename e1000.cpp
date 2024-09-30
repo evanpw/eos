@@ -202,9 +202,7 @@ E1000Device::E1000Device() {
     resetDevice();
     initEEPROM();
 
-    print("e1000: mac address: ");
-    _macAddress.print();
-    println("");
+    println("e1000: mac address: {}", _macAddress);
 
     initIrq();
     initTxRing();

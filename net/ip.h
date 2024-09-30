@@ -1,6 +1,9 @@
 #pragma once
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
+
+#include "estd/print.h"
 
 class NetworkInterface;
 
@@ -17,10 +20,32 @@ struct IpAddress {
     bool operator==(const IpAddress& other) const { return value == other.value; }
 
     static IpAddress broadcast() { return IpAddress(0xFFFFFFFF); }
-    void print();
 };
 
 static_assert(sizeof(IpAddress) == 4);
+
+// Custom formatter for estd::print
+template <>
+struct FormatArg<IpAddress> : public FormatArgBase {
+    FormatArg(IpAddress value) : value(value) {}
+
+    void print(const FormatSpec&) const override {
+        uint8_t bytes[4];
+        memcpy(bytes, &value, sizeof(uint32_t));
+
+        FormatSpec spec;
+        printInt(spec, bytes[0]);
+        printChar('.');
+        printInt(spec, bytes[1]);
+        printChar('.');
+        printInt(spec, bytes[2]);
+        printChar('.');
+        printInt(spec, bytes[3]);
+    }
+
+private:
+    IpAddress value;
+};
 
 enum class IpProtocol : uint8_t {
     Tcp = 6,

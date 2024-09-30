@@ -4,7 +4,6 @@
 #include <string.h>
 
 #include "estd/new.h"
-#include "estd/print.h"
 #include "net/arp.h"
 #include "net/ip.h"
 #include "net/network_interface.h"
@@ -31,11 +30,6 @@ MacAddress MacAddress::broadcast() {
     MacAddress result;
     memset(result.bytes, 0xFF, sizeof(MacAddress));
     return result;
-}
-
-void MacAddress::print() {
-    ::print("{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}", bytes[0], bytes[1], bytes[2],
-            bytes[3], bytes[4], bytes[5]);
 }
 
 MacAddress EthernetHeader::destMac() { return MacAddress(_destMac); }

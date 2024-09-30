@@ -145,21 +145,18 @@ void dhcpRecv(NetworkInterface* netif, IpHeader*, uint8_t* buffer, size_t size) 
     if (dhcpHeader->chaddr() != netif->macAddress()) return;
 
     IpAddress ipAddress = dhcpHeader->yiaddr();
-    print("dhcp: inet ");
-    ipAddress.print();
+    print("dhcp: inet {}", ipAddress);
 
     IpAddress subnetMask;
     if (dhcpHeader->subnetMask(&subnetMask)) {
-        print(" netmask ");
-        subnetMask.print();
+        print(" netmask {}", subnetMask);
     }
 
     IpAddress gateway;
     estd::vector<IpAddress> routers = dhcpHeader->routers();
     if (!routers.empty()) {
         gateway = routers[0];
-        print(" gateway ");
-        gateway.print();
+        print(" gateway {}", gateway);
     }
 
     println("");

@@ -2,6 +2,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "estd/print.h"
+
 class NetworkInterface;
 
 struct MacAddress {
@@ -16,10 +18,33 @@ struct MacAddress {
     bool operator==(const MacAddress& other) const;
 
     static MacAddress broadcast();
-    void print();
 };
 
 static_assert(sizeof(MacAddress) == 6);
+
+// Custom formatter for estd::print
+template <>
+struct FormatArg<MacAddress> : public FormatArgBase {
+    FormatArg(MacAddress value) : value(value) {}
+
+    void print(const FormatSpec&) const override {
+        FormatSpec spec = {.base = 16, .padTo = 2, .padChar = '0', .uppercase = true};
+        printInt(spec, value.bytes[0]);
+        printChar(':');
+        printInt(spec, value.bytes[1]);
+        printChar(':');
+        printInt(spec, value.bytes[2]);
+        printChar(':');
+        printInt(spec, value.bytes[3]);
+        printChar(':');
+        printInt(spec, value.bytes[4]);
+        printChar(':');
+        printInt(spec, value.bytes[5]);
+    }
+
+private:
+    MacAddress value;
+};
 
 enum class EtherType : uint16_t {
     // Values are in network byte order

@@ -16,13 +16,6 @@ IpAddress::IpAddress(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
     value = concatBits(d, c, b, a);
 }
 
-void IpAddress::print() {
-    uint8_t bytes[4];
-    memcpy(bytes, &value, sizeof(uint32_t));
-
-    ::print("{}.{}.{}.{}", bytes[0], bytes[1], bytes[2], bytes[3]);
-}
-
 uint16_t IpHeader::computeChecksum() {
     uint32_t sum = 0;
 

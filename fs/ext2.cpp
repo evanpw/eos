@@ -27,7 +27,8 @@ bool Ext2FileSystem::readSuperBlock() {
     }
 
     if (_superBlock->rev_level != ext2::DYNAMIC_REV) {
-        println("ext2: unsupported major revision level: {}", _superBlock->rev_level);
+        println("ext2: unsupported major revision level: {}",
+                (uint32_t)_superBlock->rev_level);
         return false;
     }
 
@@ -37,7 +38,7 @@ bool Ext2FileSystem::readSuperBlock() {
     }
 
     if (_superBlock->creator_os != ext2::OS_LINUX) {
-        println("ext2: unsupported creator os: {}", _superBlock->creator_os);
+        println("ext2: unsupported creator os: {}", (uint32_t)_superBlock->creator_os);
         return false;
     }
 

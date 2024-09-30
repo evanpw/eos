@@ -10,22 +10,7 @@ void printChar(char c) { outb(0xE9, c); }
 void printChar(char c) { putchar(c); }
 #endif
 
-struct FormatSpec {
-    int base = 10;
-    size_t padTo = 0;
-    char padChar = ' ';
-    bool uppercase = false;
-};
-
-void FormatArg::print(const FormatSpec& spec) {
-    if (!isString) {
-        printInt(spec);
-    } else {
-        printString(spec);
-    }
-}
-
-void FormatArg::printInt(const FormatSpec& spec) {
+void printInt(const FormatSpec& spec, uint64_t value) {
     ASSERT(spec.base >= 2 && spec.base <= 16);
 
     constexpr const char* uppercaseDigits = "0123456789ABCDEF";
@@ -53,8 +38,7 @@ void FormatArg::printInt(const FormatSpec& spec) {
     }
 }
 
-void FormatArg::printString(const FormatSpec& spec) {
-    const char* str = reinterpret_cast<const char*>(value);
+void printString(const FormatSpec& spec, const char* str) {
     size_t length = strlen(str);
 
     // Add padding if necessary
@@ -133,7 +117,7 @@ void _printImpl(FormatStringParser& parser, FormatArgs& args) {
     while (parser) {
         if (parser.accept('{')) {
             FormatSpec spec = parser.parseFormatSpec();
-            FormatArg arg = args.next();
+            const FormatArgBase& arg = args.next();
             arg.print(spec);
         } else {
             printChar(parser.next());
