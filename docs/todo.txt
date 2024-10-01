@@ -1,0 +1,8 @@
+* create a kernel process with pid 0
+* add an idle thread that runs in pid 0
+* add states to threads
+* teach the scheduler to respect thread states
+* add a mechanism for blocking / unblocking a thread on time (for sleep())
+* switch the sleep syscall to block rather than spin
+* add mutexes and allow threads to block on them
+* make everything thread-safe by adding mutexes

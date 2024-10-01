@@ -1,0 +1,17 @@
+ACPI: Advanced Configuration and Power Interface. A collection of in-memory data structures that describe the system hardware and define how to perform certain actions. Especially relevant for power management.
+AML: ACPI Machine Language
+APIC: Advanced Programmable Interrupt Controller
+ATA: AT Attachment. Electrical and logical interface used to communicate with disk drives. May refer to just the standard interface, or to both the standard interface and ATAPI.
+ATAPI: ATA Packet Interface. ATA wrapper around SCSI commands mostly used to communicate with optical drives via an IDE controller.
+IDE: Integrated Drive Electronics. Older but widely-used synonym for PATA.
+PATA: Parallel ATA
+PCI: Peripheral Component Interconnect. Bus and protocol for connecting peripheral devices to a processor.
+PIC: Programmable Interrupt Controller
+SATA: Serial ATA
+SCSI: Small Computer System Interface. Alternative protocol to ATA for communicating with disk drives. Especially popular for tape drives.
+IDT: Interrupt Descriptor Table
+IRQ: Interrupt Request
+MSR: Machine-Specific Register
+VGA: Video Graphics Adapter
+TTY: Teletypewriter. Archaic name for a standard interface for communicating with a keyboard and screen.
+AT: Advanced Technology. Aka PC/AT. A successor to the original IBM PC
