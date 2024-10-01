@@ -550,7 +550,7 @@ bool Terminal::handleInput(char c) {
 
     if (c == '\n') {
         _inputLines++;
-        System::scheduler().wakeThreads(_inputBlocker);
+        sys.scheduler().wakeThreads(_inputBlocker);
     }
 
     return true;
@@ -793,7 +793,7 @@ ssize_t Terminal::read(OpenFileDescription&, void* buffer, size_t count) {
 
     // Block until at least one byte is available
     while (_inputLines == 0) {
-        System::scheduler().sleepThread(_inputBlocker, &_lock);
+        sys.scheduler().sleepThread(_inputBlocker, &_lock);
     }
 
     // TODO: check fd mode

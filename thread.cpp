@@ -24,7 +24,7 @@ estd::unique_ptr<Thread> Thread::createUserThread(Process* process,
     thread->process = process;
 
     // Allocate and map a user mode stack
-    PhysicalAddress userStackBottom = System::mm().pageAlloc(4);
+    PhysicalAddress userStackBottom = sys.mm().pageAlloc(4);
     VirtualAddress userStackBottomVirt = process->addressSpace->vmalloc(4);
 
     thread->userStackTop = userStackBottom + 4 * PAGE_SIZE;
@@ -34,12 +34,12 @@ estd::unique_ptr<Thread> Thread::createUserThread(Process* process,
     process->addressSpace->mapPages(userStackBottomVirt, userStackBottom, 4);
 
     // Allocate a kernel stack
-    PhysicalAddress kernelStackBottom = System::mm().pageAlloc(4);
+    PhysicalAddress kernelStackBottom = sys.mm().pageAlloc(4);
 
     thread->kernelStackTop = kernelStackBottom + 4 * PAGE_SIZE;
     thread->kernelStackPages = 4;
 
-    VirtualAddress stackTop = System::mm().physicalToVirtual(thread->kernelStackTop);
+    VirtualAddress stackTop = sys.mm().physicalToVirtual(thread->kernelStackTop);
 
     // Construct an initial stack that looks like a thread returning from a syscall
     uint64_t* stackPtr = stackTop.ptr<uint64_t>();
@@ -68,7 +68,7 @@ estd::unique_ptr<Thread> Thread::createUserThread(Process* process,
 
     // Set up the initial user stack to pass arguments to the entry point
     uint8_t* stackPtrK =
-        System::mm().physicalToVirtual(thread->userStackTop).ptr<uint8_t>();
+        sys.mm().physicalToVirtual(thread->userStackTop).ptr<uint8_t>();
     VirtualAddress stackPtrU = thread->userStackTopVirt;
 
     // First count the number of arguments
@@ -120,12 +120,12 @@ estd::unique_ptr<Thread> Thread::createKernelThread(VirtualAddress entryPoint) {
     thread->userStackTop = 0;
 
     // Allocate a kernel stack
-    PhysicalAddress kernelStackBottom = System::mm().pageAlloc(4);
+    PhysicalAddress kernelStackBottom = sys.mm().pageAlloc(4);
 
     thread->kernelStackTop = kernelStackBottom + 4 * PAGE_SIZE;
     thread->kernelStackPages = 4;
 
-    VirtualAddress stackTop = System::mm().physicalToVirtual(thread->kernelStackTop);
+    VirtualAddress stackTop = sys.mm().physicalToVirtual(thread->kernelStackTop);
 
     // Construct an initial stack that looks like a thread returning from an interrupt
     uint64_t* stackPtr = stackTop.ptr<uint64_t>();
@@ -158,9 +158,9 @@ estd::unique_ptr<Thread> Thread::createKernelThread(VirtualAddress entryPoint) {
 Thread::~Thread() {
     // Kernel threads have no user stack
     if (userStackTop != 0) {
-        System::mm().pageFree(userStackBottom(), userStackPages);
+        sys.mm().pageFree(userStackBottom(), userStackPages);
     }
 
     // Every thread has a kernel stack
-    System::mm().pageFree(kernelStackBottom(), kernelStackPages);
+    sys.mm().pageFree(kernelStackBottom(), kernelStackPages);
 }

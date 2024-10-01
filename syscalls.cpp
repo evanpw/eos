@@ -64,13 +64,13 @@ pid_t sys_getpid() {
     println("proc: user process exited with status {}", status);
 
     // Does not return
-    System::scheduler().stopThread(currentThread);
+    sys.scheduler().stopThread(currentThread);
     __builtin_unreachable();
 }
 
 int64_t sys_sleep(int ticks) {
     // Will block the current thread and allow other threads to run
-    System::timer().sleep(ticks);
+    sys.timer().sleep(ticks);
     return 0;
 }
 
@@ -78,17 +78,17 @@ int64_t sys_open(const char* path, int /*oflag*/) {
     // TODO: handle flags correctly
     Process& process = *currentThread->process;
 
-    uint32_t ino = System::fs().lookup(process.cwdIno, path);
+    uint32_t ino = sys.fs().lookup(process.cwdIno, path);
     if (ino == ext2::BAD_INO) {
         return -ENOENT;
     }
 
-    auto inode = System::fs().readInode(ino);
+    auto inode = sys.fs().readInode(ino);
     if (!inode) {
         return -EIO;
     }
 
-    estd::shared_ptr<Ext2File> file(new Ext2File(System::fs(), move(inode)));
+    estd::shared_ptr<Ext2File> file(new Ext2File(sys.fs(), move(inode)));
     return process.open(file);
 }
 
@@ -120,18 +120,18 @@ VirtualAddress sys_sbrk(intptr_t incr) {
 
 int64_t sys_getcwd(char* buffer, size_t size) {
     Process& process = *currentThread->process;
-    return System::fs().getPath(process.cwdIno, buffer, size);
+    return sys.fs().getPath(process.cwdIno, buffer, size);
 }
 
 int64_t sys_chdir(const char* path) {
     Process& process = *currentThread->process;
 
-    uint32_t ino = System::fs().lookup(process.cwdIno, path);
+    uint32_t ino = sys.fs().lookup(process.cwdIno, path);
     if (ino == ext2::BAD_INO) {
         return -ENOENT;
     }
 
-    auto inode = System::fs().readInode(ino);
+    auto inode = sys.fs().readInode(ino);
     if (!inode) {
         return -EIO;
     }

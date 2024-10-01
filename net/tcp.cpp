@@ -600,7 +600,7 @@ bool tcpSend(NetworkInterface* netif, TcpHandle handle, const void* buffer, size
             case TcpState::SYN_RECEIVED:
                 // Wait for the connection to be established
                 // TODO: add a thread blocker for this situation
-                System::timer().sleep(1, &tcb->lock);
+                sys.timer().sleep(1, &tcb->lock);
                 break;
 
             case TcpState::ESTABLISHED:
@@ -655,7 +655,7 @@ ssize_t tcpRecv(NetworkInterface*, TcpHandle handle, void* buffer, size_t size) 
             case TcpState::SYN_RECEIVED:
                 // Wait for the connection to be established
                 // TODO: add a thread blocker for this situation
-                System::timer().sleep(1, &tcb->lock);
+                sys.timer().sleep(1, &tcb->lock);
                 break;
 
             case TcpState::ESTABLISHED:
@@ -665,7 +665,7 @@ ssize_t tcpRecv(NetworkInterface*, TcpHandle handle, void* buffer, size_t size) 
                 if (tcb->dataReady) {
                     ready = true;
                 } else {
-                    System::timer().sleep(1, &tcb->lock);
+                    sys.timer().sleep(1, &tcb->lock);
                 }
                 break;
 

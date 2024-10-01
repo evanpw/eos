@@ -22,12 +22,15 @@
 #include "thread.h"
 #include "timer.h"
 
+// Constructed by kmain
+System sys;
+
 void testNetwork() {
-    NetworkInterface* netif = &System::netif();
+    NetworkInterface* netif = &sys.netif();
 
     // Wait for DHCP to finish
     while (!netif->isConfigured()) {
-        System::timer().sleep(10);
+        sys.timer().sleep(10);
     }
 
     // Send a request to gh.evanpw.com
@@ -53,27 +56,20 @@ void testNetwork() {
     }
     delete[] buffer;
 
-    System::scheduler().stopThread(currentThread);
+    sys.scheduler().stopThread(currentThread);
 }
 
 void System::run() {
-    System system;
-
     auto testThread = Thread::createKernelThread(bit_cast<uint64_t>(&testNetwork));
-    system._scheduler->startThread(testThread.get());
+    _scheduler->startThread(testThread.get());
 
     Process::create("/bin/shell", nullptr);
-    system._scheduler->start();
+    _scheduler->start();
 
     __builtin_unreachable();
 }
 
-System* System::_instance = nullptr;
-
 System::System() {
-    ASSERT(_instance == nullptr);
-    _instance = this;
-
     Processor::init();
     installInterrupts();
     _screen.assign(new Screen);
@@ -96,7 +92,4 @@ System::System() {
     ProcessTable::init();
 }
 
-estd::shared_ptr<Terminal> System::terminal() {
-    ASSERT(instance()._terminal);
-    return instance()._terminal;
-}
+estd::shared_ptr<Terminal> System::terminal() { return _terminal; }

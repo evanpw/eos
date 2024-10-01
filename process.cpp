@@ -40,7 +40,7 @@ void ProcessTable::destroy(Process* process) {
         for (size_t j = 0; j < _blockers.size(); ++j) {
             if (_blockers[j]->pid != process->pid) continue;
 
-            System::scheduler().wakeThreads(_blockers.back());
+            sys.scheduler().wakeThreads(_blockers.back());
             estd::swap(_blockers[j], _blockers.back());
             _blockers.pop_back();
         }
@@ -72,35 +72,35 @@ int ProcessTable::waitProcess(pid_t pid) {
 
     estd::shared_ptr<ProcessBlocker> blocker(new ProcessBlocker(pid));
     _blockers.push_back(blocker);
-    System::scheduler().sleepThread(blocker, &_lock);
+    sys.scheduler().sleepThread(blocker, &_lock);
 
     return 0;
 }
 
 Process::Process(pid_t pid, const char* path, const char* argv[], uint32_t initialCwdIno)
 : pid(pid), cwdIno(initialCwdIno) {
-    open(System::terminal());  // stdin
-    open(System::terminal());  // stdout
-    open(System::terminal());  // stderr
+    open(sys.terminal());  // stdin
+    open(sys.terminal());  // stdout
+    open(sys.terminal());  // stderr
 
     // Look up the executable on disk
-    uint32_t ino = System::fs().lookup(cwdIno, path);
+    uint32_t ino = sys.fs().lookup(cwdIno, path);
     ASSERT(ino != ext2::BAD_INO);
-    auto inode = System::fs().readInode(ino);
+    auto inode = sys.fs().readInode(ino);
     ASSERT(inode);
 
     // Allocate a fresh piece of page-aligned physical memory to store it
     imagePagesCount = ceilDiv(inode->size(), PAGE_SIZE);
-    imagePages = System::mm().pageAlloc(imagePagesCount);
-    uint8_t* ptr = System::mm().physicalToVirtual(imagePages).ptr<uint8_t>();
+    imagePages = sys.mm().pageAlloc(imagePagesCount);
+    uint8_t* ptr = sys.mm().physicalToVirtual(imagePages).ptr<uint8_t>();
 
     // Read the executable from disk
-    if (!System::fs().readFullFile(*inode, ptr)) {
+    if (!sys.fs().readFullFile(*inode, ptr)) {
         panic("failed to read file");
     }
 
     // Create user address space and map the executable image into it
-    addressSpace = System::mm().kaddressSpace().makeUserAddressSpace();
+    addressSpace = sys.mm().kaddressSpace().makeUserAddressSpace();
     VirtualAddress entryPoint = addressSpace->userMapBase();
     addressSpace->mapPages(entryPoint, imagePages, imagePagesCount);
 
@@ -114,14 +114,14 @@ Process::Process(pid_t pid, const char* path, const char* argv[], uint32_t initi
     const char* programName = p;
 
     thread = Thread::createUserThread(this, entryPoint, programName, argv);
-    System::scheduler().startThread(thread.get());
+    sys.scheduler().startThread(thread.get());
 }
 
 Process::~Process() {
-    System::mm().pageFree(imagePages, imagePagesCount);
+    sys.mm().pageFree(imagePages, imagePagesCount);
 
     if (heapPagesCount > 0) {
-        System::mm().pageFree(heapPages, heapPagesCount);
+        sys.mm().pageFree(heapPages, heapPagesCount);
     }
 }
 
@@ -130,7 +130,7 @@ void Process::createHeap(size_t size) {
     ASSERT(heapPagesCount == 0);
 
     heapPagesCount = ceilDiv(size, PAGE_SIZE);
-    heapPages = System::mm().pageAlloc(heapPagesCount);
+    heapPages = sys.mm().pageAlloc(heapPagesCount);
     addressSpace->mapPages(heapStart(), heapPages, heapPagesCount);
 }
 

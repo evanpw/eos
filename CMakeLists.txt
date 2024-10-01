@@ -76,6 +76,7 @@ target_compile_options(
     -mno-red-zone
     -fno-rtti
     -fno-exceptions
+    -fno-use-cxa-atexit
     -mgeneral-regs-only
     -Wall
     -Wextra

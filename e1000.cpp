@@ -188,7 +188,7 @@ void E1000Device::staticAssert<E1000Device::ReceiveDescriptor>() {
 }
 
 E1000Device::E1000Device() {
-    _pciDev = System::pciDevices().findByClass(PCIDeviceClass::NetworkEthernet);
+    _pciDev = sys.pciDevices().findByClass(PCIDeviceClass::NetworkEthernet);
 
     // For now, only target the 82540EM-A, though the driver should work with other
     // related Intel devices as well
@@ -227,7 +227,7 @@ void E1000Device::initPCI() {
 
     // The register space of the device is mapped to physical memory, so we overlay a
     // struct on top of it to access the registers
-    _regs = System::mm().physicalToVirtual(memBase).ptr<RegisterSpace>();
+    _regs = sys.mm().physicalToVirtual(memBase).ptr<RegisterSpace>();
 }
 
 void E1000Device::resetDevice() {
@@ -276,7 +276,7 @@ uint16_t E1000Device::readEEPROM(uint8_t addr) {
 uint32_t E1000Device::icr() const { return _regs->icr; }
 
 void e1000IrqHandler(TrapRegisters&) {
-    E1000Device& nic = static_cast<E1000Device&>(System::netif());
+    E1000Device& nic = static_cast<E1000Device&>(sys.netif());
     uint32_t cause = nic.icr();
 
     if (cause & IMR_RXT) {
@@ -293,10 +293,10 @@ void E1000Device::initIrq() {
 }
 
 void E1000Device::initTxRing() {
-    _txDescBase = System::mm().pageAlloc(1);
+    _txDescBase = sys.mm().pageAlloc(1);
 
     // Default-construct the descriptors and get a pointer to the tx ring
-    void* txDescAddr = System::mm().physicalToVirtual(_txDescBase);
+    void* txDescAddr = sys.mm().physicalToVirtual(_txDescBase);
     _txDescCount = PAGE_SIZE / sizeof(TransmitDescriptor);
     _txRing = new (txDescAddr) TransmitDescriptor[_txDescCount];
 
@@ -321,7 +321,7 @@ void E1000Device::sendPacket(uint8_t* buffer, size_t length) {
     }
 
     // Set up the next descriptor in the ring to point to the packet
-    _txRing[idx].bufferAddress = System::mm().virtualToPhysical(buffer);
+    _txRing[idx].bufferAddress = sys.mm().virtualToPhysical(buffer);
     _txRing[idx].clearFlags();
     _txRing[idx].setLength(length);
     _txRing[idx].setEndOfPacket();
@@ -339,10 +339,10 @@ void E1000Device::sendPacket(uint8_t* buffer, size_t length) {
 }
 
 void E1000Device::initRxRing() {
-    _rxDescBase = System::mm().pageAlloc(1);
+    _rxDescBase = sys.mm().pageAlloc(1);
 
     // Default-construct the descriptors and get a pointer to the rx ring
-    void* rxDescAddr = System::mm().physicalToVirtual(_rxDescBase);
+    void* rxDescAddr = sys.mm().physicalToVirtual(_rxDescBase);
     _rxDescCount = PAGE_SIZE / sizeof(ReceiveDescriptor);
     _rxRing = new (rxDescAddr) ReceiveDescriptor[_rxDescCount];
 
@@ -354,7 +354,7 @@ void E1000Device::initRxRing() {
     _regs->rdt = 0;
 
     // Allocate receive buffers for each descriptor and fill the ring
-    PhysicalAddress packetsBase = System::mm().pageAlloc(_rxDescCount);
+    PhysicalAddress packetsBase = sys.mm().pageAlloc(_rxDescCount);
     for (size_t i = 0; i < _rxDescCount; i++) {
         _rxRing[i].bufferAddress = packetsBase + i * PAGE_SIZE;
         _rxRing[i].clearFlags();
@@ -386,7 +386,7 @@ void E1000Device::flushRx() {
 
         // Copy the data out of the static packet buffer
         Buffer buffer(_rxRing[idx].length());
-        void* descBuffer = System::mm().physicalToVirtual(_rxRing[idx].bufferAddress);
+        void* descBuffer = sys.mm().physicalToVirtual(_rxRing[idx].bufferAddress);
         memcpy(buffer.get(), descBuffer, buffer.size());
 
         // Make the descriptor available to the hardware again

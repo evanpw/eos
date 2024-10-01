@@ -176,7 +176,7 @@ void installInterrupts() {
     // Set up the TSS to allow interrupts from ring3 -> ring0 by pointing
     // rsp0 to the top of a 16KiB kernel stack
     VirtualAddress kernelStackBottom =
-        System::mm().physicalToVirtual(System::mm().pageAlloc(4));
+        sys.mm().physicalToVirtual(sys.mm().pageAlloc(4));
     VirtualAddress kernelStackTop = kernelStackBottom + 4 * PAGE_SIZE;
     Processor::tss().rsp0 = kernelStackTop.value;
 

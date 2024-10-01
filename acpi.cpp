@@ -29,7 +29,7 @@ struct __attribute__((packed)) RSDP {
     // TODO: handle revision 2 and its extra fields
 
     static RSDP* tryCreate(PhysicalAddress address) {
-        RSDP* candidate = System::mm().physicalToVirtual(address).ptr<RSDP>();
+        RSDP* candidate = sys.mm().physicalToVirtual(address).ptr<RSDP>();
         if (candidate->verifySignature() && candidate->verifyChecksum()) {
             return candidate;
         } else {
@@ -71,7 +71,7 @@ struct __attribute__((packed)) TableHeader {
         }
 
         TableHeader* candidate =
-            System::mm().physicalToVirtual(address).ptr<TableHeader>();
+            sys.mm().physicalToVirtual(address).ptr<TableHeader>();
 
         if (expected && candidate->signature != makeSignature(expected)) {
             return nullptr;

@@ -139,13 +139,13 @@ UserAddressSpace::UserAddressSpace(KernelAddressSpace& kaddr, PhysicalAddress pm
 
 UserAddressSpace::~UserAddressSpace() {
     for (PhysicalAddress page : _allocatedPages) {
-        System::mm().pageFree(page);
+        sys.mm().pageFree(page);
     }
 }
 
 void UserAddressSpace::mapPage(VirtualAddress virtAddr, PhysicalAddress physAddr,
                                int pageSize) {
-    mapPageImpl(System::mm(), _pml4, virtAddr, physAddr, pageSize, PAGE_USER,
+    mapPageImpl(sys.mm(), _pml4, virtAddr, physAddr, pageSize, PAGE_USER,
                 [this](PhysicalAddress page) { _allocatedPages.push_back(page); });
 }
 

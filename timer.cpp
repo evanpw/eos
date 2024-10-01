@@ -6,9 +6,9 @@
 #include "system.h"
 
 void irqHandler0(TrapRegisters&) {
-    System::timer().increment();
+    sys.timer().increment();
     outb(PIC1_COMMAND, EOI);
-    System::scheduler().onTimerInterrupt();
+    sys.scheduler().onTimerInterrupt();
 }
 
 Timer::Timer() { registerIrqHandler(0, irqHandler0); }
@@ -19,7 +19,7 @@ void Timer::sleep(uint64_t duration, Spinlock* lock) {
     estd::shared_ptr<TimerBlocker> blocker(new TimerBlocker{endTick});
     _blockers.push_back(blocker);
 
-    System::scheduler().sleepThread(blocker, lock);
+    sys.scheduler().sleepThread(blocker, lock);
 }
 
 void Timer::increment() {
@@ -34,7 +34,7 @@ void Timer::increment() {
             continue;
         }
 
-        System::scheduler().wakeThreads(blocker);
+        sys.scheduler().wakeThreads(blocker);
 
         // Remove the expired blocker from the list
         _blockers[i] = _blockers.back();

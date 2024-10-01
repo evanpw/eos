@@ -346,7 +346,7 @@ void IDEController::detectPartitions(IDEDevice& device) {
 }
 
 IDEController::IDEController() {
-    PCIDevice* pciDevice = System::pciDevices().findByClass(PCIDeviceClass::StorageIDE);
+    PCIDevice* pciDevice = sys.pciDevices().findByClass(PCIDeviceClass::StorageIDE);
 
     if (!pciDevice) {
         return;

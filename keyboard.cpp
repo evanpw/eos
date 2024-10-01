@@ -18,7 +18,7 @@ enum : uint16_t {
 void irqHandler1(TrapRegisters&) {
     if (inb(PS2_STATUS) & 1) {
         uint8_t byte = inb(PS2_DATA);
-        System::keyboard().handleKey(byte);
+        sys.keyboard().handleKey(byte);
     }
 
     // EOI signal

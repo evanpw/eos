@@ -41,7 +41,7 @@ struct AllocatedPages {
     ~AllocatedPages() {
         // This is a bit of a hack, but it's fine for our purposes
         for (size_t i = 0; i < pageCount; ++i) {
-            System::mm().pageFrameArray()[start.pageFrame()].status =
+            sys.mm().pageFrameArray()[start.pageFrame()].status =
                 PageFrameStatus::Free;
         }
     }

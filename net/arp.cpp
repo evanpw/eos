@@ -81,7 +81,7 @@ MacAddress arpLookup(NetworkInterface* netif, IpAddress ip) {
     // Wait for the reply
     do {
         // TODO: create a thread blocker for this
-        System::timer().sleep(10);
+        sys.timer().sleep(10);
         // TODO: re-send after a timeout
     } while (!arpLookupCached(ip, &result));
 
