@@ -15,10 +15,6 @@ public:
 
     void sendPacket(uint8_t* buffer, size_t length) override;
 
-    // For use by the irq handler
-    void flushRx();
-    uint32_t icr() const;
-
 private:
     template <typename T>
     static void staticAssert();
@@ -41,8 +37,8 @@ private:
     ReceiveDescriptor* _rxRing;
     size_t _rxDescCount;
 
-    struct TrapRegisters;
-    friend void e1000IrqHandler(TrapRegisters&);
+    void irqHandler();
+    void flushRx();
 
     void initPCI();
     void resetDevice();

@@ -14,17 +14,6 @@ enum : uint16_t {
     PS2_COMMAND = 0x64,
 };
 
-// PS/2 Keyboard IRQ
-void irqHandler1(TrapRegisters&) {
-    if (inb(PS2_STATUS) & 1) {
-        uint8_t byte = inb(PS2_DATA);
-        sys.keyboard().handleKey(byte);
-    }
-
-    // EOI signal
-    outb(PIC1_COMMAND, EOI);
-}
-
 KeyboardDevice::KeyboardDevice() {
     // Flush the output buffer
     while (inb(PS2_STATUS) & 1) {
@@ -36,9 +25,20 @@ KeyboardDevice::KeyboardDevice() {
         _keyState[i] = false;
     }
 
-    registerIrqHandler(1, irqHandler1);
+    registerIrqHandler(1, [this](TrapRegisters&) { this->irqHandler(); });
 
     println("kbd: init complete");
+}
+
+// PS/2 Keyboard IRQ
+void KeyboardDevice::irqHandler() {
+    if (inb(PS2_STATUS) & 1) {
+        uint8_t byte = inb(PS2_DATA);
+        handleKey(byte);
+    }
+
+    // EOI signal
+    outb(PIC1_COMMAND, EOI);
 }
 
 void KeyboardDevice::handleKey(uint8_t scanCode) {

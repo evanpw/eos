@@ -5,13 +5,9 @@
 #include "scheduler.h"
 #include "system.h"
 
-void irqHandler0(TrapRegisters&) {
-    sys.timer().increment();
-    outb(PIC1_COMMAND, EOI);
-    sys.scheduler().onTimerInterrupt();
+Timer::Timer() {
+    registerIrqHandler(0, [this](TrapRegisters&) { this->irqHandler(); });
 }
-
-Timer::Timer() { registerIrqHandler(0, irqHandler0); }
 
 void Timer::sleep(uint64_t duration, Spinlock* lock) {
     uint64_t endTick = tickCount() + duration;
@@ -40,4 +36,10 @@ void Timer::increment() {
         _blockers[i] = _blockers.back();
         _blockers.pop_back();
     }
+}
+
+void Timer::irqHandler() {
+    increment();
+    outb(PIC1_COMMAND, EOI);
+    sys.scheduler().onTimerInterrupt();
 }

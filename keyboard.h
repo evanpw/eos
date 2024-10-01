@@ -140,7 +140,7 @@ private:
     friend class System;
     KeyboardDevice();
 
-    friend void irqHandler1(TrapRegisters& regs);
+    void irqHandler();
     void handleKey(uint8_t scanCode);
 
     bool _lastE0 = false;

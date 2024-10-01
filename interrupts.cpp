@@ -43,11 +43,11 @@ static constexpr uint8_t IRQ_OFFSET = 0x20;
 InterruptDescriptor* g_idt = nullptr;
 IDTRegister g_idtr;
 
-static IRQHandler irqHandlers[16] = {nullptr};
+static IRQHandler irqHandlers[16] = {};
 
 void registerIrqHandler(uint8_t idx, IRQHandler handler) {
     ASSERT(idx < 16);
-    ASSERT(irqHandlers[idx] == nullptr);
+    ASSERT(!irqHandlers[idx]);
     irqHandlers[idx] = handler;
 
     // Unmask this IRQ at the PIC
@@ -58,7 +58,7 @@ void registerIrqHandler(uint8_t idx, IRQHandler handler) {
 
 // Called by the assembly-language IRQ entry points defined in entry.S
 extern "C" void irqEntry(uint8_t idx, TrapRegisters& regs) {
-    ASSERT(irqHandlers[idx] != nullptr);
+    ASSERT(irqHandlers[idx]);
     irqHandlers[idx](regs);
 }
 
@@ -175,8 +175,7 @@ void installInterrupts() {
 
     // Set up the TSS to allow interrupts from ring3 -> ring0 by pointing
     // rsp0 to the top of a 16KiB kernel stack
-    VirtualAddress kernelStackBottom =
-        sys.mm().physicalToVirtual(sys.mm().pageAlloc(4));
+    VirtualAddress kernelStackBottom = sys.mm().physicalToVirtual(sys.mm().pageAlloc(4));
     VirtualAddress kernelStackTop = kernelStackBottom + 4 * PAGE_SIZE;
     Processor::tss().rsp0 = kernelStackTop.value;
 

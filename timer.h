@@ -1,13 +1,8 @@
 #pragma once
 #include "estd/atomic.h"
 #include "scheduler.h"
-#include "trap.h"
-
-extern "C" void irqHandler0(TrapRegisters& regs);
 
 class Timer {
-    friend void irqHandler0(TrapRegisters& regs);
-
 public:
     Timer();
 
@@ -17,6 +12,8 @@ public:
 private:
     AtomicInt _tickCount = 0;
     void increment();
+
+    void irqHandler();
 
     struct TimerBlocker : Blocker {
         TimerBlocker(uint64_t endTick) : endTick(endTick) {}

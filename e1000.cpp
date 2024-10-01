@@ -272,15 +272,11 @@ uint16_t E1000Device::readEEPROM(uint8_t addr) {
     }
 }
 
-// Makes the ICR register accessible to the irq handler
-uint32_t E1000Device::icr() const { return _regs->icr; }
-
-void e1000IrqHandler(TrapRegisters&) {
-    E1000Device& nic = static_cast<E1000Device&>(sys.netif());
-    uint32_t cause = nic.icr();
+void E1000Device::irqHandler() {
+    uint32_t cause = _regs->icr;
 
     if (cause & IMR_RXT) {
-        nic.flushRx();
+        flushRx();
     }
 
     outb(PIC2_COMMAND, EOI);
@@ -289,7 +285,7 @@ void e1000IrqHandler(TrapRegisters&) {
 
 void E1000Device::initIrq() {
     // Register the IRQ handler for the device
-    registerIrqHandler(_irqNumber, e1000IrqHandler);
+    registerIrqHandler(_irqNumber, [this](TrapRegisters&) { this->irqHandler(); });
 }
 
 void E1000Device::initTxRing() {
