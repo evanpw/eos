@@ -4,7 +4,7 @@
 
 #include "address.h"
 #include "estd/print.h"
-#include "system.h"
+#include "mm.h"
 #include "units.h"
 
 uint32_t makeSignature(const char* str) {
@@ -29,7 +29,7 @@ struct __attribute__((packed)) RSDP {
     // TODO: handle revision 2 and its extra fields
 
     static RSDP* tryCreate(PhysicalAddress address) {
-        RSDP* candidate = sys.mm().physicalToVirtual(address).ptr<RSDP>();
+        RSDP* candidate = mm.physicalToVirtual(address).ptr<RSDP>();
         if (candidate->verifySignature() && candidate->verifyChecksum()) {
             return candidate;
         } else {
@@ -70,8 +70,7 @@ struct __attribute__((packed)) TableHeader {
             return nullptr;
         }
 
-        TableHeader* candidate =
-            sys.mm().physicalToVirtual(address).ptr<TableHeader>();
+        TableHeader* candidate = mm.physicalToVirtual(address).ptr<TableHeader>();
 
         if (expected && candidate->signature != makeSignature(expected)) {
             return nullptr;

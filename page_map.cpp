@@ -2,7 +2,7 @@
 
 #include <string.h>
 
-#include "mem.h"
+#include "mm.h"
 #include "system.h"
 
 // Page map flags
@@ -139,13 +139,13 @@ UserAddressSpace::UserAddressSpace(KernelAddressSpace& kaddr, PhysicalAddress pm
 
 UserAddressSpace::~UserAddressSpace() {
     for (PhysicalAddress page : _allocatedPages) {
-        sys.mm().pageFree(page);
+        mm.pageFree(page);
     }
 }
 
 void UserAddressSpace::mapPage(VirtualAddress virtAddr, PhysicalAddress physAddr,
                                int pageSize) {
-    mapPageImpl(sys.mm(), _pml4, virtAddr, physAddr, pageSize, PAGE_USER,
+    mapPageImpl(mm, _pml4, virtAddr, physAddr, pageSize, PAGE_USER,
                 [this](PhysicalAddress page) { _allocatedPages.push_back(page); });
 }
 

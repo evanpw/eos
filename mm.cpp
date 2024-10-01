@@ -1,4 +1,4 @@
-#include "mem.h"
+#include "mm.h"
 
 #include <string.h>
 
@@ -8,6 +8,9 @@
 #include "klibc.h"
 #include "page_map.h"
 #include "panic.h"
+
+// Constructed by System::System
+MemoryManager mm;
 
 MemoryManager::MemoryManager()
 : _e820Table(E820_TABLE, *E820_NUM_ENTRIES_PTR), _kaddressSpace(*this) {

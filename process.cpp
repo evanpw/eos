@@ -5,6 +5,7 @@
 #include "file.h"
 #include "fs/ext2.h"
 #include "klibc.h"
+#include "mm.h"
 #include "page_map.h"
 #include "panic.h"
 #include "system.h"
@@ -91,8 +92,8 @@ Process::Process(pid_t pid, const char* path, const char* argv[], uint32_t initi
 
     // Allocate a fresh piece of page-aligned physical memory to store it
     imagePagesCount = ceilDiv(inode->size(), PAGE_SIZE);
-    imagePages = sys.mm().pageAlloc(imagePagesCount);
-    uint8_t* ptr = sys.mm().physicalToVirtual(imagePages).ptr<uint8_t>();
+    imagePages = mm.pageAlloc(imagePagesCount);
+    uint8_t* ptr = mm.physicalToVirtual(imagePages).ptr<uint8_t>();
 
     // Read the executable from disk
     if (!sys.fs().readFullFile(*inode, ptr)) {
@@ -100,7 +101,7 @@ Process::Process(pid_t pid, const char* path, const char* argv[], uint32_t initi
     }
 
     // Create user address space and map the executable image into it
-    addressSpace = sys.mm().kaddressSpace().makeUserAddressSpace();
+    addressSpace = mm.kaddressSpace().makeUserAddressSpace();
     VirtualAddress entryPoint = addressSpace->userMapBase();
     addressSpace->mapPages(entryPoint, imagePages, imagePagesCount);
 
@@ -118,10 +119,10 @@ Process::Process(pid_t pid, const char* path, const char* argv[], uint32_t initi
 }
 
 Process::~Process() {
-    sys.mm().pageFree(imagePages, imagePagesCount);
+    mm.pageFree(imagePages, imagePagesCount);
 
     if (heapPagesCount > 0) {
-        sys.mm().pageFree(heapPages, heapPagesCount);
+        mm.pageFree(heapPages, heapPagesCount);
     }
 }
 
@@ -130,7 +131,7 @@ void Process::createHeap(size_t size) {
     ASSERT(heapPagesCount == 0);
 
     heapPagesCount = ceilDiv(size, PAGE_SIZE);
-    heapPages = sys.mm().pageAlloc(heapPagesCount);
+    heapPages = mm.pageAlloc(heapPagesCount);
     addressSpace->mapPages(heapStart(), heapPages, heapPagesCount);
 }
 

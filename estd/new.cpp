@@ -10,13 +10,13 @@ void operator delete[](void*, void*) noexcept {}
 
 // Regular (non-placement) new / delete
 #ifdef KERNEL
-#include "system.h"
-void* operator new(size_t count) { return sys.mm().kmalloc(count); }
-void* operator new[](size_t count) { return sys.mm().kmalloc(count); }
-void operator delete(void* ptr) noexcept { sys.mm().kfree(ptr); }
-void operator delete[](void* ptr) noexcept { sys.mm().kfree(ptr); }
-void operator delete(void* ptr, size_t) noexcept { sys.mm().kfree(ptr); }
-void operator delete[](void* ptr, size_t) noexcept { sys.mm().kfree(ptr); }
+#include "mm.h"
+void* operator new(size_t count) { return mm.kmalloc(count); }
+void* operator new[](size_t count) { return mm.kmalloc(count); }
+void operator delete(void* ptr) noexcept { mm.kfree(ptr); }
+void operator delete[](void* ptr) noexcept { mm.kfree(ptr); }
+void operator delete(void* ptr, size_t) noexcept { mm.kfree(ptr); }
+void operator delete[](void* ptr, size_t) noexcept { mm.kfree(ptr); }
 #else
 #include "stdlib.h"
 void* operator new(size_t count) { return malloc(count); }

@@ -6,7 +6,7 @@
 #include "estd/print.h"
 #include "io.h"
 #include "keyboard.h"
-#include "mem.h"
+#include "mm.h"
 #include "panic.h"
 #include "processor.h"
 #include "system.h"
@@ -175,7 +175,7 @@ void installInterrupts() {
 
     // Set up the TSS to allow interrupts from ring3 -> ring0 by pointing
     // rsp0 to the top of a 16KiB kernel stack
-    VirtualAddress kernelStackBottom = sys.mm().physicalToVirtual(sys.mm().pageAlloc(4));
+    VirtualAddress kernelStackBottom = mm.physicalToVirtual(mm.pageAlloc(4));
     VirtualAddress kernelStackTop = kernelStackBottom + 4 * PAGE_SIZE;
     Processor::tss().rsp0 = kernelStackTop.value;
 

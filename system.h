@@ -1,7 +1,6 @@
 // Holder class for initializing and accessing various components of the kernel
 #pragma once
 #include "estd/memory.h"
-#include "mem.h"
 
 class Screen;
 class KeyboardDevice;
@@ -18,7 +17,6 @@ public:
     System();
     void run();
 
-    MemoryManager& mm() { return _mm; }
     Screen& screen() { return *_screen; }
     KeyboardDevice& keyboard() { return *_keyboard; }
     estd::shared_ptr<Terminal> terminal();
@@ -29,9 +27,6 @@ public:
     Timer& timer() { return *_timer; }
 
 private:
-    // This can't be a pointer because we need it to implement new()
-    MemoryManager _mm;
-
     estd::unique_ptr<Screen> _screen;
     estd::unique_ptr<KeyboardDevice> _keyboard;
     estd::shared_ptr<Terminal> _terminal;

@@ -41,7 +41,7 @@ struct AllocatedPages {
     ~AllocatedPages() {
         // This is a bit of a hack, but it's fine for our purposes
         for (size_t i = 0; i < pageCount; ++i) {
-            sys.mm().pageFrameArray()[start.pageFrame()].status =
+            mm.pageFrameArray()[start.pageFrame()].status =
                 PageFrameStatus::Free;
         }
     }
@@ -57,6 +57,8 @@ struct PageFrame {
 // Handles physical and virtual memory at the page level
 class MemoryManager {
 public:
+    MemoryManager();
+
     size_t freePageCount() const;
 
     PhysicalAddress pageAlloc(size_t count = 1);
@@ -85,9 +87,6 @@ public:
     void showFreePageList() const;
 
 private:
-    friend class System;
-    MemoryManager();
-
     E820Table _e820Table;
     KernelAddressSpace _kaddressSpace;
 
@@ -119,3 +118,5 @@ private:
     uint8_t* _heap = nullptr;
     void initializeHeap();
 };
+
+extern MemoryManager mm;

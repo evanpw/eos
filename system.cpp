@@ -7,7 +7,7 @@
 #include "interrupts.h"
 #include "keyboard.h"
 #include "klibc.h"
-#include "mem.h"
+#include "mm.h"
 #include "net/arp.h"
 #include "net/dhcp.h"
 #include "net/ip.h"
@@ -70,6 +70,8 @@ void System::run() {
 }
 
 System::System() {
+    new (&mm) MemoryManager();
+
     Processor::init();
     installInterrupts();
     _screen.assign(new Screen);

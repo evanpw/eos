@@ -8,6 +8,7 @@
 #include "estd/print.h"
 #include "interrupts.h"
 #include "io.h"
+#include "mm.h"
 #include "net/ethernet.h"
 #include "panic.h"
 #include "system.h"
@@ -227,7 +228,7 @@ void E1000Device::initPCI() {
 
     // The register space of the device is mapped to physical memory, so we overlay a
     // struct on top of it to access the registers
-    _regs = sys.mm().physicalToVirtual(memBase).ptr<RegisterSpace>();
+    _regs = mm.physicalToVirtual(memBase).ptr<RegisterSpace>();
 }
 
 void E1000Device::resetDevice() {
@@ -289,10 +290,10 @@ void E1000Device::initIrq() {
 }
 
 void E1000Device::initTxRing() {
-    _txDescBase = sys.mm().pageAlloc(1);
+    _txDescBase = mm.pageAlloc(1);
 
     // Default-construct the descriptors and get a pointer to the tx ring
-    void* txDescAddr = sys.mm().physicalToVirtual(_txDescBase);
+    void* txDescAddr = mm.physicalToVirtual(_txDescBase);
     _txDescCount = PAGE_SIZE / sizeof(TransmitDescriptor);
     _txRing = new (txDescAddr) TransmitDescriptor[_txDescCount];
 
@@ -317,7 +318,7 @@ void E1000Device::sendPacket(uint8_t* buffer, size_t length) {
     }
 
     // Set up the next descriptor in the ring to point to the packet
-    _txRing[idx].bufferAddress = sys.mm().virtualToPhysical(buffer);
+    _txRing[idx].bufferAddress = mm.virtualToPhysical(buffer);
     _txRing[idx].clearFlags();
     _txRing[idx].setLength(length);
     _txRing[idx].setEndOfPacket();
@@ -335,10 +336,10 @@ void E1000Device::sendPacket(uint8_t* buffer, size_t length) {
 }
 
 void E1000Device::initRxRing() {
-    _rxDescBase = sys.mm().pageAlloc(1);
+    _rxDescBase = mm.pageAlloc(1);
 
     // Default-construct the descriptors and get a pointer to the rx ring
-    void* rxDescAddr = sys.mm().physicalToVirtual(_rxDescBase);
+    void* rxDescAddr = mm.physicalToVirtual(_rxDescBase);
     _rxDescCount = PAGE_SIZE / sizeof(ReceiveDescriptor);
     _rxRing = new (rxDescAddr) ReceiveDescriptor[_rxDescCount];
 
@@ -350,7 +351,7 @@ void E1000Device::initRxRing() {
     _regs->rdt = 0;
 
     // Allocate receive buffers for each descriptor and fill the ring
-    PhysicalAddress packetsBase = sys.mm().pageAlloc(_rxDescCount);
+    PhysicalAddress packetsBase = mm.pageAlloc(_rxDescCount);
     for (size_t i = 0; i < _rxDescCount; i++) {
         _rxRing[i].bufferAddress = packetsBase + i * PAGE_SIZE;
         _rxRing[i].clearFlags();
@@ -382,7 +383,7 @@ void E1000Device::flushRx() {
 
         // Copy the data out of the static packet buffer
         Buffer buffer(_rxRing[idx].length());
-        void* descBuffer = sys.mm().physicalToVirtual(_rxRing[idx].bufferAddress);
+        void* descBuffer = mm.physicalToVirtual(_rxRing[idx].bufferAddress);
         memcpy(buffer.get(), descBuffer, buffer.size());
 
         // Make the descriptor available to the hardware again

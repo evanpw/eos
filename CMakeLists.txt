@@ -44,7 +44,7 @@ set(KERNEL_SOURCES
     interrupts.cpp
     keyboard.cpp
     kmain.cpp
-    mem.cpp
+    mm.cpp
     net/arp.cpp
     net/dhcp.cpp
     net/ethernet.cpp
