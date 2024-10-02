@@ -139,9 +139,7 @@ struct TcpControlBlock {
 
     uint8_t recvBuffer[RECV_BUFFER_SIZE];
     uint32_t recvBufferUsed() { return sizeof(recvBuffer) - recv.window; }
-
-    // This flag is set if we receive a PSH flag or if the receive buffer is full
-    bool dataReady;
+    bool recvBufferEmpty() { return recvBufferUsed() == 0; }
 
     TcpControlBlock* next;
 };
@@ -199,7 +197,6 @@ TcpControlBlock::TcpControlBlock() {
     send.window = 0;
     recv.next = 0;
     recv.window = RECV_BUFFER_SIZE;
-    dataReady = false;
     next = nullptr;
 }
 
@@ -309,7 +306,6 @@ void tcpRecvListen(NetworkInterface* netif, TcpControlBlock* tcb, IpHeader* ipHe
     tcb->irs = tcpHeader->seqNum();
     tcb->recv.next = tcb->irs + 1;  // SYN consumes one sequence number
     tcb->recv.window = TcpControlBlock::RECV_BUFFER_SIZE;
-    tcb->dataReady = false;
 
     // Reply with SYN-ACK
     TcpHeader response;
@@ -361,10 +357,6 @@ void tcpRecvEstablished(NetworkInterface* netif, TcpControlBlock* tcb,
     if (dataLen > 0) {
         memcpy(tcb->recvBuffer + tcb->recvBufferUsed(), data, dataLen);
         tcb->recv.window -= dataLen;
-
-        if (tcpHeader->psh() || tcb->recv.window == 0) {
-            tcb->dataReady = true;
-        }
     }
 
     tcb->state = TcpState::ESTABLISHED;
@@ -662,7 +654,7 @@ ssize_t tcpRecv(NetworkInterface*, TcpHandle handle, void* buffer, size_t size) 
             case TcpState::FIN_WAIT_1:
             case TcpState::FIN_WAIT_2:
                 // Wait until we receive a push or the recv window is full
-                if (tcb->dataReady) {
+                if (!tcb->recvBufferEmpty()) {
                     ready = true;
                 } else {
                     sys.timer().sleep(1, &tcb->lock);
@@ -671,7 +663,7 @@ ssize_t tcpRecv(NetworkInterface*, TcpHandle handle, void* buffer, size_t size) 
 
             case TcpState::CLOSE_WAIT:
                 // No more data is coming, but we can read what's left in the buffer
-                if (tcb->recvBufferUsed() != 0) {
+                if (!tcb->recvBufferEmpty()) {
                     ready = true;
                 } else {
                     return 0;
@@ -691,11 +683,6 @@ ssize_t tcpRecv(NetworkInterface*, TcpHandle handle, void* buffer, size_t size) 
     // Shift the remaining data to the front of the buffer
     memcpy(tcb->recvBuffer, tcb->recvBuffer + readSize, tcb->recvBufferUsed() - readSize);
     tcb->recv.window += readSize;
-
-    // If we've emptied the recieve buffer, start buffering again
-    if (tcb->recvBufferUsed() == 0) {
-        tcb->dataReady = false;
-    }
 
     tcb->lock.unlock();
     return readSize;
