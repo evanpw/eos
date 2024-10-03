@@ -27,6 +27,7 @@ set(ESTD_SOURCES
 set(KLIBC_SOURCES
     ${CMAKE_SOURCE_DIR}/user/libc/string.cpp
     ${CMAKE_SOURCE_DIR}/user/libc/arpa/inet.cpp
+    ${CMAKE_SOURCE_DIR}/klibc.cpp
 )
 
 

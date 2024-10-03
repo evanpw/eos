@@ -54,21 +54,18 @@ static void arpInsert(IpAddress ip, MacAddress mac);
 void arpInit() { arpLock = new Spinlock(); }
 
 bool arpLookupCached(IpAddress ip, MacAddress* result) {
-    println("arpLookupCached");
     SpinlockLocker locker(*arpLock);
 
     ArpEntry* entry = arpCache;
     while (entry != nullptr) {
         if (entry->ip == ip) {
             *result = entry->mac;
-            println("arpLookupCached: found");
             return true;
         }
 
         entry = entry->next;
     }
 
-    println("arpLookupCached: not found");
     return false;
 }
 

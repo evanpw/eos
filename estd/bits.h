@@ -46,6 +46,10 @@ inline uint32_t concatBits(uint16_t high, uint16_t low) {
     return ((uint32_t)high << 16) | low;
 }
 
+inline uint16_t concatBits(uint8_t high, uint8_t low) {
+    return ((uint16_t)high << 8) | low;
+}
+
 inline uint32_t concatBits(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
     return (a << 24) | (b << 16) | (c << 8) | d;
 }

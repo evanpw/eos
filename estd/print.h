@@ -83,6 +83,10 @@ template <>
 struct normalize_type<int> {
     using type = uint64_t;
 };
+template <>
+struct normalize_type<long int> {
+    using type = uint64_t;
+};
 
 // Specialize for char* and const char* to print as strings
 template <>

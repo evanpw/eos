@@ -37,6 +37,28 @@ enum class DnsOpcode : uint8_t {
     Dso = 6,       // DNS Stateful Operations
 };
 
+enum class DnsRecordType : uint16_t {
+    A = 1,       // IPv4 address
+    NS = 2,      // Name server
+    CNAME = 5,   // Canonical name
+    SOA = 6,     // Start of authority
+    PTR = 12,    // Pointer
+    MX = 15,     // Mail exchange
+    TXT = 16,    // Text
+    AAAA = 28,   // IPv6 address
+    SRV = 33,    // Service locator
+    OPT = 41,    // EDNS0 option
+    AXFR = 252,  // Transfer zone of authority
+    ANY = 255,   // Any record
+};
+
+enum class DnsRecordClass : uint16_t {
+    IN = 1,  // Internet
+    CS = 2,  // CSNET
+    CH = 3,  // CHAOS
+    HS = 4,  // Hesiod
+};
+
 class DnsHeader {
     uint16_t _id;  // transaction ID
     union {
@@ -46,10 +68,9 @@ class DnsHeader {
             uint16_t _aa : 1;      // authoritative answer
             uint16_t _opcode : 4;  // operation code
             uint16_t _qr : 1;      // query/response flag
-
-            uint16_t _rcode : 4;  // response code
-            uint16_t _z : 3;      // reserved
-            uint16_t _ra : 1;     // recursion available
+            uint16_t _rcode : 4;   // response code
+            uint16_t _z : 3;       // reserved
+            uint16_t _ra : 1;      // recursion available
         };
         uint16_t _flags;
     };
@@ -59,19 +80,19 @@ class DnsHeader {
     uint16_t _arcount;  // number of resource records in the additional records section
 
 public:
-    uint16_t id();
-    bool isReply();
-    DnsOpcode opcode();
-    bool authoritativeAnswer();
-    bool truncated();
-    bool recursionDesired();
-    bool recursionAvailable();
-    DnsResponseCode rcode();
-    uint16_t flags();
-    uint16_t qdcount();
-    uint16_t ancount();
-    uint16_t nscount();
-    uint16_t arcount();
+    uint16_t id() const;
+    bool isReply() const;
+    DnsOpcode opcode() const;
+    bool authoritativeAnswer() const;
+    bool truncated() const;
+    bool recursionDesired() const;
+    bool recursionAvailable() const;
+    DnsResponseCode rcode() const;
+    uint16_t flags() const;
+    uint16_t qdcount() const;
+    uint16_t ancount() const;
+    uint16_t nscount() const;
+    uint16_t arcount() const;
 
     void setId(uint16_t value);
     void setOpcode(DnsOpcode value);
@@ -84,5 +105,7 @@ public:
 
 static_assert(sizeof(DnsHeader) == 12);
 
-IpAddress dnsResolve(NetworkInterface* netif, IpAddress dnsServer, const char* hostname);
+void dnsInit();
+IpAddress dnsResolve(NetworkInterface* netif, IpAddress dnsServer, const char* hostname,
+                     bool blocking = false);
 void dnsRecv(NetworkInterface* netif, uint8_t* buffer, size_t size);

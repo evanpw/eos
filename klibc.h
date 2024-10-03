@@ -2,6 +2,8 @@
 // kernel
 #pragma once
 
+#include <stddef.h>
+
 template <typename T>
 T min(const T& lhs, const T& rhs) {
     return (rhs < lhs) ? rhs : lhs;
@@ -34,3 +36,7 @@ T roundDown(T num, U denom) {
     ASSERT(num >= 0 && denom > 0);
     return denom * (num / denom);
 }
+
+// Defined via kmalloc / kfree so that we can use parts of libc in the kernel
+extern "C" void* malloc(size_t size);
+extern "C" void free(void* ptr);

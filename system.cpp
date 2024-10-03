@@ -31,23 +31,21 @@ void testNetwork() {
 
     // Wait for DHCP to finish
     while (!netif->isConfigured()) {
-        println("waiting for dhcp");
         sys.timer().sleep(10);
     }
 
+    // Lookup gh.evanpw.com via DNS
     const char* hostname = "gh.evanpw.com";
-    IpAddress result = dnsResolve(netif, IpAddress(10, 0, 2, 3), hostname);
-    println("{} -> {}", hostname, result);
+    IpAddress destIp = dnsResolve(netif, IpAddress(10, 0, 2, 3), hostname, true);
 
-    /*
-    // Send a request to gh.evanpw.com
-    IpAddress destIp(185, 199, 110, 153);
+    // Send an HTTP request for the root file
     const char* request =
         "GET / HTTP/1.1\r\nHost: gh.evanpw.com\r\nConnection: close\r\n\r\n";
 
     TcpHandle handle = tcpConnect(netif, destIp, 80);
     tcpSend(netif, handle, request, strlen(request), true);
 
+    // Echo the result to the terminal
     char* buffer = new char[1024];
     while (true) {
         ssize_t bytesRead = tcpRecv(netif, handle, buffer, 1023);
@@ -62,7 +60,6 @@ void testNetwork() {
         print(buffer);
     }
     delete[] buffer;
-    */
 
     sys.scheduler().stopThread(currentThread);
 }
@@ -92,6 +89,7 @@ System::System() {
     arpInit();
     tcpInit();
     dhcpInit(_netif.get());
+    dnsInit();
     initACPI();
     _scheduler.assign(new Scheduler);
     _timer.assign(new Timer);

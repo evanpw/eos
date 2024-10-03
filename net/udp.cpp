@@ -60,9 +60,7 @@ void udpSend(NetworkInterface* netif, IpAddress destIp, uint16_t sourcePort,
     udpHeader->setChecksum(0);
 
     memcpy(udpHeader->data(), buffer, size);
-    println("udp send: {} -> {}:{} ({} bytes)", sourcePort, destIp, destPort, size);
     ipSend(netif, destIp, IpProtocol::Udp, packet, totalSize, blocking);
-    println("udp sent");
 
     delete[] packet;
 }
