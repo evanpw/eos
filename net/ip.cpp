@@ -94,8 +94,10 @@ void ipRecv(NetworkInterface* netif, uint8_t* buffer, size_t size) {
 // Extremely basic IP routing
 bool findRoute(NetworkInterface* netif, IpAddress destIp, MacAddress* destMac,
                bool blocking) {
+    println("net: find route to {}", destIp);
     if (destIp == IpAddress::broadcast()) {
         *destMac = MacAddress::broadcast();
+        println("net: broadcast");
         return true;
     }
 
@@ -104,9 +106,11 @@ bool findRoute(NetworkInterface* netif, IpAddress destIp, MacAddress* destMac,
     IpAddress nextHop = netif->isLocal(destIp) ? destIp : netif->gateway();
     if (blocking) {
         *destMac = arpLookup(netif, nextHop);
+        println("net: arp lookup {}", *destMac);
         return true;
     }
 
+    println("net: arp lookup cached");
     return arpLookupCached(nextHop, destMac);
 }
 

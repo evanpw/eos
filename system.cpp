@@ -10,6 +10,7 @@
 #include "mm.h"
 #include "net/arp.h"
 #include "net/dhcp.h"
+#include "net/dns.h"
 #include "net/ip.h"
 #include "net/tcp.h"
 #include "pci.h"
@@ -30,9 +31,15 @@ void testNetwork() {
 
     // Wait for DHCP to finish
     while (!netif->isConfigured()) {
+        println("waiting for dhcp");
         sys.timer().sleep(10);
     }
 
+    const char* hostname = "gh.evanpw.com";
+    IpAddress result = dnsResolve(netif, IpAddress(10, 0, 2, 3), hostname);
+    println("{} -> {}", hostname, result);
+
+    /*
     // Send a request to gh.evanpw.com
     IpAddress destIp(185, 199, 110, 153);
     const char* request =
@@ -55,6 +62,7 @@ void testNetwork() {
         print(buffer);
     }
     delete[] buffer;
+    */
 
     sys.scheduler().stopThread(currentThread);
 }

@@ -47,6 +47,7 @@ set(KERNEL_SOURCES
     mm.cpp
     net/arp.cpp
     net/dhcp.cpp
+    net/dns.cpp
     net/ethernet.cpp
     net/ip.cpp
     net/tcp.cpp

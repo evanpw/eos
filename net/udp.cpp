@@ -6,6 +6,7 @@
 #include "estd/new.h"
 #include "estd/print.h"
 #include "net/dhcp.h"
+#include "net/dns.h"
 #include "net/ip.h"
 #include "net/network_interface.h"
 
@@ -42,11 +43,13 @@ void udpRecv(NetworkInterface* netif, IpHeader* ipHeader, uint8_t* buffer, size_
                 udpHeader->data(), dataLen);
     } else if (udpHeader->destPort() == DHCP_CLIENT_PORT) {
         dhcpRecv(netif, ipHeader, udpHeader->data(), udpHeader->dataLen());
+    } else if (udpHeader->destPort() == 10053) {
+        dnsRecv(netif, udpHeader->data(), udpHeader->dataLen());
     }
 }
 
 void udpSend(NetworkInterface* netif, IpAddress destIp, uint16_t sourcePort,
-             uint16_t destPort, uint8_t* buffer, uint8_t size) {
+             uint16_t destPort, uint8_t* buffer, uint8_t size, bool blocking) {
     size_t totalSize = sizeof(UdpHeader) + size;
     uint8_t* packet = new uint8_t[totalSize];
 
@@ -57,7 +60,9 @@ void udpSend(NetworkInterface* netif, IpAddress destIp, uint16_t sourcePort,
     udpHeader->setChecksum(0);
 
     memcpy(udpHeader->data(), buffer, size);
-    ipSend(netif, destIp, IpProtocol::Udp, packet, totalSize);
+    println("udp send: {} -> {}:{} ({} bytes)", sourcePort, destIp, destPort, size);
+    ipSend(netif, destIp, IpProtocol::Udp, packet, totalSize, blocking);
+    println("udp sent");
 
     delete[] packet;
 }
