@@ -41,7 +41,7 @@ void ProcessTable::destroy(Process* process) {
         for (size_t j = 0; j < _blockers.size(); ++j) {
             if (_blockers[j]->pid != process->pid) continue;
 
-            sys.scheduler().wakeThreads(_blockers.back());
+            sys.scheduler().wakeThreadsLocked(_blockers.back());
             estd::swap(_blockers[j], _blockers.back());
             _blockers.pop_back();
         }

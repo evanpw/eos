@@ -35,6 +35,7 @@ public:
 
     void sleepThread(const estd::shared_ptr<Blocker>& blocker, Spinlock* lock = nullptr);
     void wakeThreads(const estd::shared_ptr<Blocker>& blocker);
+    void wakeThreadsLocked(const estd::shared_ptr<Blocker>& blocker);
 
     void onTimerInterrupt();
 
