@@ -2,7 +2,7 @@
 #pragma once
 #include <stdint.h>
 
-using pid_t = int32_t;
-using ssize_t = int64_t;
-using off_t = int64_t;
-using ino_t = uint32_t;
+typedef int32_t pid_t;
+typedef int64_t ssize_t;
+typedef int64_t off_t;
+typedef uint32_t ino_t;

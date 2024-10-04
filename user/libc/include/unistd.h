@@ -3,7 +3,9 @@
 #include <stddef.h>
 #include <sys/types.h>
 
+#ifdef __cplusplus
 extern "C" {
+#endif
 
 #define STDIN_FILENO 0
 #define STDOUT_FILENO 1
@@ -21,4 +23,7 @@ char* getcwd(char* buffer, size_t size);
 // Non-standard
 int sleep(int ticks);
 pid_t launch(const char* path, const char* argv[]);
+
+#ifdef __cplusplus
 }
+#endif

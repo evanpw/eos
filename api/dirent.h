@@ -3,7 +3,9 @@
 
 #include <stdint.h>
 
+#ifdef __cplusplus
 extern "C" {
+#endif
 
 struct __attribute__((packed)) dirent {
     uint32_t d_ino;
@@ -11,4 +13,7 @@ struct __attribute__((packed)) dirent {
     uint8_t d_type;
     char d_name[];
 };
+
+#ifdef __cplusplus
 }
+#endif

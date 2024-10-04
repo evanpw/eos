@@ -6,7 +6,9 @@
 // Defines struct dirent
 #include "api/dirent.h"
 
+#ifdef __cplusplus
 extern "C" {
+#endif
 
 struct DIR {
     uint8_t* buffer;
@@ -14,10 +16,13 @@ struct DIR {
     uint32_t offset;
 };
 
-int closedir(DIR*);
+int closedir(struct DIR*);
 DIR* opendir(const char* name);
-dirent* readdir(DIR*);
-void rewinddir(DIR*);
-void seekdir(DIR*, long loc);
-long telldir(DIR*);
+dirent* readdir(struct DIR*);
+void rewinddir(struct DIR*);
+void seekdir(struct DIR*, long loc);
+long telldir(struct DIR*);
+
+#ifdef __cplusplus
 }
+#endif

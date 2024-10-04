@@ -5,4 +5,8 @@
 #include "api/errno.h"
 
 // TODO: should be thread-local?
+#ifdef __cplusplus
 extern "C" int errno;
+#else
+int errno;
+#endif
