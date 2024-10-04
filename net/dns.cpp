@@ -84,7 +84,7 @@ struct DnsRecord {
     const char* name;
     DnsRecordType type;
     DnsRecordClass cls;
-    int32_t ttl;
+    uint32_t ttl;
     uint16_t rdlength;
     const uint8_t* rdata;
 
@@ -184,7 +184,7 @@ class ResponseParser {
 
             uint32_t ttlRaw;
             memcpy(&ttlRaw, p, 4);
-            int32_t ttl = (int32_t)ntohl(ttlRaw);
+            uint32_t ttl = ntohl(ttlRaw);
             p += 4;
 
             uint16_t rdlengthRaw;
