@@ -60,6 +60,7 @@ endmacro()
 make_user_target(shell shell.cpp)
 make_user_target(spam spam.cpp)
 make_user_target(cat cat.cpp)
+make_user_target(wget wget.cpp)
 
 add_custom_target(
     userland
@@ -67,11 +68,13 @@ add_custom_target(
     shell.elf
     spam.elf
     cat.elf
+    wget.elf
 )
 
 set(USERLAND_BINARIES
     ${CMAKE_CURRENT_BINARY_DIR}/shell
     ${CMAKE_CURRENT_BINARY_DIR}/spam
     ${CMAKE_CURRENT_BINARY_DIR}/cat
+    ${CMAKE_CURRENT_BINARY_DIR}/wget
     PARENT_SCOPE
 )
