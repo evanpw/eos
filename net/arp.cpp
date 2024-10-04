@@ -4,12 +4,13 @@
 #include <string.h>
 
 #include "estd/new.h"
+#include "estd/vector.h"
 #include "net/ethernet.h"
 #include "net/ip.h"
 #include "net/network_interface.h"
+#include "scheduler.h"
 #include "spinlock.h"
 #include "system.h"
-#include "timer.h"
 
 EtherType ArpHeader::protocolType() { return (EtherType)_protocolType; }
 uint8_t ArpHeader::hardwareLen() { return _hardwareLen; }
@@ -46,12 +47,37 @@ struct ArpEntry {
     ArpEntry* next;
 };
 
+struct ArpBlocker : Blocker {
+    ArpBlocker(IpAddress ipAddress) : ipAddress(ipAddress) {}
+    IpAddress ipAddress;
+};
+
 static ArpEntry* arpCache = nullptr;
 static Spinlock* arpLock = nullptr;
+estd::vector<estd::shared_ptr<ArpBlocker>> arpBlockers;
 
 static void arpInsert(IpAddress ip, MacAddress mac);
 
-void arpInit() { arpLock = new Spinlock(); }
+void arpInit() {
+    arpLock = new Spinlock();
+    new (&arpBlockers) decltype(arpBlockers);
+}
+
+estd::shared_ptr<ArpBlocker> getBlocker(IpAddress ip, bool create = false) {
+    for (auto& blocker : arpBlockers) {
+        if (blocker->ipAddress == ip) {
+            return blocker;
+        }
+    }
+
+    if (create) {
+        estd::shared_ptr<ArpBlocker> blocker(new ArpBlocker(ip));
+        arpBlockers.push_back(blocker);
+        return blocker;
+    }
+
+    return {};
+}
 
 bool arpLookupCached(IpAddress ip, MacAddress* result) {
     SpinlockLocker locker(*arpLock);
@@ -80,8 +106,7 @@ MacAddress arpLookup(NetworkInterface* netif, IpAddress ip) {
 
     // Wait for the reply
     do {
-        // TODO: create a thread blocker for this
-        sys.timer().sleep(10);
+        sys.scheduler().sleepThread(getBlocker(ip, true));
         // TODO: re-send after a timeout
     } while (!arpLookupCached(ip, &result));
 
@@ -108,6 +133,12 @@ static void arpInsert(IpAddress ip, MacAddress mac) {
     newEntry->mac = mac;
     newEntry->next = arpCache;
     arpCache = newEntry;
+
+    // Wake up any threads waiting for this ip
+    auto blocker = getBlocker(ip);
+    if (blocker) {
+        sys.scheduler().wakeThreads(blocker);
+    }
 }
 
 void arpRecv(NetworkInterface* netif, uint8_t* buffer, size_t size) {

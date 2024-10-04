@@ -246,12 +246,36 @@ struct CacheEntry {
     ~CacheEntry() { delete[] hostname; }
 };
 
+struct DnsBlocker : Blocker {
+    DnsBlocker(const char* hostname) : hostname(strdup(hostname)) {}
+    ~DnsBlocker() { delete[] hostname; }
+    const char* hostname;
+};
+
 static Spinlock* dnsLock;
 static CacheEntry* dnsCache;
+estd::vector<estd::shared_ptr<DnsBlocker>> dnsBlockers;
 
 void dnsInit() {
     dnsLock = new Spinlock();
     dnsCache = nullptr;
+    new (&dnsBlockers) decltype(dnsBlockers);
+}
+
+estd::shared_ptr<DnsBlocker> getBlocker(const char* hostname, bool create = false) {
+    for (auto& blocker : dnsBlockers) {
+        if (strcmp(hostname, blocker->hostname) == 0) {
+            return blocker;
+        }
+    }
+
+    if (create) {
+        estd::shared_ptr<DnsBlocker> blocker(new DnsBlocker(hostname));
+        dnsBlockers.push_back(blocker);
+        return blocker;
+    }
+
+    return {};
 }
 
 bool dnsLookupCached(const char* hostname, IpAddress* result) {
@@ -292,6 +316,12 @@ static void dnsInsert(const char* hostname, IpAddress ip) {
     newEntry->ip = ip;
     newEntry->next = dnsCache;
     dnsCache = newEntry;
+
+    // Wake up any threads waiting for this ip
+    auto blocker = getBlocker(hostname);
+    if (blocker) {
+        sys.scheduler().wakeThreads(blocker);
+    }
 }
 
 void dnsQuery(NetworkInterface* netif, IpAddress dnsServer, const char* hostname) {
@@ -329,8 +359,7 @@ IpAddress dnsResolve(NetworkInterface* netif, IpAddress dnsServer, const char* h
 
     // Wait for the reply
     do {
-        // TODO: create a thread blocker for this
-        sys.timer().sleep(10);
+        sys.scheduler().sleepThread(getBlocker(hostname, true));
         // TODO: re-send after a timeout
     } while (!dnsLookupCached(hostname, &result));
 

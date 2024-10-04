@@ -8,6 +8,7 @@
 #include "net/ip.h"
 #include "net/network_interface.h"
 #include "panic.h"
+#include "scheduler.h"
 #include "spinlock.h"
 #include "system.h"
 #include "timer.h"
@@ -141,6 +142,10 @@ struct TcpControlBlock {
     uint32_t recvBufferUsed() { return sizeof(recvBuffer) - recv.window; }
     bool recvBufferEmpty() { return recvBufferUsed() == 0; }
 
+    // Used to wait for certain conditions to occur
+    estd::shared_ptr<Blocker> connectionEstablished;
+    estd::shared_ptr<Blocker> dataAvailable;
+
     TcpControlBlock* next;
 };
 
@@ -197,6 +202,8 @@ TcpControlBlock::TcpControlBlock() {
     send.window = 0;
     recv.next = 0;
     recv.window = RECV_BUFFER_SIZE;
+    connectionEstablished.assign(new Blocker);
+    dataAvailable.assign(new Blocker);
     next = nullptr;
 }
 
@@ -341,6 +348,8 @@ void tcpRecvSynReceived(NetworkInterface* netif, TcpControlBlock* tcb,
     if (tcpHeader->dataOffset() * 4 > sizeof(TcpHeader)) {
         tcpRecvEstablished(netif, tcb, tcpHeader, data, dataLen);
     }
+
+    sys.scheduler().wakeThreads(tcb->connectionEstablished);
 }
 
 void tcpRecvEstablished(NetworkInterface* netif, TcpControlBlock* tcb,
@@ -357,6 +366,7 @@ void tcpRecvEstablished(NetworkInterface* netif, TcpControlBlock* tcb,
     if (dataLen > 0) {
         memcpy(tcb->recvBuffer + tcb->recvBufferUsed(), data, dataLen);
         tcb->recv.window -= dataLen;
+        sys.scheduler().wakeThreads(tcb->dataAvailable);
     }
 
     tcb->state = TcpState::ESTABLISHED;
@@ -471,6 +481,7 @@ void tcpRecvSynSent(NetworkInterface* netif, TcpControlBlock* tcb, TcpHeader* tc
     ipSend(netif, tcb->remoteIp, IpProtocol::Tcp, &response, sizeof(TcpHeader));
 
     tcb->state = TcpState::ESTABLISHED;
+    sys.scheduler().wakeThreads(tcb->connectionEstablished);
 }
 
 void tcpRecv(NetworkInterface* netif, IpHeader* ipHeader, uint8_t* buffer, size_t size) {
@@ -592,7 +603,7 @@ bool tcpSend(NetworkInterface* netif, TcpHandle handle, const void* buffer, size
             case TcpState::SYN_RECEIVED:
                 // Wait for the connection to be established
                 // TODO: add a thread blocker for this situation
-                sys.timer().sleep(1, &tcb->lock);
+                sys.scheduler().sleepThread(tcb->connectionEstablished, &tcb->lock);
                 break;
 
             case TcpState::ESTABLISHED:
