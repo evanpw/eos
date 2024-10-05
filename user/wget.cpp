@@ -1,4 +1,5 @@
 #include <netinet/in.h>
+#include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
@@ -17,10 +18,34 @@ int main(int argc, char* argv[]) {
 
     if (connect(fd, (sockaddr*)&addr, sizeof(sockaddr_in)) < 0) {
         println("connect failed");
-        return -1;
+        return 1;
     }
 
-    sleep(100);
+    // Send an HTTP request for the root file
+    const char* request =
+        "GET / HTTP/1.1\r\nHost: gh.evanpw.com\r\nConnection: close\r\n\r\n";
+    ssize_t bytesSent = send(fd, request, strlen(request), 0);
+    if (bytesSent < 0) {
+        println("send failed");
+        return 1;
+    }
+
+    // Echo the result to the terminal
+    char* buffer = new char[1024];
+    while (true) {
+        ssize_t bytesRead = recv(fd, buffer, 1023, 0);
+        if (bytesRead < 0) {
+            println("tcp error");
+            return 1;
+        } else if (bytesRead == 0) {
+            break;
+        }
+
+        buffer[bytesRead] = '\0';
+        print(buffer);
+    }
+    delete[] buffer;
+
     close(fd);
     return 0;
 }

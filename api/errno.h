@@ -18,3 +18,5 @@
 #define EPROTOTYPE 91       // Protocol wrong type for socket
 #define ENOTSOCK 88         // Socket operation on non-socket
 #define ECONNREFUSED 111    // Connection refused
+#define ENOTCONN 107        // Socket is not connected
+#define EPIPE 32            // Broken pipe

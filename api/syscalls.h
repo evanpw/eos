@@ -17,5 +17,8 @@ enum {
     SYS_wait_pid,
     SYS_socket,
     SYS_connect,
+    SYS_send,
+    SYS_recv,
+
     SYS_COUNT,
 };

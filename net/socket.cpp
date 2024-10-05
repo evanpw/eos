@@ -33,10 +33,29 @@ int64_t TcpSocket::connect(const struct sockaddr* addr, socklen_t addrlen) {
     return 0;
 }
 
-ssize_t TcpSocket::read(OpenFileDescription&, void*, size_t) { return -ENOSYS; }
-ssize_t TcpSocket::write(OpenFileDescription&, const void*, size_t) { return -ENOSYS; }
+ssize_t TcpSocket::read(OpenFileDescription&, void* buffer, size_t size) {
+    if (_handle == InvalidTcpHandle) {
+        return -ENOTCONN;
+    }
 
-int64_t UdpSocket::connect(const struct sockaddr* addr, socklen_t addrlen) {
+    NetworkInterface* netif = &sys.netif();
+    return tcpRecv(netif, _handle, buffer, size);
+}
+
+ssize_t TcpSocket::write(OpenFileDescription&, const void* buffer, size_t size) {
+    if (_handle == InvalidTcpHandle) {
+        return -ENOTCONN;
+    }
+
+    NetworkInterface* netif = &sys.netif();
+    if (!tcpSend(netif, _handle, buffer, size, true)) {
+        return -EPIPE;
+    }
+
+    return size;
+}
+
+int64_t UdpSocket::connect(const struct sockaddr* /*addr*/, socklen_t /*addrlen*/) {
     return -ENOSYS;
 }
 
