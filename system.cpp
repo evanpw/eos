@@ -61,7 +61,7 @@ void testNetwork() {
     }
     delete[] buffer;
 
-    sys.scheduler().stopThread(currentThread);
+    sys.scheduler().threadExit();
 }
 
 void System::run() {

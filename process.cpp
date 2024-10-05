@@ -38,48 +38,46 @@ void ProcessTable::destroy(Process* process) {
         estd::swap(_processes[i], _processes.back());
         _processes.pop_back();
 
-        for (size_t j = 0; j < _blockers.size(); ++j) {
-            if (_blockers[j]->pid != process->pid) continue;
-
-            sys.scheduler().wakeThreadsLocked(_blockers.back());
-            estd::swap(_blockers[j], _blockers.back());
-            _blockers.pop_back();
-        }
-
         return;
     }
 
     panic("process not found");
 }
 
-int ProcessTable::waitProcess(pid_t pid) {
-    if (pid < 1) {
-        return -ECHILD;
-    }
-
+Process* ProcessTable::findProcess(pid_t pid) {
     SpinlockLocker locker(_lock);
 
-    bool found = false;
-    for (auto& process : _processes) {
-        if (process->pid == pid) {
-            found = true;
-            break;
+    for (auto& p : _processes) {
+        if (p->pid == pid) {
+            return p.get();
         }
     }
 
-    if (!found) {
+    return nullptr;
+}
+
+int ProcessTable::waitProcess(pid_t pid) {
+    Process* process = findProcess(pid);
+
+    if (!process) {
         return -ECHILD;
     }
 
-    estd::shared_ptr<ProcessBlocker> blocker(new ProcessBlocker(pid));
-    _blockers.push_back(blocker);
-    sys.scheduler().sleepThread(blocker, &_lock);
+    // Wait for the process to exit
+    process->lock.lock();
+    if (process->status != ProcessStatus::Exited) {
+        sys.scheduler().sleepThread(process->exitBlocker, &process->lock);
+    }
+    process->lock.unlock();
+
+    // Remove the process from the process table and destroy it
+    destroy(process);
 
     return 0;
 }
 
 Process::Process(pid_t pid, const char* path, const char* argv[], uint32_t initialCwdIno)
-: pid(pid), cwdIno(initialCwdIno) {
+: pid(pid), cwdIno(initialCwdIno), exitBlocker(new Blocker) {
     open(sys.terminal());  // stdin
     open(sys.terminal());  // stdout
     open(sys.terminal());  // stderr
@@ -154,4 +152,11 @@ int Process::close(int fd) {
 
     openFiles[fd].clear();
     return 0;
+}
+
+void Process::exit() {
+    SpinlockLocker locker(lock);
+    ASSERT(status == ProcessStatus::Exiting);
+    status = ProcessStatus::Exited;
+    sys.scheduler().wakeThreadsLocked(exitBlocker);
 }

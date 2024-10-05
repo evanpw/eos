@@ -65,8 +65,16 @@ pid_t sys_getpid() {
 [[noreturn]] void sys_exit(int status) {
     println("proc: user process exited with status {}", status);
 
-    // Does not return
-    sys.scheduler().stopThread(currentThread);
+    Process& process = *currentThread->process;
+    {
+        SpinlockLocker locker(process.lock);
+        process.status = ProcessStatus::Exiting;
+        process.exitCode = status;
+    }
+
+    // Does not return. The actual call to process.exit() is done in the scheduler after
+    // switching away from this thread
+    sys.scheduler().threadExit();
     __builtin_unreachable();
 }
 

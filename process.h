@@ -31,6 +31,7 @@ public:
 private:
     static ProcessTable* _instance;
 
+    Process* findProcess(pid_t pid);
     Process* create(const char* path, const char* argv[], uint32_t initialCwdIno);
     void destroy(Process* process);
 
@@ -39,14 +40,12 @@ private:
     // TODO: we should store processes in a hash map for faster lookup by pid
     estd::vector<estd::unique_ptr<Process>> _processes;
     pid_t _nextPid = 1;
+};
 
-    struct ProcessBlocker : Blocker {
-        ProcessBlocker(pid_t pid) : pid(pid) {}
-        pid_t pid;
-    };
-
-    // TODO: we should store these in a hash map, for efficiency
-    estd::vector<estd::shared_ptr<ProcessBlocker>> _blockers;
+enum class ProcessStatus {
+    Running,
+    Exiting,
+    Exited,
 };
 
 // Represents and maintains state for a single usermode process. A process may
@@ -76,6 +75,14 @@ public:
     estd::unique_ptr<OpenFileDescription> openFiles[RLIMIT_NOFILE] = {};
     uint32_t cwdIno;
 
+    // This spinlock should really protect everything, but for now it only protects status
+    // updates
+    Spinlock lock;
+    ProcessStatus status = ProcessStatus::Running;
+    int exitCode;
+
+    estd::shared_ptr<Blocker> exitBlocker;
+
     estd::unique_ptr<UserAddressSpace> addressSpace;
     estd::unique_ptr<Thread> thread;
 
@@ -88,6 +95,7 @@ public:
 
     int open(const estd::shared_ptr<File>& file);
     int close(int fd);
+    void exit();
 
 private:
     Process(pid_t pid, const char* path, const char* argv[], uint32_t initialCwdIno);

@@ -31,7 +31,7 @@ public:
     void start();
 
     void startThread(Thread* thread);
-    void stopThread(Thread* thread);
+    void threadExit();
 
     void sleepThread(const estd::shared_ptr<Blocker>& blocker, Spinlock* lock = nullptr);
     void wakeThreads(const estd::shared_ptr<Blocker>& blocker);

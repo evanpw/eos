@@ -89,8 +89,6 @@ void Scheduler::yield() {
     ASSERT(_schedLock.isLocked());
     if (!running) return;
 
-    cleanupDeadThreads();
-
     Thread* fromThread = currentThread;
     Thread* toThread;
 
@@ -110,6 +108,9 @@ void Scheduler::yield() {
         SpinlockUnlocker unlocker(_schedLock);
         switchContext(toThread, fromThread);
     }
+
+    // TODO: run this cleanup on a housekeeping kernel thread
+    cleanupDeadThreads();
 }
 
 void Scheduler::startThread(Thread* thread) {
@@ -117,17 +118,20 @@ void Scheduler::startThread(Thread* thread) {
     runQueue.push_back(thread);
 }
 
-void Scheduler::stopThread(Thread* thread) {
+void Scheduler::threadExit() {
     SpinlockLocker locker(_schedLock);
 
     for (size_t i = 0; i < runQueue.size(); ++i) {
-        if (runQueue[i] != thread) continue;
+        if (runQueue[i] != currentThread) continue;
 
         // Move the thread from the run queue to the dead queue
         Thread* lastThread = runQueue.back();
         runQueue[i] = lastThread;
         runQueue.pop_back();
-        deadQueue.push_back(thread);
+
+        if (currentThread->process) {
+            deadQueue.push_back(currentThread);
+        }
 
         if (!runQueue.empty()) {
             nextIdx = (i + 1) % runQueue.size();
@@ -135,12 +139,8 @@ void Scheduler::stopThread(Thread* thread) {
             nextIdx = 0;
         }
 
-        // If we're stopping our own thread, we need to switch to something else
-        if (thread == currentThread) {
-            yield();
-        } else {
-            return;
-        }
+        // Switch to another thread
+        yield();
     }
 
     panic("Thread not found");
@@ -149,24 +149,13 @@ void Scheduler::stopThread(Thread* thread) {
 void Scheduler::cleanupDeadThreads() {
     ASSERT(_schedLock.isLocked());
 
-    bool foundSelf = false;
     for (Thread* thread : deadQueue) {
-        // We can't clean up a thread until we've switched away from it
-        if (thread == currentThread) {
-            foundSelf = true;
-            continue;
-        }
-
-        if (thread->process) {
-            Process::destroy(thread->process);
-        }
+        ASSERT(thread != currentThread);
+        ASSERT(thread->process);
+        thread->process->exit();
     }
 
     deadQueue.clear();
-
-    if (foundSelf) {
-        deadQueue.push_back(currentThread);
-    }
 }
 
 void Scheduler::sleepThread(const estd::shared_ptr<Blocker>& blocker, Spinlock* lock) {
