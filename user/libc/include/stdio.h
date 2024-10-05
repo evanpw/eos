@@ -7,6 +7,7 @@ extern "C" {
 #define EOF -1
 
 int putchar(int c);
+int puts(const char* s);
 
 #ifdef __cplusplus
 }

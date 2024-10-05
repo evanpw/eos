@@ -10,3 +10,19 @@ int putchar(int c) {
 
     return c;
 }
+
+int puts(const char* s) {
+    int ret = 0;
+    while (*s) {
+        if (putchar(*s++) == EOF) {
+            return EOF;
+        }
+        ret++;
+    }
+
+    if (putchar('\n') == EOF) {
+        return EOF;
+    }
+
+    return ret + 1;
+}

@@ -1,9 +1,17 @@
 #include <netinet/in.h>
+#include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
 #include "estd/print.h"
+#include "estd/vector.h"
+
+void appendString(estd::vector<char>& v, const char* str) {
+    for (size_t i = 0; i < strlen(str); i++) {
+        v.push_back(str[i]);
+    }
+}
 
 int main(int argc, char* argv[]) {
     int fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -20,10 +28,13 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    // Send an HTTP request for the root file
-    const char* request =
-        "GET / HTTP/1.1\r\nHost: gh.evanpw.com\r\nConnection: close\r\n\r\n";
-    ssize_t bytesSent = send(fd, request, strlen(request), 0);
+    // Send an HTTP request for the root file]
+    estd::vector<char> request;
+    appendString(request, "GET /");
+    appendString(request, argc > 1 ? argv[1] : "");
+    appendString(request,
+                 " HTTP/1.1\r\nHost: gh.evanpw.com\r\nConnection: close\r\n\r\n");
+    ssize_t bytesSent = send(fd, request.data(), request.size(), 0);
     if (bytesSent < 0) {
         println("send failed");
         return 1;
@@ -32,7 +43,7 @@ int main(int argc, char* argv[]) {
     // Echo the result to the terminal
     char* buffer = new char[1024];
     while (true) {
-        ssize_t bytesRead = recv(fd, buffer, 1023, 0);
+        ssize_t bytesRead = recv(fd, buffer, 1024, 0);
         if (bytesRead < 0) {
             println("tcp error");
             return 1;
@@ -40,8 +51,9 @@ int main(int argc, char* argv[]) {
             break;
         }
 
-        buffer[bytesRead] = '\0';
-        print(buffer);
+        for (size_t i = 0; i < bytesRead; ++i) {
+            putchar(buffer[i]);
+        }
     }
     delete[] buffer;
 
