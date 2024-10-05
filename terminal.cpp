@@ -386,9 +386,9 @@ char keyCodeToAsciiShifted(KeyCode keyCode) {
         case KeyCode::Zero:
             return ')';
         case KeyCode::Minus:
-            return '-';
+            return '_';
         case KeyCode::Equals:
-            return '=';
+            return '+';
         case KeyCode::Q:
             return 'Q';
         case KeyCode::W:
@@ -488,9 +488,9 @@ char keyCodeToAsciiShifted(KeyCode keyCode) {
         case KeyCode::Keypad0:
             return '0';
         case KeyCode::KeypadDot:
-            return '.';
+            return '>';
         case KeyCode::KeypadSlash:
-            return '/';
+            return '<';
         case KeyCode::Enter:
             return '\n';
         case KeyCode::KeypadEnter:
