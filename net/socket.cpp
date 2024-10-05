@@ -5,6 +5,8 @@
 #include "net/ip.h"
 #include "system.h"
 
+TcpSocket::~TcpSocket() { tcpClose(&sys.netif(), _handle); }
+
 int64_t TcpSocket::connect(const struct sockaddr* addr, socklen_t addrlen) {
     if (addr->sa_family != AF_INET) {
         return -EAFNOSUPPORT;

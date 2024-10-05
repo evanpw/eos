@@ -7,7 +7,6 @@
 
 int main(int argc, char* argv[]) {
     int fd = socket(AF_INET, SOCK_STREAM, 0);
-    println("socket: {}", fd);
 
     sockaddr_in addr;
     addr.sin_family = AF_INET;

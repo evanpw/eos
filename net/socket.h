@@ -13,6 +13,7 @@ public:
 
 class TcpSocket : public Socket {
 public:
+    ~TcpSocket();
     int64_t connect(const struct sockaddr* addr, socklen_t addrlen) override;
     ssize_t read(OpenFileDescription& fd, void* buffer, size_t count) override;
     ssize_t write(OpenFileDescription& fd, const void* buffer, size_t count) override;

@@ -235,15 +235,11 @@ void tcbRemove(TcpControlBlock* tcb) {
 
 // Returns the tcb in the locked state, must be unlocked by the caller
 TcpControlBlock* tcbLookup(TcpHandle handle) {
-    println("tcbLookup: start");
     SpinlockLocker locker(*tcpLock);
-    println("tcbLookup: locked");
 
     TcpControlBlock* tcb = tcbList;
     while (tcb != nullptr) {
-        println("tcbLookup: loop");
         tcb->lock.lock();
-        println("tcbLookup: locked tcb");
         if (tcb->handle == handle) {
             return tcb;
         }
@@ -253,7 +249,6 @@ TcpControlBlock* tcbLookup(TcpHandle handle) {
         tcb = next;
     }
 
-    println("tcbLookup: not found");
     return nullptr;
 }
 
@@ -623,15 +618,11 @@ TcpHandle tcpListen(NetworkInterface* netif, uint16_t port) {
 
 bool tcpSend(NetworkInterface* netif, TcpHandle handle, const void* buffer, size_t size,
              bool push) {
-    println("tcpSend");
     // Lookup the connection
     TcpControlBlock* tcb = tcbLookup(handle);
     if (!tcb) {
-        println("tcb not found");
         return false;
     }
-
-    println("state: ", (int)tcb->state);
 
     bool ready = false;
     while (!ready) {
@@ -651,11 +642,10 @@ bool tcpSend(NetworkInterface* netif, TcpHandle handle, const void* buffer, size
 
             default:
                 // Error: connection is closed or closing
+                tcb->lock.unlock();
                 return false;
         }
     }
-
-    println("ready");
 
     size_t packetSize = sizeof(TcpHeader) + size;
     uint8_t* packet = new uint8_t[packetSize];
@@ -678,9 +668,7 @@ bool tcpSend(NetworkInterface* netif, TcpHandle handle, const void* buffer, size
     tcb->lock.unlock();
 
     // Will block until sent (may have to wait for ARP resolution)
-    println("tcpSend: ipSend");
     ipSend(netif, tcb->remoteIp, IpProtocol::Tcp, packet, packetSize, true);
-    println("tcpSend: ipSend finished");
 
     return true;
 }
@@ -717,12 +705,14 @@ ssize_t tcpRecv(NetworkInterface*, TcpHandle handle, void* buffer, size_t size) 
                 if (!tcb->recvBufferEmpty()) {
                     ready = true;
                 } else {
+                    tcb->lock.unlock();
                     return 0;
                 }
                 break;
 
             default:
                 // Error: connection is closed or closing
+                tcb->lock.unlock();
                 return -1;
         }
     }

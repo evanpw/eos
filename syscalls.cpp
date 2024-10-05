@@ -165,7 +165,6 @@ int64_t sys_wait_pid(pid_t pid) {
 }
 
 int64_t sys_socket(int domain, int type, int protocol) {
-    println("sys_socket");
     // TODO: handle flags correctly
     Process& process = *currentThread->process;
 
@@ -185,7 +184,6 @@ int64_t sys_socket(int domain, int type, int protocol) {
 }
 
 int64_t sys_connect(int sockfd, const struct sockaddr* addr, socklen_t addrlen) {
-    println("sys_connect");
     Process& process = *currentThread->process;
 
     if (sockfd < 0 || sockfd >= RLIMIT_NOFILE || !process.openFiles[sockfd]) {
@@ -204,7 +202,6 @@ int64_t sys_connect(int sockfd, const struct sockaddr* addr, socklen_t addrlen) 
 }
 
 int64_t sys_send(int sockfd, const void* buffer, size_t length, int /*flags*/) {
-    println("sys_send");
     Process& process = *currentThread->process;
 
     if (sockfd < 0 || sockfd >= RLIMIT_NOFILE || !process.openFiles[sockfd]) {
@@ -224,7 +221,6 @@ int64_t sys_send(int sockfd, const void* buffer, size_t length, int /*flags*/) {
 }
 
 int64_t sys_recv(int sockfd, void* buffer, size_t length, int /*flags*/) {
-    println("sys_recv");
     Process& process = *currentThread->process;
 
     if (sockfd < 0 || sockfd >= RLIMIT_NOFILE || !process.openFiles[sockfd]) {
