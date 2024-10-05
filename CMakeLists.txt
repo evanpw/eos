@@ -51,6 +51,7 @@ set(KERNEL_SOURCES
     net/dns.cpp
     net/ethernet.cpp
     net/ip.cpp
+    net/socket.cpp
     net/tcp.cpp
     net/udp.cpp
     page_map.cpp

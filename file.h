@@ -34,5 +34,7 @@ struct File {
     }
 
     virtual bool hasInode() const { return false; }
+    virtual bool isSocket() const { return false; }
+
     virtual ext2::Inode* inode() { return nullptr; }
 };

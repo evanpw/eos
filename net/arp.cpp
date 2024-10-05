@@ -79,8 +79,8 @@ estd::shared_ptr<ArpBlocker> getBlocker(IpAddress ip, bool create = false) {
     return {};
 }
 
-bool arpLookupCached(IpAddress ip, MacAddress* result) {
-    SpinlockLocker locker(*arpLock);
+bool arpLookupCachedLocked(IpAddress ip, MacAddress* result) {
+    ASSERT(arpLock->isLocked());
 
     ArpEntry* entry = arpCache;
     while (entry != nullptr) {
@@ -95,22 +95,29 @@ bool arpLookupCached(IpAddress ip, MacAddress* result) {
     return false;
 }
 
+bool arpLookupCached(IpAddress ip, MacAddress* result) {
+    SpinlockLocker locker(*arpLock);
+    return arpLookupCachedLocked(ip, result);
+}
+
 MacAddress arpLookup(NetworkInterface* netif, IpAddress ip) {
     MacAddress result;
-    if (arpLookupCached(ip, &result)) {
-        return result;
-    }
+    if (arpLookupCached(ip, &result)) return result;
 
     // Not in cache, we have to send an arp request
     arpRequest(netif, ip);
 
-    // Wait for the reply
-    do {
-        sys.scheduler().sleepThread(getBlocker(ip, true));
-        // TODO: re-send after a timeout
-    } while (!arpLookupCached(ip, &result));
+    // Wait for the reply. We need to take the lock to avoid a race condition between
+    // checking the cache and going to sleep. Otherwise, the reply may arrive between
+    // those two operations and we could miss it and sleep forever.
+    while (true) {
+        SpinlockLocker locker(*arpLock);
+        if (arpLookupCachedLocked(ip, &result)) {
+            return result;
+        }
 
-    return result;
+        sys.scheduler().sleepThread(getBlocker(ip, true), arpLock);
+    }
 }
 
 static void arpInsert(IpAddress ip, MacAddress mac) {

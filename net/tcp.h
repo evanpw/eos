@@ -79,6 +79,8 @@ void tcpRecv(NetworkInterface* netif, IpHeader* ipHeader, uint8_t* buffer, size_
 using TcpHandle = uint64_t;
 static constexpr TcpHandle InvalidTcpHandle = 0;
 
+bool tcpWaitForConnection(TcpHandle handle);
+
 TcpHandle tcpConnect(NetworkInterface* netif, IpAddress destIp, uint16_t destPort);
 TcpHandle tcpListen(NetworkInterface* netif, uint16_t port);
 bool tcpSend(NetworkInterface* netif, TcpHandle handle, const void* buffer, size_t size,

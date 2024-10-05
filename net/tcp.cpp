@@ -538,6 +538,31 @@ void tcpRecv(NetworkInterface* netif, IpHeader* ipHeader, uint8_t* buffer, size_
 }
 
 //// High-level kernel-mode API
+bool tcpWaitForConnection(TcpHandle handle) {
+    // Lookup the connection
+    TcpControlBlock* tcb = tcbLookup(handle);
+    if (!tcb) return false;
+
+    while (true) {
+        // TODO: add a timeout
+        switch (tcb->state) {
+            case TcpState::SYN_SENT:
+            case TcpState::SYN_RECEIVED:
+                // Wait for the connection to be established
+                sys.scheduler().sleepThread(tcb->connectionEstablished, &tcb->lock);
+                break;
+
+            case TcpState::ESTABLISHED:
+            case TcpState::CLOSE_WAIT:
+                return true;
+
+            default:
+                // Error: connection is closed or closing
+                return false;
+        }
+    }
+}
+
 TcpHandle tcpConnect(NetworkInterface* netif, IpAddress destIp, uint16_t destPort) {
     // Create and initialize the control block
     TcpControlBlock* tcb = new TcpControlBlock;
@@ -602,7 +627,6 @@ bool tcpSend(NetworkInterface* netif, TcpHandle handle, const void* buffer, size
             case TcpState::SYN_SENT:
             case TcpState::SYN_RECEIVED:
                 // Wait for the connection to be established
-                // TODO: add a thread blocker for this situation
                 sys.scheduler().sleepThread(tcb->connectionEstablished, &tcb->lock);
                 break;
 
@@ -657,7 +681,6 @@ ssize_t tcpRecv(NetworkInterface*, TcpHandle handle, void* buffer, size_t size) 
             case TcpState::SYN_SENT:
             case TcpState::SYN_RECEIVED:
                 // Wait for the connection to be established
-                // TODO: add a thread blocker for this situation
                 sys.timer().sleep(1, &tcb->lock);
                 break;
 

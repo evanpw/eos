@@ -1,17 +1,6 @@
 #include "fcntl.h"
 
-#include "errno.h"
 #include "syscall.h"
 
-int open(const char* path, int oflag) {
-    int result = __syscall(SYS_open, (uint64_t)path, oflag);
-
-    if (result < 0) {
-        errno = -result;
-        return -1;
-    }
-
-    return result;
-}
-
-int close(int fd) { return __syscall(SYS_close, fd); }
+int open(const char* path, int oflag) { return try_syscall(SYS_open, path, oflag); }
+int close(int fd) { return try_syscall(SYS_close, fd); }

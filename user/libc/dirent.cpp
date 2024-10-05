@@ -31,7 +31,7 @@ DIR* opendir(const char* name) {
     while (true) {
         dir->buffer = (uint8_t*)malloc(bufferSize);
 
-        int64_t result = __syscall(SYS_read_dir, fd, (uint64_t)dir->buffer, bufferSize);
+        int64_t result = syscall(SYS_read_dir, fd, dir->buffer, bufferSize);
 
         if (result >= 0) {
             dir->bufferSize = result;

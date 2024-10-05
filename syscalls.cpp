@@ -1,6 +1,7 @@
 #include "syscalls.h"
 
 #include <stdint.h>
+#include <sys/socket.h>
 
 #include "api/errno.h"
 #include "api/syscalls.h"
@@ -8,6 +9,7 @@
 #include "file.h"
 #include "fs/ext2_file.h"
 #include "klibc.h"
+#include "net/socket.h"
 #include "process.h"
 #include "processor.h"
 #include "scheduler.h"
@@ -154,15 +156,52 @@ int64_t sys_wait_pid(pid_t pid) {
     return pid;
 }
 
+int64_t sys_socket(int domain, int type, int protocol) {
+    // TODO: handle flags correctly
+    Process& process = *currentThread->process;
+
+    if (domain != AF_INET) return -EAFNOSUPPORT;
+    if (protocol != 0) return -EPROTONOSUPPORT;
+
+    estd::shared_ptr<Socket> socket;
+    if (type == SOCK_STREAM) {
+        socket.assign(new TcpSocket);
+    } else if (type == SOCK_DGRAM) {
+        socket.assign(new UdpSocket);
+    } else {
+        return -EPROTOTYPE;
+    }
+
+    return process.open(socket);
+}
+
+int64_t sys_connect(int sockfd, const struct sockaddr* addr, socklen_t addrlen) {
+    Process& process = *currentThread->process;
+
+    if (sockfd < 0 || sockfd >= RLIMIT_NOFILE || !process.openFiles[sockfd]) {
+        return -EBADF;
+    }
+
+    OpenFileDescription& description = *process.openFiles[sockfd];
+    File& file = *description.file;
+
+    if (!file.isSocket()) {
+        return -ENOTSOCK;
+    }
+
+    Socket& socket = static_cast<Socket&>(file);
+    return socket.connect(addr, addrlen);
+}
+
 // We don't have static initialization, so this is initialized at runtime
-SyscallHandler syscallTable[MAX_SYSCALL_NO + 1];
+SyscallHandler syscallTable[SYS_COUNT];
 
 // Defined in entry.S
 extern "C" void syscallEntryAsm();
 
 // Called by syscallEntryAsm
 extern "C" void syscallEntry(TrapRegisters& regs) {
-    if (regs.rax > MAX_SYSCALL_NO) {
+    if (regs.rax >= SYS_COUNT) {
         regs.rax = -1;
         return;
     }
@@ -209,6 +248,8 @@ void initSyscalls() {
     syscallTable[SYS_getcwd] = bit_cast<SyscallHandler>((void*)sys_getcwd);
     syscallTable[SYS_chdir] = bit_cast<SyscallHandler>((void*)sys_chdir);
     syscallTable[SYS_wait_pid] = bit_cast<SyscallHandler>((void*)sys_wait_pid);
+    syscallTable[SYS_socket] = bit_cast<SyscallHandler>((void*)sys_socket);
+    syscallTable[SYS_connect] = bit_cast<SyscallHandler>((void*)sys_connect);
 
     println("syscall: init complete");
 }

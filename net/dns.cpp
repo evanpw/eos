@@ -278,8 +278,8 @@ estd::shared_ptr<DnsBlocker> getBlocker(const char* hostname, bool create = fals
     return {};
 }
 
-bool dnsLookupCached(const char* hostname, IpAddress* result) {
-    SpinlockLocker locker(*dnsLock);
+bool dnsLookupCachedLocked(const char* hostname, IpAddress* result) {
+    ASSERT(dnsLock->isLocked());
 
     CacheEntry* entry = dnsCache;
     while (entry != nullptr) {
@@ -293,6 +293,11 @@ bool dnsLookupCached(const char* hostname, IpAddress* result) {
     }
 
     return false;
+}
+
+bool dnsLookupCached(const char* hostname, IpAddress* result) {
+    SpinlockLocker locker(*dnsLock);
+    return dnsLookupCachedLocked(hostname, result);
 }
 
 static void dnsInsert(const char* hostname, IpAddress ip) {
@@ -357,13 +362,17 @@ IpAddress dnsResolve(NetworkInterface* netif, IpAddress dnsServer, const char* h
     // If not in cache, we have to send a dns request
     dnsQuery(netif, dnsServer, hostname);
 
-    // Wait for the reply
-    do {
-        sys.scheduler().sleepThread(getBlocker(hostname, true));
-        // TODO: re-send after a timeout
-    } while (!dnsLookupCached(hostname, &result));
+    // Wait for the reply. We need to take the lock to avoid a race condition between
+    // checking the cache and going to sleep. Otherwise, the reply may arrive between
+    // those two operations and we could miss it and sleep forever.
+    while (true) {
+        SpinlockLocker locker(*dnsLock);
+        if (dnsLookupCachedLocked(hostname, &result)) {
+            return result;
+        }
 
-    return result;
+        sys.scheduler().sleepThread(getBlocker(hostname, true), dnsLock);
+    }
 }
 
 void dnsRecv(NetworkInterface*, uint8_t* buffer, size_t size) {

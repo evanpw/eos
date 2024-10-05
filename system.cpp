@@ -65,8 +65,8 @@ void testNetwork() {
 }
 
 void System::run() {
-    auto testThread = Thread::createKernelThread(bit_cast<uint64_t>(&testNetwork));
-    _scheduler->startThread(testThread.get());
+    // auto testThread = Thread::createKernelThread(bit_cast<uint64_t>(&testNetwork));
+    //_scheduler->startThread(testThread.get());
 
     Process::create("/bin/shell", nullptr);
     _scheduler->start();

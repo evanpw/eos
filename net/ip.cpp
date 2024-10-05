@@ -99,7 +99,9 @@ bool findRoute(NetworkInterface* netif, IpAddress destIp, MacAddress* destMac,
         return true;
     }
 
-    if (!netif->isConfigured()) return false;
+    if (!netif->isConfigured()) {
+        return false;
+    }
 
     IpAddress nextHop = netif->isLocal(destIp) ? destIp : netif->gateway();
     if (blocking) {

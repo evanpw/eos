@@ -3,6 +3,10 @@
 #include <stdint.h>
 #include <sys/uio.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef uint32_t socklen_t;
 typedef uint16_t sa_family_t;
 
@@ -98,22 +102,32 @@ struct linger {
 #define SHUT_RDWR 2
 #define SHUT_WR 3
 
-int accept(int, struct sockaddr *__restrict, socklen_t *__restrict);
-int bind(int, const struct sockaddr *, socklen_t);
-int connect(int, const struct sockaddr *, socklen_t);
-int getpeername(int, struct sockaddr *__restrict, socklen_t *__restrict);
-int getsockname(int, struct sockaddr *__restrict, socklen_t *__restrict);
-int getsockopt(int, int, int, void *__restrict, socklen_t *__restrict);
-int listen(int, int);
-ssize_t recv(int, void *, size_t, int);
-ssize_t recvfrom(int, void *__restrict, size_t, int, struct sockaddr *__restrict,
-                 socklen_t *__restrict);
-ssize_t recvmsg(int, struct msghdr *, int);
-ssize_t send(int, const void *, size_t, int);
-ssize_t sendmsg(int, const struct msghdr *, int);
-ssize_t sendto(int, const void *, size_t, int, const struct sockaddr *, socklen_t);
-int setsockopt(int, int, int, const void *, socklen_t);
-int shutdown(int, int);
-int socket(int, int, int);
-int sockatmark(int);
-int socketpair(int, int, int, int[2]);
+int accept(int socket, struct sockaddr *__restrict address,
+           socklen_t *__restrict address_len);
+int bind(int socket, const struct sockaddr *address, socklen_t address_len);
+int connect(int socket, const struct sockaddr *address, socklen_t address_len);
+int getpeername(int socket, struct sockaddr *__restrict address,
+                socklen_t *__restrict address_len);
+int getsockname(int socket, struct sockaddr *__restrict address,
+                socklen_t *__restrict address_len);
+int getsockopt(int socket, int level, int option_name, void *__restrict option_value,
+               socklen_t *__restrict option_len);
+int listen(int socket, int backlog);
+ssize_t recv(int socket, void *buffer, size_t length, int flags);
+ssize_t recvfrom(int socket, void *__restrict buffer, size_t length, int flags,
+                 struct sockaddr *__restrict address, socklen_t *__restrict address_len);
+ssize_t recvmsg(int socket, struct msghdr *message, int flags);
+ssize_t send(int socket, const void *buffer, size_t length, int flags);
+ssize_t sendmsg(int socket, const struct msghdr *message, int flags);
+ssize_t sendto(int socket, const void *message, size_t length, int flags,
+               const struct sockaddr *dest_addr, socklen_t dest_len);
+int setsockopt(int socket, int level, int option_name, const void *option_value,
+               socklen_t option_len);
+int shutdown(int socket, int how);
+int socket(int domain, int type, int protocol);
+int sockatmark(int s);
+int socketpair(int domain, int type, int protocol, int socket_vector[2]);
+
+#ifdef __cplusplus
+}
+#endif

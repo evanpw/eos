@@ -34,6 +34,7 @@ add_library(
     libc/stdio.cpp
     libc/stdlib.cpp
     libc/string.cpp
+    libc/sys/socket.cpp
     libc/sys/wait.cpp
     libc/syscall.cpp
     libc/unistd.cpp
