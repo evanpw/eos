@@ -188,8 +188,7 @@ void dhcpRequest(NetworkInterface* netif) {
     request->fillMagic();
     request->setOptions(options.data(), options.size());
 
-    udpSend(netif, IpAddress::broadcast(), DHCP_CLIENT_PORT, DHCP_SERVER_PORT, packet,
-            packetSize);
+    udpBroadcast(netif, DHCP_CLIENT_PORT, DHCP_SERVER_PORT, packet, packetSize);
 }
 
 void dhcpInit(NetworkInterface* netif) { dhcpRequest(netif); }

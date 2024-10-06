@@ -329,7 +329,7 @@ static void dnsInsert(const char* hostname, IpAddress ip) {
     }
 }
 
-void dnsQuery(NetworkInterface* netif, IpAddress dnsServer, const char* hostname) {
+void dnsQuery(IpAddress dnsServer, const char* hostname) {
     QuestionBuilder questions;
     questions.add(hostname, DnsRecordType::A, DnsRecordClass::IN);
 
@@ -343,13 +343,12 @@ void dnsQuery(NetworkInterface* netif, IpAddress dnsServer, const char* hostname
     header->setQdcount(1);
     memcpy(packet + sizeof(DnsHeader), questions.data(), questions.size());
 
-    udpSend(netif, dnsServer, 10053, 53, packet, packetSize, true);
+    udpSend(dnsServer, 10053, 53, packet, packetSize, true);
 
     delete[] packet;
 }
 
-IpAddress dnsResolve(NetworkInterface* netif, IpAddress dnsServer, const char* hostname,
-                     bool blocking) {
+IpAddress dnsResolve(IpAddress dnsServer, const char* hostname, bool blocking) {
     IpAddress result;
     if (dnsLookupCached(hostname, &result)) {
         return result;
@@ -360,7 +359,7 @@ IpAddress dnsResolve(NetworkInterface* netif, IpAddress dnsServer, const char* h
     }
 
     // If not in cache, we have to send a dns request
-    dnsQuery(netif, dnsServer, hostname);
+    dnsQuery(dnsServer, hostname);
 
     // Wait for the reply. We need to take the lock to avoid a race condition between
     // checking the cache and going to sleep. Otherwise, the reply may arrive between
@@ -375,7 +374,7 @@ IpAddress dnsResolve(NetworkInterface* netif, IpAddress dnsServer, const char* h
     }
 }
 
-void dnsRecv(NetworkInterface*, uint8_t* buffer, size_t size) {
+void dnsRecv(uint8_t* buffer, size_t size) {
     if (size < sizeof(DnsHeader)) {
         return;
     }

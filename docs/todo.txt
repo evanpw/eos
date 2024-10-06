@@ -1,8 +1,12 @@
-* create a kernel process with pid 0
-* add an idle thread that runs in pid 0
-* add states to threads
-* teach the scheduler to respect thread states
-* add a mechanism for blocking / unblocking a thread on time (for sleep())
-* switch the sleep syscall to block rather than spin
-* add mutexes and allow threads to block on them
-* make everything thread-safe by adding mutexes
+* support for UDP sockets in usermode
+* add support for pipes and write a less command
+* support ELF binaries
+* support listening on a socket
+* support tcp retransmission and out-of-order packets
+* handle MSS and MTU correctly in tcp stack
+* parse TCP options
+* add usermode support for DNS lookups
+* add send queueing to ip and tcp protocol layers
+* add a loopback interface
+* split boot into multiple stages, and support grub
+* add support for USB

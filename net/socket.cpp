@@ -3,9 +3,8 @@
 #include <netinet/in.h>
 
 #include "net/ip.h"
-#include "system.h"
 
-TcpSocket::~TcpSocket() { tcpClose(&sys.netif(), _handle); }
+TcpSocket::~TcpSocket() { tcpClose(_handle); }
 
 int64_t TcpSocket::connect(const struct sockaddr* addr, socklen_t addrlen) {
     if (addr->sa_family != AF_INET) {
@@ -17,11 +16,10 @@ int64_t TcpSocket::connect(const struct sockaddr* addr, socklen_t addrlen) {
     }
 
     const struct sockaddr_in* addr_in = reinterpret_cast<const struct sockaddr_in*>(addr);
-    NetworkInterface* netif = &sys.netif();
     IpAddress destIp(addr_in->sin_addr.s_addr);
     uint16_t destPort = ntohs(addr_in->sin_port);
 
-    _handle = tcpConnect(netif, destIp, destPort);
+    _handle = tcpConnect(destIp, destPort);
 
     if (_handle == InvalidTcpHandle) {
         return -ECONNREFUSED;
@@ -40,8 +38,7 @@ ssize_t TcpSocket::read(OpenFileDescription&, void* buffer, size_t size) {
         return -ENOTCONN;
     }
 
-    NetworkInterface* netif = &sys.netif();
-    return tcpRecv(netif, _handle, buffer, size);
+    return tcpRecv(_handle, buffer, size);
 }
 
 ssize_t TcpSocket::write(OpenFileDescription&, const void* buffer, size_t size) {
@@ -49,8 +46,7 @@ ssize_t TcpSocket::write(OpenFileDescription&, const void* buffer, size_t size) 
         return -ENOTCONN;
     }
 
-    NetworkInterface* netif = &sys.netif();
-    if (!tcpSend(netif, _handle, buffer, size, true)) {
+    if (!tcpSend(_handle, buffer, size, true)) {
         return -EPIPE;
     }
 

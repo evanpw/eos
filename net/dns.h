@@ -3,7 +3,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "net/network_interface.h"
+#include "net/ip.h"
 
 enum class DnsResponseCode : uint8_t {
     NoError = 0,     // No error condition
@@ -106,6 +106,5 @@ public:
 static_assert(sizeof(DnsHeader) == 12);
 
 void dnsInit();
-IpAddress dnsResolve(NetworkInterface* netif, IpAddress dnsServer, const char* hostname,
-                     bool blocking = false);
-void dnsRecv(NetworkInterface* netif, uint8_t* buffer, size_t size);
+IpAddress dnsResolve(IpAddress dnsServer, const char* hostname, bool blocking = false);
+void dnsRecv(uint8_t* buffer, size_t size);

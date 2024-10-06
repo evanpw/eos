@@ -31,5 +31,7 @@ public:
 static_assert(sizeof(UdpHeader) == 8);
 
 void udpRecv(NetworkInterface* netif, IpHeader* ipHeader, uint8_t* buffer, size_t size);
-void udpSend(NetworkInterface* netif, IpAddress destIp, uint16_t sourcePort,
-             uint16_t destPort, uint8_t* buffer, uint8_t size, bool blocking = false);
+void udpBroadcast(NetworkInterface* netif, uint16_t sourcePort, uint16_t destPort,
+                  uint8_t* buffer, uint8_t size);
+void udpSend(IpAddress destIp, uint16_t sourcePort, uint16_t destPort, uint8_t* buffer,
+             uint8_t size, bool blocking = false);

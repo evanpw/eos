@@ -11,6 +11,7 @@
 #include "net/network_interface.h"
 #include "net/tcp.h"
 #include "net/udp.h"
+#include "system.h"
 
 IpAddress::IpAddress(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
     value = concatBits(d, c, b, a);
@@ -83,7 +84,7 @@ void ipRecv(NetworkInterface* netif, uint8_t* buffer, size_t size) {
             break;
 
         case IpProtocol::Tcp:
-            tcpRecv(netif, ipHeader, buffer, size);
+            tcpRecv(ipHeader, buffer, size);
             break;
 
         default:
@@ -92,15 +93,19 @@ void ipRecv(NetworkInterface* netif, uint8_t* buffer, size_t size) {
 }
 
 // Extremely basic IP routing
-bool findRoute(NetworkInterface* netif, IpAddress destIp, MacAddress* destMac,
+bool findRoute(IpAddress destIp, NetworkInterface** netifOut, MacAddress* destMac,
                bool blocking) {
-    if (destIp == IpAddress::broadcast()) {
-        *destMac = MacAddress::broadcast();
-        return true;
-    }
+    // TODO: determine the correct network interface from the destination
+    NetworkInterface* netif = &sys.netif();
+    *netifOut = netif;
 
     if (!netif->isConfigured()) {
         return false;
+    }
+
+    if (destIp == IpAddress::broadcast()) {
+        *destMac = MacAddress::broadcast();
+        return true;
     }
 
     IpAddress nextHop = netif->isLocal(destIp) ? destIp : netif->gateway();
@@ -112,10 +117,23 @@ bool findRoute(NetworkInterface* netif, IpAddress destIp, MacAddress* destMac,
     return arpLookupCached(nextHop, destMac);
 }
 
-bool ipSend(NetworkInterface* netif, IpAddress destIp, IpProtocol protocol, void* buffer,
-            size_t size, bool blocking) {
+bool findRouteSourceIp(IpAddress, IpAddress* sourceIp) {
+    // TODO: determine the correct network interface from the destination
+    NetworkInterface* netif = &sys.netif();
+
+    if (!netif->isConfigured()) {
+        return false;
+    }
+
+    *sourceIp = netif->ipAddress();
+    return true;
+}
+
+bool ipSend(IpAddress destIp, IpProtocol protocol, void* buffer, size_t size,
+            bool blocking) {
+    NetworkInterface* netif;
     MacAddress destMac;
-    if (!findRoute(netif, destIp, &destMac, blocking)) return false;
+    if (!findRoute(destIp, &netif, &destMac, blocking)) return false;
 
     size_t totalSize = sizeof(IpHeader) + size;
     uint8_t* packet = new uint8_t[totalSize];
@@ -129,5 +147,22 @@ bool ipSend(NetworkInterface* netif, IpAddress destIp, IpProtocol protocol, void
 
     memcpy(packet + sizeof(IpHeader), buffer, size);
     ethSend(netif, destMac, EtherType::Ipv4, packet, totalSize);
+    return true;
+}
+
+bool ipBroadcast(NetworkInterface* netif, IpProtocol protocol, void* buffer,
+                 size_t size) {
+    size_t totalSize = sizeof(IpHeader) + size;
+    uint8_t* packet = new uint8_t[totalSize];
+
+    IpHeader* ipHeader = new (packet) IpHeader;
+    ipHeader->setTotalLen(totalSize);
+    ipHeader->setProtocol(protocol);
+    ipHeader->setSourceIp(netif->ipAddress());
+    ipHeader->setDestIp(IpAddress::broadcast());
+    ipHeader->fillChecksum();
+
+    memcpy(packet + sizeof(IpHeader), buffer, size);
+    ethSend(netif, MacAddress::broadcast(), EtherType::Ipv4, packet, totalSize);
     return true;
 }

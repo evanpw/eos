@@ -73,7 +73,7 @@ static_assert(sizeof(TcpHeader) == 20);
 
 // Low-level API
 void tcpInit();
-void tcpRecv(NetworkInterface* netif, IpHeader* ipHeader, uint8_t* buffer, size_t size);
+void tcpRecv(IpHeader* ipHeader, uint8_t* buffer, size_t size);
 
 // High-level kernel-mode API
 using TcpHandle = uint64_t;
@@ -81,9 +81,8 @@ static constexpr TcpHandle InvalidTcpHandle = 0;
 
 bool tcpWaitForConnection(TcpHandle handle);
 
-TcpHandle tcpConnect(NetworkInterface* netif, IpAddress destIp, uint16_t destPort);
-TcpHandle tcpListen(NetworkInterface* netif, uint16_t port);
-bool tcpSend(NetworkInterface* netif, TcpHandle handle, const void* buffer, size_t size,
-             bool push = false);
-ssize_t tcpRecv(NetworkInterface* netif, TcpHandle handle, void* buffer, size_t size);
-bool tcpClose(NetworkInterface* netif, TcpHandle handle);
+TcpHandle tcpConnect(IpAddress destIp, uint16_t destPort);
+TcpHandle tcpListen(uint16_t port);
+bool tcpSend(TcpHandle handle, const void* buffer, size_t size, bool push = false);
+ssize_t tcpRecv(TcpHandle handle, void* buffer, size_t size);
+bool tcpClose(TcpHandle handle);

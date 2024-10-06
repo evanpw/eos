@@ -94,6 +94,8 @@ public:
 
 static_assert(sizeof(IpHeader) == 20);
 
+bool findRouteSourceIp(IpAddress destIp, IpAddress* sourceIp);
 void ipRecv(NetworkInterface* netif, uint8_t* buffer, size_t size);
-bool ipSend(NetworkInterface* netif, IpAddress destIp, IpProtocol protocol, void* buffer,
-            size_t size, bool blocking = false);
+bool ipBroadcast(NetworkInterface* netif, IpProtocol protocol, void* buffer, size_t size);
+bool ipSend(IpAddress destIp, IpProtocol protocol, void* buffer, size_t size,
+            bool blocking = false);
