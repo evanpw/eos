@@ -46,9 +46,9 @@ int main(int argc, char* argv[]) {
     // Echo the result to the terminal
     bool needToWait = false;
     size_t linesWritten = 0;
-    char* buffer = new char[1024];
+    char* buffer = new char[64 * 1024];
     while (true) {
-        ssize_t bytesRead = recv(fd, buffer, 1024, 0);
+        ssize_t bytesRead = recv(fd, buffer, 64 * 1024, 0);
         if (bytesRead < 0) {
             println("tcp error");
             return 1;

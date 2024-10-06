@@ -668,7 +668,7 @@ bool tcpSend(NetworkInterface* netif, TcpHandle handle, const void* buffer, size
     return true;
 }
 
-ssize_t tcpRecv(NetworkInterface*, TcpHandle handle, void* buffer, size_t size) {
+ssize_t tcpRecv(NetworkInterface* netif, TcpHandle handle, void* buffer, size_t size) {
     // Lookup the connection
     TcpControlBlock* tcb = tcbLookup(handle);
     if (!tcb) return -1;
@@ -718,9 +718,29 @@ ssize_t tcpRecv(NetworkInterface*, TcpHandle handle, void* buffer, size_t size) 
 
     // Shift the remaining data to the front of the buffer
     memcpy(tcb->recvBuffer, tcb->recvBuffer + readSize, tcb->recvBufferUsed() - readSize);
+    uint32_t prevWindow = tcb->recv.window;
     tcb->recv.window += readSize;
 
-    tcb->lock.unlock();
+    // If moving from a zero (or near-zero) window to a non-zero window, send a window
+    // update to the remote side
+    if ((prevWindow < 1500 && tcb->recv.window >= 1500) ||
+        (prevWindow == 0 && tcb->recv.window > 0)) {
+        TcpHeader header;
+        header.setSourcePort(tcb->localPort);
+        header.setDestPort(tcb->remotePort);
+        header.setSeqNum(tcb->send.next);
+        header.setAckNum(tcb->recv.next);
+        header.setAck();
+        header.setWindowSize(tcb->recv.window);
+        header.fillChecksum(tcb->localIp, tcb->remoteIp, sizeof(TcpHeader));
+        tcb->lock.unlock();
+
+        // Will block until sent (may have to wait for ARP resolution)
+        ipSend(netif, tcb->remoteIp, IpProtocol::Tcp, &header, sizeof(TcpHeader), true);
+    } else {
+        tcb->lock.unlock();
+    }
+
     return readSize;
 }
 
@@ -766,7 +786,7 @@ bool tcpClose(NetworkInterface* netif, TcpHandle handle) {
     } else {
         tcb->state = TcpState::LAST_ACK;
     }
-    tcb->send.next++;  // FIN consumes on sequence number
+    tcb->send.next++;  // FIN consumes one sequence number
     tcb->lock.unlock();
 
     // Will block until sent (may have to wait for ARP resolution)
