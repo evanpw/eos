@@ -369,10 +369,16 @@ void tcpRecvEstablished(NetworkInterface* netif, TcpControlBlock* tcb,
         sys.scheduler().wakeThreads(tcb->dataAvailable);
     }
 
-    tcb->state = TcpState::ESTABLISHED;
     tcb->send.window = tcpHeader->windowSize();
     tcb->send.unacked = tcpHeader->ackNum();
     tcb->recv.next += dataLen;
+
+    // If the other side is finished, continue acking this segment, and wait for the
+    // local user to close the connection
+    if (tcpHeader->fin()) {
+        tcb->state = TcpState::CLOSE_WAIT;
+        tcb->recv.next++;  // ACK the FIN, which consumes one sequence number
+    }
 
     // If we get a simple ACK with no data and no FIN, then we don't need to reply
     if (origDataLen == 0 && !tcpHeader->fin()) {
@@ -388,17 +394,6 @@ void tcpRecvEstablished(NetworkInterface* netif, TcpControlBlock* tcb,
     response.setAckNum(tcb->recv.next);
     response.setAck();
     response.setWindowSize(tcb->recv.window);
-
-    // If the remote side has sent a FIN, start tearing down the connection
-    if (tcpHeader->fin()) {
-        tcb->state = TcpState::CLOSE_WAIT;
-        tcb->recv.next++;  // FIN consumes one sequence number
-        tcb->send.next++;  // sent FIN also consumes one sequence number
-
-        // Acknowledge their FIN and send our own
-        response.setAckNum(tcb->recv.next);
-        response.setFin();
-    }
 
     response.fillChecksum(tcb->localIp, tcb->remoteIp, sizeof(TcpHeader));
     ipSend(netif, tcb->remoteIp, IpProtocol::Tcp, &response, sizeof(TcpHeader));
