@@ -8,6 +8,13 @@
 
 void clear() { print("\033[J"); }
 
+void hello() {
+    print("\033[?1049h");
+    print("Hello World!");
+    sleep(20);
+    print("\033[?1049l");
+}
+
 void spam() { launch("/bin/spam", nullptr); }
 
 void ls(const char* path) {
@@ -74,6 +81,8 @@ int main() {
 
         if (strcmp(cmd, "clear") == 0) {
             clear();
+        } else if (strcmp(cmd, "hello") == 0) {
+            hello();
         } else if (strcmp(cmd, "spam") == 0) {
             spam();
         } else if (strcmp(cmd, "wget") == 0) {

@@ -1,5 +1,7 @@
 #include "screen.h"
 
+#include <string.h>
+
 #include "estd/assertions.h"
 #include "estd/bits.h"
 #include "estd/print.h"
@@ -65,4 +67,12 @@ void Screen::scrollUp() {
     for (size_t x = 0; x < _width; ++x) {
         putChar(x, _height - 1, ' ', Black, LightGrey);
     }
+}
+
+void Screen::save(uint16_t* buffer) {
+    memcpy(buffer, _vram, _width * _height * sizeof(uint16_t));
+}
+
+void Screen::restore(const uint16_t* buffer) {
+    memcpy(_vram, buffer, _width * _height * sizeof(uint16_t));
 }

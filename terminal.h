@@ -28,6 +28,8 @@ private:
     void handleOutput(char c);
     void handleEscapeSequence();
     bool parseEscapeSequence();
+    bool parseCSI();
+    bool parseDEC();
     void echo(char c);
     void carriageReturn();
     void newline();
@@ -48,4 +50,9 @@ private:
     size_t _savedX = 0, _savedY = 0;
     Screen::Color _fg = Screen::LightGrey, _bg = Screen::Black;
     SmallVector<char, TERMINAL_OUTPUT_BUFFER_SIZE> _outputBuffer;
+
+    // Saved screen state for use when switching to the alternate screen buffer
+    size_t _normalX = 0, _normalY = 0;
+    Screen::Color _normalFg = Screen::LightGrey, _normalBg = Screen::Black;
+    uint16_t _normalScreen[80 * 25] = {};
 };

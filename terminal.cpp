@@ -588,151 +588,226 @@ bool Terminal::parseEscapeSequence() {
 
     size_t idx = 1;
     if (_outputBuffer[idx] == '[') {
-        // CSI sequences
-        if (++idx == _outputBuffer.size()) return false;
-        char c = _outputBuffer[idx];
-
-        // Look for optional numerical arguments
-        estd::vector<int> args;
-        if (c >= '0' && c <= '9') {
-            while (true) {
-                int arg = 0;
-                while (c >= '0' && c <= '9') {
-                    // TODO: check for overflow
-                    arg = (arg * 10) + (c - '0');
-
-                    if (++idx == _outputBuffer.size()) return false;
-                    c = _outputBuffer[idx];
-                }
-
-                args.push_back(arg);
-
-                if (c == ';') {
-                    if (++idx == _outputBuffer.size()) return false;
-                    c = _outputBuffer[idx];
-                } else {
-                    break;
-                }
-            }
-        }
-
-        switch (c) {
-            case 's':
-                _savedX = _x;
-                _savedY = _y;
-                return true;
-
-            case 'u':
-                _x = _savedX;
-                _y = _savedY;
-                _screen.setCursor(_x, _y);
-                return true;
-
-            case 'J':
-                _screen.clear(_bg);
-                _x = 0;
-                _y = 0;
-                _screen.setCursor(_x, _y);
-                return true;
-
-            case 'm': {
-                if (args.size() == 0) {
-                    _fg = Screen::LightGrey;
-                    _bg = Screen::Black;
-                }
-
-                for (int arg : args) {
-                    if (arg == 0) {
-                        _fg = Screen::LightGrey;
-                        _bg = Screen::Black;
-                    } else if (arg == 30) {
-                        _fg = Screen::Black;
-                    } else if (arg == 31) {
-                        _fg = Screen::Red;
-                    } else if (arg == 32) {
-                        _fg = Screen::Green;
-                    } else if (arg == 33) {
-                        _fg = Screen::Brown;
-                    } else if (arg == 34) {
-                        _fg = Screen::Blue;
-                    } else if (arg == 35) {
-                        _fg = Screen::Magenta;
-                    } else if (arg == 36) {
-                        _fg = Screen::Cyan;
-                    } else if (arg == 37) {
-                        _fg = Screen::LightGrey;
-                    } else if (arg == 90) {
-                        _fg = Screen::DarkGrey;
-                    } else if (arg == 91) {
-                        _fg = Screen::LightRed;
-                    } else if (arg == 92) {
-                        _fg = Screen::LightGreen;
-                    } else if (arg == 93) {
-                        _fg = Screen::Yellow;
-                    } else if (arg == 94) {
-                        _fg = Screen::LightBlue;
-                    } else if (arg == 95) {
-                        _fg = Screen::LightMagenta;
-                    } else if (arg == 96) {
-                        _fg = Screen::LightCyan;
-                    } else if (arg == 97) {
-                        _fg = Screen::White;
-                    } else if (arg == 40) {
-                        _bg = Screen::Black;
-                    } else if (arg == 41) {
-                        _bg = Screen::Red;
-                    } else if (arg == 42) {
-                        _bg = Screen::Green;
-                    } else if (arg == 43) {
-                        _bg = Screen::Brown;
-                    } else if (arg == 44) {
-                        _bg = Screen::Blue;
-                    } else if (arg == 45) {
-                        _bg = Screen::Magenta;
-                    } else if (arg == 46) {
-                        _bg = Screen::Cyan;
-                    } else if (arg == 47) {
-                        _bg = Screen::LightGrey;
-                    } else if (arg == 100) {
-                        _bg = Screen::DarkGrey;
-                    } else if (arg == 101) {
-                        _bg = Screen::LightRed;
-                    } else if (arg == 102) {
-                        _bg = Screen::LightGreen;
-                    } else if (arg == 103) {
-                        _bg = Screen::Yellow;
-                    } else if (arg == 104) {
-                        _bg = Screen::LightBlue;
-                    } else if (arg == 105) {
-                        _bg = Screen::LightMagenta;
-                    } else if (arg == 106) {
-                        _bg = Screen::LightCyan;
-                    } else if (arg == 107) {
-                        _bg = Screen::White;
-                    }
-                }
-
-                return true;
-            }
-
-            case 'H': {
-                if (args.size() == 2) {
-                    _x = min(max(0, args[1] - 1), (int)_screen.width() - 1);
-                    _y = min(max(0, args[0] - 1), (int)_screen.height() - 1);
-                    _screen.setCursor(_x, _y);
-                }
-
-                return true;
-            }
-
-            default:
-                // Bad escape sequence, ignore it and clear the buffer
-                return true;
-        }
+        return parseCSI();
     } else {
         // Bad escape sequence, ignore it and clear the buffer
         return true;
     }
+}
+
+bool Terminal::parseCSI() {
+    ASSERT(_outputBuffer.size() >= 2 && _outputBuffer[0] == '\033' &&
+           _outputBuffer[1] == '[');
+
+    size_t idx = 2;
+    if (idx == _outputBuffer.size()) return false;
+    char c = _outputBuffer[idx];
+
+    if (c == '?') {
+        return parseDEC();
+    }
+
+    // Look for optional numerical arguments
+    estd::vector<int> args;
+    if (c >= '0' && c <= '9') {
+        while (true) {
+            int arg = 0;
+            while (c >= '0' && c <= '9') {
+                // TODO: check for overflow
+                arg = (arg * 10) + (c - '0');
+
+                if (++idx == _outputBuffer.size()) return false;
+                c = _outputBuffer[idx];
+            }
+
+            args.push_back(arg);
+
+            if (c == ';') {
+                if (++idx == _outputBuffer.size()) return false;
+                c = _outputBuffer[idx];
+            } else {
+                break;
+            }
+        }
+    }
+
+    switch (c) {
+        case 's':
+            _savedX = _x;
+            _savedY = _y;
+            return true;
+
+        case 'u':
+            _x = _savedX;
+            _y = _savedY;
+            _screen.setCursor(_x, _y);
+            return true;
+
+        case 'J':
+            _screen.clear(_bg);
+            _x = 0;
+            _y = 0;
+            _screen.setCursor(_x, _y);
+            return true;
+
+        case 'm': {
+            if (args.size() == 0) {
+                _fg = Screen::LightGrey;
+                _bg = Screen::Black;
+            }
+
+            for (int arg : args) {
+                if (arg == 0) {
+                    _fg = Screen::LightGrey;
+                    _bg = Screen::Black;
+                } else if (arg == 30) {
+                    _fg = Screen::Black;
+                } else if (arg == 31) {
+                    _fg = Screen::Red;
+                } else if (arg == 32) {
+                    _fg = Screen::Green;
+                } else if (arg == 33) {
+                    _fg = Screen::Brown;
+                } else if (arg == 34) {
+                    _fg = Screen::Blue;
+                } else if (arg == 35) {
+                    _fg = Screen::Magenta;
+                } else if (arg == 36) {
+                    _fg = Screen::Cyan;
+                } else if (arg == 37) {
+                    _fg = Screen::LightGrey;
+                } else if (arg == 90) {
+                    _fg = Screen::DarkGrey;
+                } else if (arg == 91) {
+                    _fg = Screen::LightRed;
+                } else if (arg == 92) {
+                    _fg = Screen::LightGreen;
+                } else if (arg == 93) {
+                    _fg = Screen::Yellow;
+                } else if (arg == 94) {
+                    _fg = Screen::LightBlue;
+                } else if (arg == 95) {
+                    _fg = Screen::LightMagenta;
+                } else if (arg == 96) {
+                    _fg = Screen::LightCyan;
+                } else if (arg == 97) {
+                    _fg = Screen::White;
+                } else if (arg == 40) {
+                    _bg = Screen::Black;
+                } else if (arg == 41) {
+                    _bg = Screen::Red;
+                } else if (arg == 42) {
+                    _bg = Screen::Green;
+                } else if (arg == 43) {
+                    _bg = Screen::Brown;
+                } else if (arg == 44) {
+                    _bg = Screen::Blue;
+                } else if (arg == 45) {
+                    _bg = Screen::Magenta;
+                } else if (arg == 46) {
+                    _bg = Screen::Cyan;
+                } else if (arg == 47) {
+                    _bg = Screen::LightGrey;
+                } else if (arg == 100) {
+                    _bg = Screen::DarkGrey;
+                } else if (arg == 101) {
+                    _bg = Screen::LightRed;
+                } else if (arg == 102) {
+                    _bg = Screen::LightGreen;
+                } else if (arg == 103) {
+                    _bg = Screen::Yellow;
+                } else if (arg == 104) {
+                    _bg = Screen::LightBlue;
+                } else if (arg == 105) {
+                    _bg = Screen::LightMagenta;
+                } else if (arg == 106) {
+                    _bg = Screen::LightCyan;
+                } else if (arg == 107) {
+                    _bg = Screen::White;
+                }
+            }
+
+            return true;
+        }
+
+        case 'H': {
+            if (args.size() == 2) {
+                _x = min(max(0, args[1] - 1), (int)_screen.width() - 1);
+                _y = min(max(0, args[0] - 1), (int)_screen.height() - 1);
+                _screen.setCursor(_x, _y);
+            }
+
+            return true;
+        }
+
+        default:
+            // Bad escape sequence, ignore it and clear the buffer
+            return true;
+    }
+}
+
+bool Terminal::parseDEC() {
+    ASSERT(_outputBuffer.size() >= 3 && _outputBuffer[0] == '\033' &&
+           _outputBuffer[1] == '[' && _outputBuffer[2] == '?');
+
+    size_t idx = 3;
+    if (idx == _outputBuffer.size()) return false;
+    char c = _outputBuffer[idx];
+
+    // Look for optional numerical arguments
+    estd::vector<int> args;
+    if (c >= '0' && c <= '9') {
+        while (true) {
+            int arg = 0;
+            while (c >= '0' && c <= '9') {
+                // TODO: check for overflow
+                arg = (arg * 10) + (c - '0');
+
+                if (++idx == _outputBuffer.size()) return false;
+                c = _outputBuffer[idx];
+            }
+
+            args.push_back(arg);
+
+            if (c == ';') {
+                if (++idx == _outputBuffer.size()) return false;
+                c = _outputBuffer[idx];
+            } else {
+                break;
+            }
+        }
+    }
+
+    if ((c != 'h' && c != 'l') || args.size() != 1) return true;
+
+    if (c == 'h' && args[0] == 1049) {
+        //// CSI ? Pm l = Use alternate screen buffer
+        // Save normal screen buffer state
+        _normalX = _x;
+        _normalY = _y;
+        _normalFg = _fg;
+        _normalBg = _bg;
+        _screen.save(_normalScreen);
+
+        // Reset the screen state
+        _x = 0;
+        _y = 0;
+        _fg = Screen::LightGrey;
+        _bg = Screen::Black;
+        _screen.clear(_bg);
+        _screen.setCursor(_x, _y);
+    } else if (c == 'l' && args[0] == 1049) {
+        //// CSI ? Pm h = Use normal screen buffer
+        // Just restore normal screen buffer state, alternate state is discarded
+        _x = _normalX;
+        _y = _normalY;
+        _fg = _normalFg;
+        _bg = _normalBg;
+        _screen.restore(_normalScreen);
+        _screen.setCursor(_x, _y);
+    }
+
+    return true;
 }
 
 void Terminal::echo(char c) {

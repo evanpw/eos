@@ -34,6 +34,9 @@ public:
     void setCursor(size_t x, size_t y);
     void scrollUp();
 
+    void save(uint16_t* buffer);
+    void restore(const uint16_t* buffer);
+
 private:
     friend class System;
     Screen();
