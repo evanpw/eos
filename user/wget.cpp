@@ -40,7 +40,12 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    // Switch to alternate terminal mode
+    print("\033[?1049h");
+
     // Echo the result to the terminal
+    bool needToWait = false;
+    size_t linesWritten = 0;
     char* buffer = new char[1024];
     while (true) {
         ssize_t bytesRead = recv(fd, buffer, 1024, 0);
@@ -52,10 +57,35 @@ int main(int argc, char* argv[]) {
         }
 
         for (size_t i = 0; i < bytesRead; ++i) {
+            if (buffer[i] == '\n') {
+                linesWritten++;
+            }
+
+            // TODO: track line wrapping as well
+            if (linesWritten == 25) {
+                // Wait for a key before continuing
+                char c;
+                read(STDIN_FILENO, &c, 1);
+
+                // Clear the screen and continue with the next line
+                print("\033[2J");
+                linesWritten = 0;
+                needToWait = false;
+                continue;
+            }
+
             putchar(buffer[i]);
+            needToWait = true;
         }
     }
     delete[] buffer;
+
+    // If we've printed something since the last screen clear, wait for a key
+    char c;
+    read(STDIN_FILENO, &c, 1);
+
+    // Switch back to normal terminal mode
+    print("\033[?1049l");
 
     close(fd);
     return 0;
