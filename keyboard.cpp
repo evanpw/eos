@@ -25,7 +25,7 @@ KeyboardDevice::KeyboardDevice() {
         _keyState[i] = false;
     }
 
-    registerIrqHandler(1, [this](TrapRegisters&) { this->irqHandler(); });
+    registerIrqHandler(1, [this](uint8_t) { this->irqHandler(); });
 
     println("kbd: init complete");
 }
@@ -37,8 +37,7 @@ void KeyboardDevice::irqHandler() {
         handleKey(byte);
     }
 
-    // EOI signal
-    outb(PIC1_COMMAND, EOI);
+    endOfInterrupt(IRQ_KEYBOARD);
 }
 
 void KeyboardDevice::handleKey(uint8_t scanCode) {

@@ -5,11 +5,9 @@
 #include "estd/bits.h"
 #include "estd/print.h"
 #include "io.h"
-#include "keyboard.h"
 #include "mm.h"
 #include "panic.h"
 #include "processor.h"
-#include "system.h"
 #include "trap.h"
 
 InterruptDescriptor::InterruptDescriptor(uint64_t addr, uint8_t flags)
@@ -43,23 +41,38 @@ static constexpr uint8_t IRQ_OFFSET = 0x20;
 InterruptDescriptor* g_idt = nullptr;
 IDTRegister g_idtr;
 
+// TODO: should be per-cpu
+// This doesn't actually need to be atomic right now, since interrupts are disabled during
+// irq handling, but we probably want to change that in the future
+AtomicBool irqFlag;
+
 static IRQHandler irqHandlers[16] = {};
 
-void registerIrqHandler(uint8_t idx, IRQHandler handler) {
-    ASSERT(idx < 16);
-    ASSERT(!irqHandlers[idx]);
-    irqHandlers[idx] = handler;
+void registerIrqHandler(uint8_t irqNo, IRQHandler handler) {
+    ASSERT(irqNo < 16);
+    ASSERT(!irqHandlers[irqNo]);
+    irqHandlers[irqNo] = handler;
 
     // Unmask this IRQ at the PIC
-    uint16_t port = idx < 8 ? PIC1_DATA : PIC2_DATA;
-    uint8_t mask = inb(port) & ~(1 << (idx % 8));
+    uint16_t port = irqNo < 8 ? PIC1_DATA : PIC2_DATA;
+    uint8_t mask = inb(port) & ~(1 << (irqNo % 8));
     outb(port, mask);
 }
 
 // Called by the assembly-language IRQ entry points defined in entry.S
-extern "C" void irqEntry(uint8_t idx, TrapRegisters& regs) {
-    ASSERT(irqHandlers[idx]);
-    irqHandlers[idx](regs);
+extern "C" void irqEntry(uint8_t irqNo, TrapRegisters&) {
+    ASSERT(irqHandlers[irqNo]);
+    ASSERT(!Processor::interruptsEnabled());
+
+    irqFlag.store(true);
+    irqHandlers[irqNo](irqNo);
+}
+
+void endOfInterrupt(uint8_t irqNo) {
+    if (irqNo >= 8) outb(PIC2_COMMAND, EOI);
+    outb(PIC1_COMMAND, EOI);
+
+    irqFlag.store(false);
 }
 
 void handleException(uint8_t vector, const char* name, TrapRegisters& regs,
@@ -173,6 +186,8 @@ void installInterrupts() {
     g_idtr.addr = (uint64_t)&g_idt[0];
     g_idtr.limit = 256 * sizeof(InterruptDescriptor) - 1;
 
+    new (&irqFlag) AtomicBool;
+
     // Set up the TSS to allow interrupts from ring3 -> ring0 by pointing
     // rsp0 to the top of a 16KiB kernel stack
     VirtualAddress kernelStackBottom = mm.physicalToVirtual(mm.pageAlloc(4));
@@ -182,3 +197,5 @@ void installInterrupts() {
     Processor::lidt(g_idtr);
     println("pic: init complete");
 }
+
+bool inIrq() { return irqFlag.load(); }

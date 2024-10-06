@@ -12,8 +12,8 @@
 Thread* currentThread;
 
 // Defined in entry.S
-extern "C" void switchToUserMode();
-extern "C" void enterKernelThread();
+extern "C" void syscallExitAsm();
+extern "C" void irqExitAsm();
 
 estd::unique_ptr<Thread> Thread::createUserThread(Process* process,
                                                   VirtualAddress entryPoint,
@@ -53,14 +53,13 @@ estd::unique_ptr<Thread> Thread::createUserThread(Process* process,
     regs.cs = SELECTOR_CODE3;
 
     // On top of that, construct a stack which looks like the one constructed by
-    // switchContext, except that the return address is switchToUserMode, which pops all
+    // switchContext, except that the return address is syscallExitAsm, which pops all
     // the registers from TrapRegisters and issues a sysret to enter user mode
-    *(--stackPtr) = bit_cast<uint64_t>((void*)switchToUserMode);
+    stackPtr -= sizeof(ThreadContext) / sizeof(uint64_t);
+    memset(stackPtr, 0, sizeof(ThreadContext));
 
-    // The rest of the regs (rbp, rbx, r12, r13, r14, r15) can be set to zero here
-    for (size_t i = 0; i < 6; ++i) {
-        *(--stackPtr) = 0;
-    }
+    ThreadContext& ctx = *new (stackPtr) ThreadContext;
+    ctx.returnAddress = bit_cast<uint64_t>((void*)syscallExitAsm);
 
     thread->kernelStack = stackTop.value;
     thread->rsp = bit_cast<uint64_t>(stackPtr);
@@ -138,14 +137,13 @@ estd::unique_ptr<Thread> Thread::createKernelThread(VirtualAddress entryPoint) {
     regs.cs = SELECTOR_CODE0;
 
     // On top of that, construct a stack which looks like the one constructed by
-    // switchContext, except that the return address is switchToUserMode, which pops
-    // off the (unused) error code and performs an iretq
-    *(--stackPtr) = bit_cast<uint64_t>((void*)enterKernelThread);
+    // switchContext, except that the return address is irqExitAsm, which pops all
+    // of the registers from TrapRegisters and issues an iretq
+    stackPtr -= sizeof(ThreadContext) / sizeof(uint64_t);
+    memset(stackPtr, 0, sizeof(ThreadContext));
 
-    // The rest of the regs (rbp, rbx, r12, r13, r14, r15) can be set to zero here
-    for (size_t i = 0; i < 6; ++i) {
-        *(--stackPtr) = 0;
-    }
+    ThreadContext& ctx = *new (stackPtr) ThreadContext;
+    ctx.returnAddress = bit_cast<uint64_t>((void*)irqExitAsm);
 
     thread->kernelStack = stackTop.value;
     thread->rsp = bit_cast<uint64_t>(stackPtr);

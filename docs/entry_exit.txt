@@ -1,0 +1,255 @@
+NB: top of stack diagram corresponds to higher addresses
+
+Initial Kernel Stacks
+=====================
+A newly created user thread has a kernel thread that looks like this:
+
+	TrapRegisters:
+		r15 = 0
+		r14 = 0
+		r13 = 0
+		r12 = 0
+		r11 = 0
+		r10 = 0
+		r9 = 0
+		r8 = 0
+		rdi = 0
+		rsi = 0
+		rsp = 0
+		rbp = 0
+		rbx = 0
+		rdx = 0
+		rcx = 0
+		rax = 0
+		errorCode = 0
+		rip = <entry point>
+		cs = <SELECTOR_DATA3>
+		rflags = <IF + reserved bit>
+		rspPrev = <top of user stack>
+		ss = <SELECTOR_CODE3>
+	ThreadContext:
+		returnAddress = <syscallExitAsm>
+		rbp = 0
+		rbx = 0
+		r12 = 0
+		r13 = 0
+		r14 = 0
+		r15 = 0
+
+A newly created kernel thread looks like this:
+
+	TrapRegisters:
+		r15 = 0
+		r14 = 0
+		r13 = 0
+		r12 = 0
+		r11 = 0
+		r10 = 0
+		r9 = 0
+		r8 = 0
+		rdi = 0
+		rsi = 0
+		rsp = 0
+		rbp = 0
+		rbx = 0
+		rdx = 0
+		rcx = 0
+		rax = 0
+		errorCode = 0
+		rip = <entry point>
+		cs = <SELECTOR_DATA0>
+		rflags = <IF + reserved bit>
+		rspPrev = <top of kernel stack>
+		ss = <SELECTOR_CODE0>
+	ThreadContext:
+		returnAddress = <irqExitAsm>
+		rbp = 0
+		rbx = 0
+		r12 = 0
+		r13 = 0
+		r14 = 0
+		r15 = 0
+
+Kernel Entry
+============
+On syscall entry (user -> kernel), the processor (based on MSR configuration):
+* places the address of the following user instruction in rcx
+* saves rflags into r11
+* clears rflags except the reserved bit (in particular, disables interrupts)
+* sets CS to SELECTOR_CODE0 and SS to SELECTOR_DATA0
+* jumps to syscallEntryAsm
+
+Within syscallEntryAsm, the following is pushed onto the stack:
+
+	TrapRegisters:
+		r15 = <user value>
+		r14 = <user value>
+		r13 = <user value>
+		r12 = <user value>
+		r11 = <user value>
+		r10 = <user value>
+		r9 = <user value>
+		r8 = <user value>
+		rdi = <user value>
+		rsi = <user value>
+		rsp = <kernel stack>
+		rbp = <user value>
+		rbx = <user value>
+		rdx = <user value>
+		rcx = <user value>
+		rax = <user value>
+		errorCode = 0
+		rip = <rcx (user return address)>
+		cs = <SELECTOR_DATA3>
+		rflags = <r11 (user rflags)>
+		rspPrev = <user rsp>
+		ss = <SELECTOR_CODE3>
+
+On irq entry (user -> kernel or kernel -> kernel), the processor:
+* disables interrupts (because irqs are defined using interrupt gates in the IDT)
+* if coming from user mode, switches to the interrupt stack (given by rsp0 in the TSS)
+* pushes ss, rsp, rflags, cs, and rip onto the stack
+* jumps to the correct irqEntryAsmN function (all identical except for passing a different irq index to irqEntry)
+
+Within irqEntryAsmN, the rest of a TrapRegisters structure is pushed onto the stack (note that the last 5 values
+are pushed by the processor, not the function):
+
+	TrapRegisters:
+		r15 = <saved value>
+		r14 = <saved value>
+		r13 = <saved value>
+		r12 = <saved value>
+		r11 = <saved value>
+		r10 = <saved value>
+		r9 = <saved value>
+		r8 = <saved value>
+		rdi = <saved value>
+		rsi = <saved value>
+		rsp = <saved stack>
+		rbp = <saved value>
+		rbx = <saved value>
+		rdx = <saved value>
+		rcx = <saved value>
+		rax = <saved value>
+		errorCode = 0
+		rip = <saved value>
+		cs = <saved value>
+		rflags = <saved value>
+		rspPrev = <saved value>
+		ss = <saved value>
+
+On an exception, the processor:
+* disables interrupts (because exceptions are defined using interrupt gates in the IDT)
+* if coming from user mode, switches to the interrupt stack (given by rsp0 in the TSS)
+* pushes ss, rsp, rflags, cs, and rip onto the stack
+* depending on the exception, may push an error code as well
+* jumps to the correct exceptionEntryAsmN function
+	- these are identical, except that they call different exception handlers in C++, and
+	  for exceptions without error codes, they also push a 0 to keep the structure the same
+
+Within exceptionEntryAsmN, the rest of a TrapRegisters structure is pushed onto the stack (note that the
+last 5 or 6 values are pushed by the processor, not the function):
+
+	TrapRegisters:
+		r15 = <saved value>
+		r14 = <saved value>
+		r13 = <saved value>
+		r12 = <saved value>
+		r11 = <saved value>
+		r10 = <saved value>
+		r9 = <saved value>
+		r8 = <saved value>
+		rdi = <saved value>
+		rsi = <saved value>
+		rsp = <saved stack>
+		rbp = <saved value>
+		rbx = <saved value>
+		rdx = <saved value>
+		rcx = <saved value>
+		rax = <saved value>
+		errorCode = <exception's error code or 0>
+		rip = <saved value>
+		cs = <saved value>
+		rflags = <saved value>
+		rspPrev = <saved value>
+		ss = <saved value>
+
+Context Switches
+================
+The normal path for a context switch is:
+
+* the PIT interrupt irq0 fires
+* like with any irq, the processor:
+	- disables interrupts
+	- switches to the interrupt stack (if coming from user mode)
+	- push ss, rsp, rflags, cs, and rip onto the stack
+	- jumps to irqEntryAsm0
+* irqEntryAsm0 then:
+	- saves all other registers to form a TrapRegisters struct on the stack
+	- calls irqEntry(0, <ptr to TrapRegisters>)
+* irqEntry then:
+	- looks up the handler function (sys.timer().irqHandler) in its irq table
+	- calls Timer::irqHandler()
+* Timer::irqHandler() then:
+	- does its own timing-related housekeeping
+	- notifies the PIC that the interrupt was handled (because the next step
+	  may not return for a long time), and
+	- calls Scheduler::onTimerInterrupt()
+* Scheduler::onTimerInterrupt() then:
+	- locks the scheduler, and
+	- calls Scheduler::yield()
+* Scheduler::yield() then:
+	- chooses a new thread from the run queue (or the idle thread);
+	- unlocks the scheduler; and
+	- calls switchContext(toThread, fromThread)
+* switchContext(toThread, fromThread) then:
+	- pushes a ThreadContext struct onto the stack
+	- saves the current thread's stack pointer its Thread struct
+	- jumps to enterContext
+* enterContext then:
+	- switches to the new thread's stack using the stack ptr in the Thread struct
+	- calls enterContextImpl (which switches address spaces and other housekeeping)
+	- restores caller-saved registers from the ThreadContext struct on its stack
+	- returns to the returnAddress from the ThreadContext
+
+In this is not the first time the new thread has run, the ret from enterContext will return to
+the caller of switchContext, which is always Scheduler::yield:
+
+* Scheduler::yield() then:
+	- re-locks the scheduler
+	- cleans up any threads in the deadQueue (calling process->exit())
+	- returns to its caller
+
+There are two possibilities here for the original caller of Scheduler::yield(): either the thread
+was preempted, and the caller is Scheduler::onTimerInterrupt, or the thread voluntarily slept, and
+the caller is Scheduler::sleepThread.
+
+In the first case:
+
+* Scheduler::onTimerInterrupt:
+	- unlocks the scheduler, and
+	- returns to Timer::irqHandler
+* Timer::irqHandler:
+	- returns to irqEntry
+* irqEntry:
+	- returns to irqEntry0
+* irqEntry0:
+	- restores all registers from the TrapRegisters previously pushed onto the stack
+	- performs an iretq
+
+That iretq will:
+* restore ss, rsp, rflags, and cs, and rip, which:
+* enables interrupts (they must have been enabled before if and irq interrupted)
+* switches back to the original (kernel or user) stack
+* jumps back to the instruction that was pending before the irq (could be in user or kernel mode)
+
+
+In the second case:
+
+* Scheduler::sleepThread:
+	- relocks the lock passed to sleepThread if not null
+	- unlocks the scheduler
+	- returns to the original kernel-mode code that called sleep
+
+Note that we don't actually return from the irq handler in this case! On later on when the
+originally-interrupted thread is rescheduled does the handler return.

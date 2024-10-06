@@ -66,6 +66,11 @@ syscallEntryAsm:
     call syscallEntry
 
     // Return value is placed into TrapRegisters->rax by syscallEntry
+
+    // When entering a user thread for the first time, we jump directly directly here, as
+    // if returning from a syscall
+.global syscallExitAsm
+syscallExitAsm:
     POP_GENERAL_REGS
     add $8, %rsp // errorCode
     popq %rcx    // rip
@@ -78,26 +83,6 @@ syscallEntryAsm:
 
 userStack:
     .quad 0
-
-// Enters a user mode thread for the first time, as if returning from a syscall
-.global switchToUserMode
-switchToUserMode:
-    POP_GENERAL_REGS
-    add $8, %rsp // errorCode
-    popq %rcx    // rip
-    add $8, %rsp // cs
-    popq %r11    // rflags
-    cli          // disable interrupts before switching backing to the user stack
-    popq %rsp    // rspPrev (this also skips ss)
-
-    sysretq
-
-// Enters a kernel thread for the first time, as if returning from an interrupt handler
-.global enterKernelThread
-enterKernelThread:
-    POP_GENERAL_REGS
-    add $8, %rsp // errorCode
-    iretq
 
 // Defines the irq entry point to the kernel. Saves registers (beyond those saved by
 // hardware), and then passes the interrupt vector and the TrapRegisters struct to the
@@ -113,12 +98,16 @@ irqEntryAsm\idx:
     mov $\idx, %rdi
     mov %rsp, %rsi
     call irqEntry
+    jmp irqExitAsm
+.endm
 
+// This is call after an IRQ handler has finished, or the first time a kernel thread is
+// entered
+.global irqExitAsm
+irqExitAsm:
     POP_GENERAL_REGS
     add $8, %rsp // errorCode
-
     iretq
-.endm
 
 // Construct the entry points for all 16 IRQs
 .set idx,0

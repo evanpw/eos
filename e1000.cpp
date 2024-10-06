@@ -12,7 +12,6 @@
 #include "net/ethernet.h"
 #include "panic.h"
 #include "system.h"
-#include "trap.h"
 
 struct E1000Device::RegisterSpace {
     volatile uint32_t ctrl;
@@ -273,20 +272,19 @@ uint16_t E1000Device::readEEPROM(uint8_t addr) {
     }
 }
 
-void E1000Device::irqHandler() {
+void E1000Device::irqHandler(uint8_t irqNo) {
     uint32_t cause = _regs->icr;
 
     if (cause & IMR_RXT) {
         flushRx();
     }
 
-    outb(PIC2_COMMAND, EOI);
-    outb(PIC1_COMMAND, EOI);
+    endOfInterrupt(irqNo);
 }
 
 void E1000Device::initIrq() {
     // Register the IRQ handler for the device
-    registerIrqHandler(_irqNumber, [this](TrapRegisters&) { this->irqHandler(); });
+    registerIrqHandler(_irqNumber, [this](uint8_t irqNo) { this->irqHandler(irqNo); });
 }
 
 void E1000Device::initTxRing() {

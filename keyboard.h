@@ -1,9 +1,8 @@
 // Keyboard drive
 #pragma once
-#include "estd/assertions.h"
-#include "trap.h"
+#include <stdint.h>
 
-void irqHandler1(TrapRegisters& regs);
+#include "estd/assertions.h"
 
 enum class KeyCode : uint8_t {
     // Identity-mapped keycodes

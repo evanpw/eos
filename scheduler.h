@@ -25,6 +25,20 @@ struct BlockedThread {
     estd::shared_ptr<Blocker> blocker;
 };
 
+// This is the structure created on the stack by calling switchContext, which is used to
+// save and restore the caller-saved registers and return address across a context switch
+struct ThreadContext {
+    uint64_t r15;
+    uint64_t r14;
+    uint64_t r13;
+    uint64_t r12;
+    uint64_t rbx;
+    uint64_t rbp;
+    uint64_t returnAddress;
+};
+
+static_assert(sizeof(ThreadContext) == 7 * sizeof(uint64_t));
+
 struct Scheduler {
 public:
     Scheduler();

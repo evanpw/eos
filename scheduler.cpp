@@ -1,6 +1,7 @@
 #include "scheduler.h"
 
 #include "estd/print.h"
+#include "interrupts.h"
 #include "klibc.h"
 #include "panic.h"
 #include "process.h"
@@ -159,6 +160,7 @@ void Scheduler::cleanupDeadThreads() {
 }
 
 void Scheduler::sleepThread(const estd::shared_ptr<Blocker>& blocker, Spinlock* lock) {
+    ASSERT(!inIrq());
     SpinlockLocker locker(_schedLock);
 
     // We can't hold this lock while sleeping

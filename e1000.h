@@ -37,7 +37,7 @@ private:
     ReceiveDescriptor* _rxRing;
     size_t _rxDescCount;
 
-    void irqHandler();
+    void irqHandler(uint8_t irqNo);
     void flushRx();
 
     void initPCI();

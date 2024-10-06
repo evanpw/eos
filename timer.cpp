@@ -46,7 +46,7 @@ Timer::Timer() {
     outb(PIT_CHANNEL0, lowBits(divisor, 8));
     outb(PIT_CHANNEL0, highBits(divisor, 8));
 
-    registerIrqHandler(0, [this](TrapRegisters&) { this->irqHandler(); });
+    registerIrqHandler(IRQ_TIMER, [this](uint8_t) { this->irqHandler(); });
 }
 
 void Timer::sleep(uint64_t duration, Spinlock* lock) {
@@ -80,6 +80,6 @@ void Timer::increment() {
 
 void Timer::irqHandler() {
     increment();
-    outb(PIC1_COMMAND, EOI);
+    endOfInterrupt(IRQ_TIMER);
     sys.scheduler().onTimerInterrupt();
 }

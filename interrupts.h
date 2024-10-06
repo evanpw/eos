@@ -4,7 +4,14 @@
 
 #include "estd/functional.h"
 #include "processor.h"
-#include "trap.h"
+
+enum : uint8_t {
+    IRQ_TIMER = 0,
+    IRQ_KEYBOARD = 1,
+    IRQ_MOUSE = 12,
+    IRQ_PRIMARY_ATA = 14,
+    IRQ_SECONDARY_ATA = 15,
+};
 
 // I/O ports for communicating with the PIC
 enum : uint16_t {
@@ -48,7 +55,11 @@ struct __attribute__((packed)) InterruptFrame {
     uint64_t ss;
 };
 
-using IRQHandler = estd::function<void(TrapRegisters&)>;
+using IRQHandler = estd::function<void(uint8_t irqNo)>;
 
 void installInterrupts();
-void registerIrqHandler(uint8_t idx, IRQHandler handler);
+void registerIrqHandler(uint8_t irqNo, IRQHandler handler);
+bool inIrq();
+
+// For use by the irq handlers to signal the end of interrupt handling
+void endOfInterrupt(uint8_t irqNo);
