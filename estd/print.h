@@ -5,6 +5,7 @@
 #include "estd/assertions.h"
 #include "estd/new.h"
 #include "estd/traits.h"
+#include "estd/utility.h"
 
 // TODO: better error handling / checking
 
@@ -136,7 +137,7 @@ struct FormatArgs {
 template <size_t N>
 struct SizedFormatArgs : public FormatArgs {
     template <typename... Args>
-    SizedFormatArgs(Args... args) : args{FormatArgHolder(args)...} {}
+    SizedFormatArgs(Args... args) : args{FormatArgHolder(estd::forward<Args>(args))...} {}
 
     FormatArgHolder args[N];
     size_t index = 0;
@@ -173,14 +174,13 @@ void _printImpl(FormatStringParser& parser, FormatArgs& args);
 template <typename... Args>
 void print(const char* fmtstr, Args... args) {
     FormatStringParser parser(fmtstr);
-    SizedFormatArgs formatArgs(args...);
+    SizedFormatArgs formatArgs(estd::forward<Args>(args)...);
 
     _printImpl(parser, formatArgs);
 }
 
 template <typename... Args>
 void println(const char* fmtstr, Args... args) {
-    // TODO: should use std::forward equivalent
-    print(fmtstr, args...);
+    print(fmtstr, estd::forward<Args>(args)...);
     printChar('\n');
 }

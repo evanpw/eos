@@ -1,5 +1,7 @@
 #pragma once
 
+#include "estd/traits.h"
+
 namespace estd {
 
 // https://stackoverflow.com/questions/7510182/how-does-stdmove-transfer-values-into-rvalues
@@ -53,6 +55,16 @@ struct pair {
 template <typename T1, typename T2>
 pair<T1, T2> make_pair(T1&& first, T2&& second) {
     return pair<T1, T2>(move(first), move(second));
+}
+
+template <class T>
+constexpr T&& forward(remove_reference_t<T>& t) noexcept {
+    return static_cast<T&&>(t);
+}
+
+template <class T>
+constexpr T&& forward(remove_reference_t<T>&& t) noexcept {
+    return static_cast<T&&>(t);
 }
 
 }  // namespace estd

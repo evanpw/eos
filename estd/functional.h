@@ -1,6 +1,7 @@
 #pragma once
 
 #include "estd/traits.h"
+#include "estd/utility.h"
 
 namespace estd {
 
@@ -19,7 +20,7 @@ class _function_holder : public _function_holder_base<R, Args...> {
 public:
     _function_holder(F f) : _f(f) {}
 
-    R call(Args... args) override { return _f(args...); }
+    R call(Args... args) override { return _f(estd::forward<Args>(args)...); }
 };
 
 template <typename Signature>
@@ -35,7 +36,7 @@ public:
     template <typename F>
     function(F&& f) : _holder(new _function_holder<F, R, Args...>(f)) {}
 
-    R operator()(Args... args) { return _holder->call(args...); }
+    R operator()(Args... args) { return _holder->call(estd::forward<Args>(args)...); }
 
     explicit operator bool() const { return _holder != nullptr; }
 };
