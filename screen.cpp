@@ -63,6 +63,6 @@ void Screen::scrollUp() {
 
     // Clear the bottom line
     for (size_t x = 0; x < _width; ++x) {
-        putChar(x, _height - 1, ' ', Black, Black);
+        putChar(x, _height - 1, ' ', Black, LightGrey);
     }
 }

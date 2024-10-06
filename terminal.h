@@ -29,6 +29,7 @@ private:
     void handleEscapeSequence();
     bool parseEscapeSequence();
     void echo(char c);
+    void carriageReturn();
     void newline();
     void backspace();
 

@@ -736,7 +736,12 @@ bool Terminal::parseEscapeSequence() {
 }
 
 void Terminal::echo(char c) {
-    if (c == '\n') {
+    if (c == '\r') {
+        carriageReturn();
+        return;
+    } else if (c == '\n') {
+        // ONLCR: map NL to CR-NL
+        carriageReturn();
         newline();
         return;
     } else if (c == '\b') {
@@ -760,8 +765,12 @@ void Terminal::echo(char c) {
     _screen.setCursor(_x, _y);
 }
 
-void Terminal::newline() {
+void Terminal::carriageReturn() {
     _x = 0;
+    _screen.setCursor(_x, _y);
+}
+
+void Terminal::newline() {
     ++_y;
     if (_y == _screen.height()) {
         _screen.scrollUp();
