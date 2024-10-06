@@ -6,13 +6,8 @@ namespace estd {
 
 // https://stackoverflow.com/questions/7510182/how-does-stdmove-transfer-values-into-rvalues
 template <typename T>
-T&& move(T& arg) noexcept {
-    return static_cast<T&&>(arg);
-}
-
-template <typename T>
-T&& move(T&& arg) noexcept {
-    return static_cast<T&&>(arg);
+constexpr remove_reference_t<T>&& move(T&& arg) noexcept {
+    return static_cast<remove_reference_t<T>&&>(arg);
 }
 
 template <typename T>
