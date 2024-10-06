@@ -558,14 +558,12 @@ bool tcpWaitForConnection(TcpHandle handle) {
 }
 
 TcpHandle tcpConnect(IpAddress destIp, uint16_t destPort) {
-    IpAddress sourceIp;
-    if (!findRouteSourceIp(destIp, &sourceIp)) {
-        return InvalidTcpHandle;
-    }
+    auto sourceIp = findRouteSourceIp(destIp);
+    if (!sourceIp) return InvalidTcpHandle;
 
     // Create and initialize the control block
     TcpControlBlock* tcb = new TcpControlBlock;
-    tcb->localIp = sourceIp;
+    tcb->localIp = *sourceIp;
     tcb->localPort = getEphemeralPort();
     tcb->remoteIp = destIp;
     tcb->remotePort = destPort;

@@ -79,30 +79,28 @@ estd::shared_ptr<ArpBlocker> getBlocker(IpAddress ip, bool create = false) {
     return {};
 }
 
-bool arpLookupCachedLocked(IpAddress ip, MacAddress* result) {
+estd::optional<MacAddress> arpLookupCachedLocked(IpAddress ip) {
     ASSERT(arpLock->isLocked());
 
     ArpEntry* entry = arpCache;
     while (entry != nullptr) {
         if (entry->ip == ip) {
-            *result = entry->mac;
-            return true;
+            return entry->mac;
         }
 
         entry = entry->next;
     }
 
-    return false;
+    return {};
 }
 
-bool arpLookupCached(IpAddress ip, MacAddress* result) {
+estd::optional<MacAddress> arpLookupCached(IpAddress ip) {
     SpinlockLocker locker(*arpLock);
-    return arpLookupCachedLocked(ip, result);
+    return arpLookupCachedLocked(ip);
 }
 
 MacAddress arpLookup(NetworkInterface* netif, IpAddress ip) {
-    MacAddress result;
-    if (arpLookupCached(ip, &result)) return result;
+    if (auto result = arpLookupCached(ip)) return *result;
 
     // Not in cache, we have to send an arp request
     arpRequest(netif, ip);
@@ -112,9 +110,7 @@ MacAddress arpLookup(NetworkInterface* netif, IpAddress ip) {
     // those two operations and we could miss it and sleep forever.
     while (true) {
         SpinlockLocker locker(*arpLock);
-        if (arpLookupCachedLocked(ip, &result)) {
-            return result;
-        }
+        if (auto result = arpLookupCachedLocked(ip)) return *result;
 
         sys.scheduler().sleepThread(getBlocker(ip, true), arpLock);
     }

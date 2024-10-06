@@ -2,6 +2,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "estd/optional.h"
+
 enum class EtherType : uint16_t;
 class NetworkInterface;
 struct MacAddress;
@@ -57,7 +59,7 @@ static_assert(sizeof(ArpHeader) == 28);
 void arpInit();
 
 // arpLookupCached does not block, arpLookup may
-bool arpLookupCached(IpAddress ip, MacAddress* result);
+estd::optional<MacAddress> arpLookupCached(IpAddress ip);
 MacAddress arpLookup(NetworkInterface* netif, IpAddress ip);
 
 void arpRecv(NetworkInterface* netif, uint8_t* buffer, size_t size);

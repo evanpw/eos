@@ -6,6 +6,7 @@
 #include "estd/bits.h"
 #include "estd/new.h"
 #include "estd/print.h"
+#include "estd/utility.h"
 #include "net/arp.h"
 #include "net/ethernet.h"
 #include "net/network_interface.h"
@@ -92,48 +93,51 @@ void ipRecv(NetworkInterface* netif, uint8_t* buffer, size_t size) {
     }
 }
 
+struct Route {
+    NetworkInterface* netif;
+    MacAddress destMac;
+};
+
 // Extremely basic IP routing
-bool findRoute(IpAddress destIp, NetworkInterface** netifOut, MacAddress* destMac,
-               bool blocking) {
+estd::optional<Route> findRoute(IpAddress destIp, bool blocking) {
     // TODO: determine the correct network interface from the destination
     NetworkInterface* netif = &sys.netif();
-    *netifOut = netif;
 
     if (!netif->isConfigured()) {
-        return false;
+        return {};
     }
 
     if (destIp == IpAddress::broadcast()) {
-        *destMac = MacAddress::broadcast();
-        return true;
+        return {{netif, MacAddress::broadcast()}};
     }
 
     IpAddress nextHop = netif->isLocal(destIp) ? destIp : netif->gateway();
     if (blocking) {
-        *destMac = arpLookup(netif, nextHop);
-        return true;
+        return {{netif, arpLookup(netif, nextHop)}};
     }
 
-    return arpLookupCached(nextHop, destMac);
+    if (auto result = arpLookupCached(nextHop)) {
+        return {{netif, *result}};
+    }
+
+    return {};
 }
 
-bool findRouteSourceIp(IpAddress, IpAddress* sourceIp) {
+estd::optional<IpAddress> findRouteSourceIp(IpAddress) {
     // TODO: determine the correct network interface from the destination
     NetworkInterface* netif = &sys.netif();
 
     if (!netif->isConfigured()) {
-        return false;
+        return {};
     }
 
-    *sourceIp = netif->ipAddress();
-    return true;
+    return {netif->ipAddress()};
 }
 
 bool ipSend(IpAddress destIp, IpProtocol protocol, void* buffer, size_t size,
             bool blocking) {
-    NetworkInterface* netif;
-    MacAddress destMac;
-    if (!findRoute(destIp, &netif, &destMac, blocking)) return false;
+    auto route = findRoute(destIp, blocking);
+    if (!route) return false;
 
     size_t totalSize = sizeof(IpHeader) + size;
     uint8_t* packet = new uint8_t[totalSize];
@@ -141,12 +145,12 @@ bool ipSend(IpAddress destIp, IpProtocol protocol, void* buffer, size_t size,
     IpHeader* ipHeader = new (packet) IpHeader;
     ipHeader->setTotalLen(totalSize);
     ipHeader->setProtocol(protocol);
-    ipHeader->setSourceIp(netif->ipAddress());
+    ipHeader->setSourceIp(route->netif->ipAddress());
     ipHeader->setDestIp(destIp);
     ipHeader->fillChecksum();
 
     memcpy(packet + sizeof(IpHeader), buffer, size);
-    ethSend(netif, destMac, EtherType::Ipv4, packet, totalSize);
+    ethSend(route->netif, route->destMac, EtherType::Ipv4, packet, totalSize);
     return true;
 }
 
