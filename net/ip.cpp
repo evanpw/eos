@@ -6,7 +6,6 @@
 #include "estd/bits.h"
 #include "estd/new.h"
 #include "estd/print.h"
-#include "estd/utility.h"
 #include "net/arp.h"
 #include "net/ethernet.h"
 #include "net/network_interface.h"
