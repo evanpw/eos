@@ -5,6 +5,7 @@
 
 #include "estd/optional.h"
 #include "estd/print.h"
+#include "net/ethernet.h"
 
 class NetworkInterface;
 
@@ -95,8 +96,11 @@ public:
 
 static_assert(sizeof(IpHeader) == 20);
 
+void ipInit();
 estd::optional<IpAddress> findRouteSourceIp(IpAddress destIp);
 void ipRecv(NetworkInterface* netif, uint8_t* buffer, size_t size);
 bool ipBroadcast(NetworkInterface* netif, IpProtocol protocol, void* buffer, size_t size);
-bool ipSend(IpAddress destIp, IpProtocol protocol, void* buffer, size_t size,
-            bool blocking = false);
+bool ipSend(IpAddress destIp, IpProtocol protocol, void* buffer, size_t size);
+
+// Callback from the arp layer
+void ipRouteFound(IpAddress ip);

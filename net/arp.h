@@ -58,9 +58,7 @@ static_assert(sizeof(ArpHeader) == 28);
 
 void arpInit();
 
-// arpLookupCached does not block, arpLookup may
-estd::optional<MacAddress> arpLookupCached(IpAddress ip);
-MacAddress arpLookup(NetworkInterface* netif, IpAddress ip);
+estd::optional<MacAddress> arpLookup(NetworkInterface* netif, IpAddress ip);
 
 void arpRecv(NetworkInterface* netif, uint8_t* buffer, size_t size);
 void arpRequest(NetworkInterface* netif, IpAddress destIp);

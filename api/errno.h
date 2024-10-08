@@ -20,3 +20,4 @@
 #define ECONNREFUSED 111    // Connection refused
 #define ENOTCONN 107        // Socket is not connected
 #define EPIPE 32            // Broken pipe
+#define EADDRINUSE 98       // Address already in use

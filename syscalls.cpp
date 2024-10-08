@@ -239,6 +239,66 @@ int64_t sys_recv(int sockfd, void* buffer, size_t length, int /*flags*/) {
     return file.read(description, buffer, length);
 }
 
+int sys_bind(int sockfd, const struct sockaddr* address, socklen_t address_len) {
+    Process& process = *currentThread->process;
+
+    if (sockfd < 0 || sockfd >= RLIMIT_NOFILE || !process.openFiles[sockfd]) {
+        return -EBADF;
+    }
+
+    OpenFileDescription& description = *process.openFiles[sockfd];
+    File& file = *description.file;
+
+    if (!file.isSocket()) {
+        return -ENOTSOCK;
+    }
+
+    Socket& socket = static_cast<Socket&>(file);
+    return socket.bind(address, address_len);
+}
+
+int sys_listen(int sockfd, int backlog) {
+    Process& process = *currentThread->process;
+
+    if (sockfd < 0 || sockfd >= RLIMIT_NOFILE || !process.openFiles[sockfd]) {
+        return -EBADF;
+    }
+
+    OpenFileDescription& description = *process.openFiles[sockfd];
+    File& file = *description.file;
+
+    if (!file.isSocket()) {
+        return -ENOTSOCK;
+    }
+
+    Socket& socket = static_cast<Socket&>(file);
+    return socket.listen(backlog);
+}
+
+int sys_accept(int sockfd, sockaddr* address, socklen_t* address_len) {
+    Process& process = *currentThread->process;
+
+    if (sockfd < 0 || sockfd >= RLIMIT_NOFILE || !process.openFiles[sockfd]) {
+        return -EBADF;
+    }
+
+    OpenFileDescription& description = *process.openFiles[sockfd];
+    File& file = *description.file;
+
+    if (!file.isSocket()) {
+        return -ENOTSOCK;
+    }
+
+    Socket& socket = static_cast<Socket&>(file);
+
+    auto childSocket = socket.accept(address, address_len);
+    if (!childSocket) {
+        return -EINVAL;
+    }
+
+    return process.open(childSocket);
+}
+
 // We don't have static initialization, so this is initialized at runtime
 SyscallHandler syscallTable[SYS_COUNT];
 
@@ -298,6 +358,9 @@ void initSyscalls() {
     syscallTable[SYS_connect] = bit_cast<SyscallHandler>((void*)sys_connect);
     syscallTable[SYS_send] = bit_cast<SyscallHandler>((void*)sys_send);
     syscallTable[SYS_recv] = bit_cast<SyscallHandler>((void*)sys_recv);
+    syscallTable[SYS_bind] = bit_cast<SyscallHandler>((void*)sys_bind);
+    syscallTable[SYS_listen] = bit_cast<SyscallHandler>((void*)sys_listen);
+    syscallTable[SYS_accept] = bit_cast<SyscallHandler>((void*)sys_accept);
 
     println("syscall: init complete");
 }

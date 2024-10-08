@@ -69,7 +69,7 @@ public:
 
     // Access
     T* get() const { return _ptr; }
-    operator bool() const { return _ptr != nullptr; }
+    explicit operator bool() const { return _ptr != nullptr; }
     T* operator->() const { return _ptr; }
     T& operator*() const { return *_ptr; }
     int refCount() const { return _refCount->load(); }

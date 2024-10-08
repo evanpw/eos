@@ -49,7 +49,7 @@ void udpRecv(NetworkInterface* netif, IpHeader* ipHeader, uint8_t* buffer, size_
 }
 
 void udpSend(IpAddress destIp, uint16_t sourcePort, uint16_t destPort, uint8_t* buffer,
-             uint8_t size, bool blocking) {
+             uint8_t size) {
     size_t totalSize = sizeof(UdpHeader) + size;
     uint8_t* packet = new uint8_t[totalSize];
 
@@ -60,7 +60,7 @@ void udpSend(IpAddress destIp, uint16_t sourcePort, uint16_t destPort, uint8_t* 
     udpHeader->setChecksum(0);
 
     memcpy(udpHeader->data(), buffer, size);
-    ipSend(destIp, IpProtocol::Udp, packet, totalSize, blocking);
+    ipSend(destIp, IpProtocol::Udp, packet, totalSize);
 
     delete[] packet;
 }

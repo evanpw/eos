@@ -4,7 +4,6 @@
 #include <string.h>
 
 #include "estd/new.h"
-#include "estd/vector.h"
 #include "net/ethernet.h"
 #include "net/ip.h"
 #include "net/network_interface.h"
@@ -54,33 +53,11 @@ struct ArpBlocker : Blocker {
 
 static ArpEntry* arpCache = nullptr;
 static Spinlock* arpLock = nullptr;
-estd::vector<estd::shared_ptr<ArpBlocker>> arpBlockers;
 
-static void arpInsert(IpAddress ip, MacAddress mac);
+void arpInit() { arpLock = new Spinlock(); }
 
-void arpInit() {
-    arpLock = new Spinlock();
-    new (&arpBlockers) decltype(arpBlockers);
-}
-
-estd::shared_ptr<ArpBlocker> getBlocker(IpAddress ip, bool create = false) {
-    for (auto& blocker : arpBlockers) {
-        if (blocker->ipAddress == ip) {
-            return blocker;
-        }
-    }
-
-    if (create) {
-        estd::shared_ptr<ArpBlocker> blocker(new ArpBlocker(ip));
-        arpBlockers.push_back(blocker);
-        return blocker;
-    }
-
-    return {};
-}
-
-estd::optional<MacAddress> arpLookupCachedLocked(IpAddress ip) {
-    ASSERT(arpLock->isLocked());
+estd::optional<MacAddress> arpLookup(NetworkInterface* netif, IpAddress ip) {
+    SpinlockLocker locker(*arpLock);
 
     ArpEntry* entry = arpCache;
     while (entry != nullptr) {
@@ -91,29 +68,10 @@ estd::optional<MacAddress> arpLookupCachedLocked(IpAddress ip) {
         entry = entry->next;
     }
 
-    return {};
-}
-
-estd::optional<MacAddress> arpLookupCached(IpAddress ip) {
-    SpinlockLocker locker(*arpLock);
-    return arpLookupCachedLocked(ip);
-}
-
-MacAddress arpLookup(NetworkInterface* netif, IpAddress ip) {
-    if (auto result = arpLookupCached(ip)) return *result;
-
-    // Not in cache, we have to send an arp request
+    // TODO: maintain a list of pending requests to avoid duplicate requests
     arpRequest(netif, ip);
 
-    // Wait for the reply. We need to take the lock to avoid a race condition between
-    // checking the cache and going to sleep. Otherwise, the reply may arrive between
-    // those two operations and we could miss it and sleep forever.
-    while (true) {
-        SpinlockLocker locker(*arpLock);
-        if (auto result = arpLookupCachedLocked(ip)) return *result;
-
-        sys.scheduler().sleepThread(getBlocker(ip, true), arpLock);
-    }
+    return {};
 }
 
 static void arpInsert(IpAddress ip, MacAddress mac) {
@@ -136,12 +94,6 @@ static void arpInsert(IpAddress ip, MacAddress mac) {
     newEntry->mac = mac;
     newEntry->next = arpCache;
     arpCache = newEntry;
-
-    // Wake up any threads waiting for this ip
-    auto blocker = getBlocker(ip);
-    if (blocker) {
-        sys.scheduler().wakeThreads(blocker);
-    }
 }
 
 void arpRecv(NetworkInterface* netif, uint8_t* buffer, size_t size) {
@@ -159,6 +111,8 @@ void arpRecv(NetworkInterface* netif, uint8_t* buffer, size_t size) {
     if (arpPacket->targetIp() != netif->ipAddress()) return;
 
     arpInsert(arpPacket->senderIp(), arpPacket->senderMac());
+
+    ipRouteFound(arpPacket->senderIp());
 
     if (arpPacket->operation() == ArpOperation::Request) {
         arpReply(netif, arpPacket->senderMac(), arpPacket->senderIp());

@@ -10,6 +10,7 @@
 #include "net/arp.h"
 #include "net/dhcp.h"
 #include "net/dns.h"
+#include "net/ip.h"
 #include "net/tcp.h"
 #include "pci.h"
 #include "process.h"
@@ -47,6 +48,7 @@ System::System() {
     tcpInit();
     dhcpInit(_netif.get());
     dnsInit();
+    ipInit();
     initACPI();
     _scheduler.assign(new Scheduler);
     _timer.assign(new Timer);

@@ -5,9 +5,9 @@
 #include "estd/bits.h"
 #include "estd/vector.h"
 #include "net/udp.h"
+#include "scheduler.h"
 #include "spinlock.h"
 #include "system.h"
-#include "timer.h"
 
 uint16_t DnsHeader::id() const { return ntohs(_id); }
 bool DnsHeader::isReply() const { return _qr; }
@@ -343,7 +343,7 @@ void dnsQuery(IpAddress dnsServer, const char* hostname) {
     header->setQdcount(1);
     memcpy(packet + sizeof(DnsHeader), questions.data(), questions.size());
 
-    udpSend(dnsServer, 10053, 53, packet, packetSize, true);
+    udpSend(dnsServer, 10053, 53, packet, packetSize);
 
     delete[] packet;
 }

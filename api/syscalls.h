@@ -19,6 +19,9 @@ enum {
     SYS_connect,
     SYS_send,
     SYS_recv,
+    SYS_bind,
+    SYS_listen,
+    SYS_accept,
 
     SYS_COUNT,
 };

@@ -81,8 +81,14 @@ static constexpr TcpHandle InvalidTcpHandle = 0;
 
 bool tcpWaitForConnection(TcpHandle handle);
 
-TcpHandle tcpConnect(IpAddress destIp, uint16_t destPort);
-TcpHandle tcpListen(uint16_t port);
+TcpHandle tcpOpen();
+bool tcpBind(TcpHandle handle, IpAddress sourceIp, uint16_t sourcePort);
+bool tcpConnect(TcpHandle handle, IpAddress destIp, uint16_t destPort);
+TcpHandle tcpAccept(TcpHandle handle);
+bool tcpListen(TcpHandle handle, int backlog);
 bool tcpSend(TcpHandle handle, const void* buffer, size_t size, bool push = false);
 ssize_t tcpRecv(TcpHandle handle, void* buffer, size_t size);
 bool tcpClose(TcpHandle handle);
+
+IpAddress tcpRemoteIp(TcpHandle handle);
+uint16_t tcpRemotePort(TcpHandle handle);

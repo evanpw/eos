@@ -34,4 +34,4 @@ void udpRecv(NetworkInterface* netif, IpHeader* ipHeader, uint8_t* buffer, size_
 void udpBroadcast(NetworkInterface* netif, uint16_t sourcePort, uint16_t destPort,
                   uint8_t* buffer, uint8_t size);
 void udpSend(IpAddress destIp, uint16_t sourcePort, uint16_t destPort, uint8_t* buffer,
-             uint8_t size, bool blocking = false);
+             uint8_t size);
