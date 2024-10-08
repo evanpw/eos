@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "estd/assertions.h"
+#include "estd/stddef.h"
 #include "estd/utility.h"
 
 // Fixed (runtime) length, heap-allocated array of bytes
@@ -11,7 +12,7 @@ public:
     Buffer() = default;
 
     Buffer(size_t count) {
-        _data = new uint8_t[count];
+        _data = new byte[count];
         _size = count;
         memset(_data, 0, count);
     }
@@ -36,15 +37,15 @@ public:
 
     operator bool() const { return _data != nullptr; }
     size_t size() const { return _size; }
-    uint8_t* get() { return _data; }
-    const uint8_t* get() const { return _data; }
+    byte* get() { return _data; }
+    const byte* get() const { return _data; }
 
-    const uint8_t& operator[](size_t index) const {
+    const byte& operator[](size_t index) const {
         ASSERT(index < _size);
         return _data[index];
     }
 
-    uint8_t& operator[](size_t index) {
+    byte& operator[](size_t index) {
         ASSERT(index < _size);
         return _data[index];
     }
@@ -55,6 +56,6 @@ private:
         estd::swap(_size, other._size);
     }
 
-    uint8_t* _data = 0;
+    byte* _data = 0;
     size_t _size = 0;
 };

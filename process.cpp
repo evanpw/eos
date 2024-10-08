@@ -91,7 +91,7 @@ Process::Process(pid_t pid, const char* path, const char* argv[], uint32_t initi
     // Allocate a fresh piece of page-aligned physical memory to store it
     imagePagesCount = ceilDiv(inode->size(), PAGE_SIZE);
     imagePages = mm.pageAlloc(imagePagesCount);
-    uint8_t* ptr = mm.physicalToVirtual(imagePages).ptr<uint8_t>();
+    byte* ptr = mm.physicalToVirtual(imagePages).ptr<byte>();
 
     // Read the executable from disk
     if (!sys.fs().readFullFile(*inode, ptr)) {

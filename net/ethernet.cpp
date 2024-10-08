@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "estd/new.h"
+#include "estd/stddef.h"
 #include "net/arp.h"
 #include "net/ip.h"
 #include "net/network_interface.h"
@@ -12,7 +13,7 @@ MacAddress::MacAddress(const MacAddress& other) {
     memcpy(bytes, other.bytes, sizeof(MacAddress));
 }
 
-MacAddress::MacAddress(uint8_t* bytes) { memcpy(this->bytes, bytes, sizeof(MacAddress)); }
+MacAddress::MacAddress(byte* bytes) { memcpy(this->bytes, bytes, sizeof(MacAddress)); }
 
 MacAddress& MacAddress::operator=(const MacAddress& other) {
     if (this != &other) {
@@ -46,7 +47,7 @@ void EthernetHeader::setSrcMac(MacAddress value) {
     memcpy(&_srcMac, &value, sizeof(MacAddress));
 }
 
-void ethRecv(NetworkInterface* netif, uint8_t* buffer, size_t size) {
+void ethRecv(NetworkInterface* netif, void* buffer, size_t size) {
     if (size < sizeof(EthernetHeader)) {
         return;
     }
@@ -57,16 +58,16 @@ void ethRecv(NetworkInterface* netif, uint8_t* buffer, size_t size) {
         return;
     }
 
-    buffer += sizeof(EthernetHeader);
-    size -= sizeof(EthernetHeader);
+    byte* payload = reinterpret_cast<byte*>(ethHeader) + sizeof(EthernetHeader);
+    size_t payloadSize = size - sizeof(EthernetHeader);
 
     switch (ethHeader->etherType()) {
         case EtherType::Arp:
-            arpRecv(netif, buffer, size);
+            arpRecv(netif, payload, payloadSize);
             break;
 
         case EtherType::Ipv4:
-            ipRecv(netif, buffer, size);
+            ipRecv(netif, payload, payloadSize);
             break;
 
         default:
@@ -77,7 +78,7 @@ void ethRecv(NetworkInterface* netif, uint8_t* buffer, size_t size) {
 void ethSend(NetworkInterface* netif, MacAddress destMac, EtherType ethType, void* buffer,
              size_t size) {
     size_t totalSize = sizeof(EthernetHeader) + size;
-    uint8_t* packet = new uint8_t[totalSize];
+    byte* packet = new byte[totalSize];
 
     EthernetHeader* ethHeader = new (packet) EthernetHeader;
     ethHeader->setDestMac(destMac);

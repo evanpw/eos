@@ -84,7 +84,8 @@ estd::unique_ptr<ext2::Inode> Ext2FileSystem::readInode(uint32_t ino) {
     return inode;
 }
 
-bool Ext2FileSystem::readFullFile(const ext2::Inode& inode, uint8_t* dest) {
+bool Ext2FileSystem::readFullFile(const ext2::Inode& inode, void* dest) {
+    byte* ptr = reinterpret_cast<byte*>(dest);
     size_t numBlocks = ceilDiv(inode.size(), blockSize());
 
     size_t blocksRemaining = numBlocks;
@@ -94,7 +95,7 @@ bool Ext2FileSystem::readFullFile(const ext2::Inode& inode, uint8_t* dest) {
     for (size_t i = 0; i < 12; ++i) {
         ASSERT((bytesRemaining <= blockSize()) == (blocksRemaining == 1));
 
-        if (!readBlock(dest, inode.block[i], bytesRemaining)) {
+        if (!readBlock(ptr, inode.block[i], bytesRemaining)) {
             return false;
         }
 
@@ -104,7 +105,7 @@ bool Ext2FileSystem::readFullFile(const ext2::Inode& inode, uint8_t* dest) {
             return true;
         }
 
-        dest += blockSize();
+        ptr += blockSize();
         bytesRemaining -= blockSize();
     }
 
@@ -118,7 +119,7 @@ bool Ext2FileSystem::readFullFile(const ext2::Inode& inode, uint8_t* dest) {
     for (size_t i = 0; i < entriesPerBlock; ++i) {
         ASSERT((bytesRemaining <= blockSize()) == (blocksRemaining == 1));
 
-        if (!readBlock(dest, indBlock[i], bytesRemaining)) {
+        if (!readBlock(ptr, indBlock[i], bytesRemaining)) {
             return false;
         }
 
@@ -128,7 +129,7 @@ bool Ext2FileSystem::readFullFile(const ext2::Inode& inode, uint8_t* dest) {
             return true;
         }
 
-        dest += blockSize();
+        ptr += blockSize();
         bytesRemaining -= blockSize();
     }
 
@@ -137,8 +138,8 @@ bool Ext2FileSystem::readFullFile(const ext2::Inode& inode, uint8_t* dest) {
     return false;
 }
 
-ssize_t Ext2FileSystem::readFromFile(const ext2::Inode& inode, uint8_t* dest,
-                                     uint32_t size, uint32_t offset) {
+ssize_t Ext2FileSystem::readFromFile(const ext2::Inode& inode, void* dest, uint32_t size,
+                                     uint32_t offset) {
     // Clip the read at the end of the file
     if (offset > inode.size()) {
         return 0;

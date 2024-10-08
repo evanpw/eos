@@ -15,8 +15,8 @@ public:
     uint32_t lookup(uint32_t cwdIno, const char* path);
     uint32_t getParent(const ext2::Inode& inode);
     int getPath(uint32_t ino, char* path, size_t pathSize);
-    bool readFullFile(const ext2::Inode& inode, uint8_t* dest);
-    ssize_t readFromFile(const ext2::Inode& inode, uint8_t* dest, uint32_t size,
+    bool readFullFile(const ext2::Inode& inode, void* dest);
+    ssize_t readFromFile(const ext2::Inode& inode, void* dest, uint32_t size,
                          uint32_t offset = 0);
 
     // Medium-level interface

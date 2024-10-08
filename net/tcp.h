@@ -3,6 +3,8 @@
 #include <stdint.h>
 #include <unistd.h>
 
+#include "estd/stddef.h"
+
 struct IpAddress;
 struct IpHeader;
 class NetworkInterface;
@@ -25,7 +27,7 @@ class __attribute__((packed)) TcpHeader {
     uint16_t _windowSize;
     uint16_t _checksum;
     uint16_t _urgentPointer = 0;
-    uint8_t _data[];
+    byte _data[];
 
     uint16_t computeChecksum(IpAddress srcIp, IpAddress destIp, size_t totalLen);
 
@@ -49,7 +51,7 @@ public:
     uint16_t windowSize();
     uint16_t checksum();
     uint16_t urgentPointer();
-    uint8_t* data();
+    byte* data();
 
     void setSourcePort(uint16_t value);
     void setDestPort(uint16_t value);
@@ -73,7 +75,7 @@ static_assert(sizeof(TcpHeader) == 20);
 
 // Low-level API
 void tcpInit();
-void tcpRecv(IpHeader* ipHeader, uint8_t* buffer, size_t size);
+void tcpRecv(IpHeader* ipHeader, void* buffer, size_t size);
 
 // High-level kernel-mode API
 using TcpHandle = uint64_t;

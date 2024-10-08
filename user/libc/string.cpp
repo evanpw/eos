@@ -3,8 +3,8 @@
 #include <string.h>
 
 void* memcpy(void* dest, const void* src, size_t n) {
-    uint8_t* d = static_cast<uint8_t*>(dest);
-    const uint8_t* s = static_cast<const uint8_t*>(src);
+    char* d = static_cast<char*>(dest);
+    const char* s = static_cast<const char*>(src);
 
     for (size_t i = 0; i < n; ++i) {
         *d++ = *s++;
@@ -14,7 +14,7 @@ void* memcpy(void* dest, const void* src, size_t n) {
 }
 
 void* memset(void* s, int c, size_t n) {
-    uint8_t* dest = static_cast<uint8_t*>(s);
+    char* dest = static_cast<char*>(s);
     for (size_t i = 0; i < n; ++i) {
         *dest++ = c;
     }
@@ -23,8 +23,8 @@ void* memset(void* s, int c, size_t n) {
 }
 
 void* memmove(void* dest, const void* src, size_t n) {
-    uint8_t* d = static_cast<uint8_t*>(dest);
-    const uint8_t* s = static_cast<const uint8_t*>(src);
+    char* d = static_cast<char*>(dest);
+    const char* s = static_cast<const char*>(src);
 
     if (d < s) {
         for (size_t i = 0; i < n; ++i) {
@@ -42,12 +42,12 @@ void* memmove(void* dest, const void* src, size_t n) {
 }
 
 int memcmp(const void* p1, const void* p2, size_t n) {
-    const uint8_t* lhs = static_cast<const uint8_t*>(p1);
-    const uint8_t* rhs = static_cast<const uint8_t*>(p2);
+    const char* lhs = static_cast<const char*>(p1);
+    const char* rhs = static_cast<const char*>(p2);
 
     for (size_t i = 0; i < n; ++i) {
         if (*lhs != *rhs) {
-            return *lhs - *rhs;
+            return (unsigned char)*lhs - (unsigned char)*rhs;
         }
 
         ++lhs;

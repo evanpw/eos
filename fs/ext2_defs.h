@@ -1,6 +1,8 @@
 #pragma once
 #include <stdint.h>
 
+#include "estd/stddef.h"
+
 namespace ext2 {
 
 // s_magic
@@ -94,23 +96,23 @@ struct __attribute__((packed)) SuperBlock {
     SFeatureCompat feature_compat;
     SFeatureIncompat feature_incompat;
     SFeatureROCompat feature_ro_compat;
-    uint8_t uuid[16];
+    byte uuid[16];
     char volume_name[16];
     char last_mounted[64];
     uint32_t algo_bitmap;
     uint8_t prealloc_blocks;
     uint8_t prealloc_dir_blocks;
     uint16_t _alignment;
-    uint8_t journal_uuid[16];
+    byte journal_uuid[16];
     uint32_t journal_inum;
     uint32_t journal_dev;
     uint32_t last_orphan;
     uint32_t hash_seed[4];
     uint8_t def_hash_version;
-    uint8_t _padding[3];
+    byte _padding[3];
     uint32_t default_mount_options;
     uint32_t first_meta_bg;
-    uint8_t unused[760];
+    byte unused[760];
 };
 
 static_assert(sizeof(SuperBlock) == 1024);

@@ -11,7 +11,7 @@ extern "C" {
 #endif
 
 struct DIR {
-    uint8_t* buffer;
+    char* buffer;
     uint32_t bufferSize;
     uint32_t offset;
 };

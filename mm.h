@@ -8,6 +8,7 @@
 #include "estd/assertions.h"
 #include "estd/atomic.h"
 #include "estd/bits.h"
+#include "estd/stddef.h"
 #include "page_map.h"
 #include "units.h"
 
@@ -115,7 +116,7 @@ private:
 
     static_assert(sizeof(BlockHeader) == 4);
 
-    uint8_t* _heap = nullptr;
+    byte* _heap = nullptr;
     void initializeHeap();
 };
 

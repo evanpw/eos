@@ -2,6 +2,6 @@
 
 #include <stdint.h>
 
-extern "C" uint8_t* nextFreeAddress;
-extern "C" uint8_t* heapEnd;
+extern "C" char* nextFreeAddress;
+extern "C" char* heapEnd;
 void initHeap();

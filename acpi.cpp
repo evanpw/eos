@@ -4,6 +4,7 @@
 
 #include "address.h"
 #include "estd/print.h"
+#include "estd/stddef.h"
 #include "mm.h"
 #include "units.h"
 
@@ -41,9 +42,9 @@ struct __attribute__((packed)) RSDP {
 
     bool verifyChecksum() {
         uint8_t sum = 0;
-        uint8_t* ptr = reinterpret_cast<uint8_t*>(this);
+        byte* ptr = reinterpret_cast<byte*>(this);
         for (size_t i = 0; i < sizeof(RSDP); ++i) {
-            sum += ptr[i];
+            sum += (uint8_t)ptr[i];
         }
 
         return sum == 0;
@@ -86,9 +87,9 @@ struct __attribute__((packed)) TableHeader {
     bool verifyChecksum() {
         // All bytes of the table (including the checksum) must sum to 0
         uint8_t sum = 0;
-        uint8_t* ptr = reinterpret_cast<uint8_t*>(this);
+        byte* ptr = reinterpret_cast<byte*>(this);
         for (size_t i = 0; i < length; ++i) {
-            sum += ptr[i];
+            sum += (uint8_t)ptr[i];
         }
 
         return sum == 0;
@@ -160,7 +161,7 @@ void printTableHeader(TableHeader* header) {
 
 // Differentiated System Description Table (DSDT)
 void parseDSDT(TableHeader* /*dsdt*/) {
-    // parseAML((uint8_t*)(dsdt + 1), dsdt->length - sizeof(TableHeader));
+    // parseAML((byte*)(dsdt + 1), dsdt->length - sizeof(TableHeader));
 }
 
 // Fixed ACPI Description Table (FADT)
@@ -183,16 +184,16 @@ void parseMADT(TableHeader* madt) {
     PhysicalAddress ioApicAddress = 0;
     size_t numCores = 0;
 
-    uint8_t* ptr = (uint8_t*)(madt + 1);
+    byte* ptr = (byte*)(madt + 1);
 
     // The common header is followed by two fixed fixed 4-byte fields
     localApicAddress = *((uint32_t*)ptr);
     ptr += 8;
 
     // Then comes a sequence of variable-length fields
-    while (ptr < (uint8_t*)madt + madt->length) {
-        uint8_t entryType = *ptr++;
-        uint8_t recordLength = *ptr++;
+    while (ptr < (byte*)madt + madt->length) {
+        uint8_t entryType = (uint8_t)*ptr++;
+        uint8_t recordLength = (uint8_t)*ptr++;
 
         if (entryType == 0) {
             // Processor local APIC

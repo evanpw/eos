@@ -26,21 +26,21 @@ const char* DhcpHeader::file() { return _file; }
 bool DhcpHeader::checkMagic() { return _magic == DHCP_MAGIC; }
 void DhcpHeader::fillMagic() { _magic = DHCP_MAGIC; }
 
-uint8_t* DhcpHeader::findOption(DhcpOption code) {
+byte* DhcpHeader::findOption(DhcpOption code) {
     ASSERT(code != DhcpOption::Pad && code != DhcpOption::End);
 
     // TODO: bounds checking
-    for (uint8_t* p = _options; *p != (uint8_t)DhcpOption::End;) {
-        if (*p == (uint8_t)code) {
+    for (byte* p = _options; *p != (byte)DhcpOption::End;) {
+        if (*p == (byte)code) {
             return p;
         }
 
         // Options 0 (pad) and 255 (end) have no length are one byte long. All other
         // options' length are given by the following byte
-        if (*p == (uint8_t)DhcpOption::Pad) {
+        if (*p == (byte)DhcpOption::Pad) {
             p += 1;
         } else {
-            p += p[1] + 2;
+            p += (uint8_t)p[1] + 2;
         }
     }
 
@@ -48,7 +48,7 @@ uint8_t* DhcpHeader::findOption(DhcpOption code) {
 }
 
 bool DhcpHeader::subnetMask(IpAddress* subnetMask) {
-    if (uint8_t* p = findOption(DhcpOption::SubnetMask)) {
+    if (byte* p = findOption(DhcpOption::SubnetMask)) {
         memcpy(subnetMask, p + 2, sizeof(IpAddress));
         return true;
     }
@@ -57,11 +57,11 @@ bool DhcpHeader::subnetMask(IpAddress* subnetMask) {
 }
 
 estd::vector<IpAddress> DhcpHeader::routers() {
-    uint8_t* start = findOption(DhcpOption::Router);
+    byte* start = findOption(DhcpOption::Router);
     uint8_t length = start[1];
 
     estd::vector<IpAddress> routers;
-    for (uint8_t* p = start + 2; p < start + 2 + length; p += 4) {
+    for (byte* p = start + 2; p < start + 2 + length; p += 4) {
         IpAddress router;
         memcpy(&router, p, sizeof(IpAddress));
         routers.push_back(router);
@@ -71,11 +71,11 @@ estd::vector<IpAddress> DhcpHeader::routers() {
 }
 
 estd::vector<IpAddress> DhcpHeader::dnsServers() {
-    uint8_t* start = findOption(DhcpOption::Dns);
+    byte* start = findOption(DhcpOption::Dns);
     uint8_t length = start[1];
 
     estd::vector<IpAddress> dnsServers;
-    for (uint8_t* p = start + 2; p < start + 2 + length; p += 4) {
+    for (byte* p = start + 2; p < start + 2 + length; p += 4) {
         IpAddress dnsServer;
         memcpy(&dnsServer, p, sizeof(IpAddress));
         dnsServers.push_back(dnsServer);
@@ -85,7 +85,7 @@ estd::vector<IpAddress> DhcpHeader::dnsServers() {
 }
 
 bool DhcpHeader::broadcastAddress(IpAddress* broadcastAddress) {
-    if (uint8_t* p = findOption(DhcpOption::BroadcastAddress)) {
+    if (byte* p = findOption(DhcpOption::BroadcastAddress)) {
         memcpy(broadcastAddress, p + 2, sizeof(IpAddress));
         return true;
     }
@@ -94,7 +94,7 @@ bool DhcpHeader::broadcastAddress(IpAddress* broadcastAddress) {
 }
 
 DhcpMessageType DhcpHeader::messageType() {
-    if (uint8_t* p = findOption(DhcpOption::MessageType)) {
+    if (byte* p = findOption(DhcpOption::MessageType)) {
         return (DhcpMessageType)p[2];
     }
 
@@ -114,23 +114,23 @@ void DhcpHeader::setSiaddr(IpAddress value) { _siaddr = value; }
 void DhcpHeader::setGiaddr(IpAddress value) { _giaddr = value; }
 void DhcpHeader::setSname(const char* value) { strcpy(_sname, value); }
 void DhcpHeader::setFile(const char* value) { strcpy(_file, value); }
-void DhcpHeader::setOptions(uint8_t* data, size_t size) { memcpy(_options, data, size); }
+void DhcpHeader::setOptions(byte* data, size_t size) { memcpy(_options, data, size); }
 
 void DhcpHeader::setChaddr(MacAddress value) {
     memset(_chaddr, 0, sizeof(_chaddr));
     memcpy(_chaddr, &value, sizeof(MacAddress));
 }
 
-estd::vector<uint8_t> DhcpHeader::createDiscoverOptions() {
-    estd::vector<uint8_t> options;
-    options.push_back((uint8_t)DhcpOption::MessageType);
+estd::vector<byte> DhcpHeader::createDiscoverOptions() {
+    estd::vector<byte> options;
+    options.push_back((byte)DhcpOption::MessageType);
     options.push_back(1);
-    options.push_back((uint8_t)DhcpMessageType::Discover);
-    options.push_back((uint8_t)DhcpOption::End);
+    options.push_back((byte)DhcpMessageType::Discover);
+    options.push_back((byte)DhcpOption::End);
     return estd::move(options);
 }
 
-void dhcpRecv(NetworkInterface* netif, IpHeader*, uint8_t* buffer, size_t size) {
+void dhcpRecv(NetworkInterface* netif, IpHeader*, void* buffer, size_t size) {
     if (size < sizeof(DhcpHeader)) {
         return;
     }
@@ -165,10 +165,10 @@ void dhcpRecv(NetworkInterface* netif, IpHeader*, uint8_t* buffer, size_t size) 
 }
 
 void dhcpRequest(NetworkInterface* netif) {
-    estd::vector<uint8_t> options = DhcpHeader().createDiscoverOptions();
+    estd::vector<byte> options = DhcpHeader().createDiscoverOptions();
 
     size_t packetSize = sizeof(DhcpHeader) + options.size();
-    uint8_t* packet = new uint8_t[packetSize];
+    byte* packet = new byte[packetSize];
 
     DhcpHeader* request = new (packet) DhcpHeader;
     request->setOp(DhcpOperation::BootRequest);

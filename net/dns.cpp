@@ -3,6 +3,7 @@
 #include <arpa/inet.h>
 
 #include "estd/bits.h"
+#include "estd/stddef.h"
 #include "estd/vector.h"
 #include "net/udp.h"
 #include "scheduler.h"
@@ -33,7 +34,7 @@ void DnsHeader::setArcount(uint16_t value) { _arcount = htons(value); }
 
 class QuestionBuilder {
     size_t _count = 0;
-    estd::vector<uint8_t> _bytes;
+    estd::vector<byte> _bytes;
 
 public:
     bool add(const char* hostname, DnsRecordType type, DnsRecordClass cls) {
@@ -70,7 +71,7 @@ public:
     };
 
     size_t count() const { return _count; }
-    const uint8_t* data() const { return _bytes.data(); }
+    const byte* data() const { return _bytes.data(); }
     size_t size() const { return _bytes.size(); }
 };
 
@@ -86,7 +87,7 @@ struct DnsRecord {
     DnsRecordClass cls;
     uint32_t ttl;
     uint16_t rdlength;
-    const uint8_t* rdata;
+    const byte* rdata;
 
     IpAddress ip() const {
         ASSERT(type == DnsRecordType::A);
@@ -96,9 +97,9 @@ struct DnsRecord {
 };
 
 class ResponseParser {
-    const uint8_t* parseName(const uint8_t* packet, const uint8_t* start,
-                             estd::vector<char>& result) {
-        const uint8_t* p = start;
+    const byte* parseName(const byte* packet, const byte* start,
+                          estd::vector<char>& result) {
+        const byte* p = start;
 
         // Domain names are sequence of labels ending in a zero byte, a pointer, or a
         // sequence of labels ending with a pointer
@@ -131,9 +132,8 @@ class ResponseParser {
         return ++p;
     }
 
-    const uint8_t* parseQuestions(const uint8_t* packet, const uint8_t* start,
-                                  size_t count) {
-        const uint8_t* p = start;
+    const byte* parseQuestions(const byte* packet, const byte* start, size_t count) {
+        const byte* p = start;
 
         for (size_t i = 0; i < count; ++i) {
             estd::vector<char> hostnameBuffer;
@@ -163,9 +163,8 @@ class ResponseParser {
         return p;
     }
 
-    const uint8_t* parseAnswers(const uint8_t* packet, const uint8_t* start,
-                                size_t count) {
-        const uint8_t* p = start;
+    const byte* parseAnswers(const byte* packet, const byte* start, size_t count) {
+        const byte* p = start;
 
         for (size_t i = 0; i < count; ++i) {
             estd::vector<char> hostnameBuffer;
@@ -192,7 +191,7 @@ class ResponseParser {
             uint16_t rdlength = ntohs(rdlengthRaw);
             p += 2;
 
-            const uint8_t* rdata = p;
+            const byte* rdata = p;
 
             // Make a copy of the hostname as a null-terminated string
             char* hostname = new char[hostnameBuffer.size() + 1];
@@ -214,14 +213,15 @@ class ResponseParser {
     estd::vector<const char*> _hostnames;
 
 public:
-    ResponseParser(const uint8_t* packet) {
+    ResponseParser(const void* packet) {
         estd::vector<char> hostnameBuffer;
 
+        const byte* start = reinterpret_cast<const byte*>(packet);
         const DnsHeader* header = reinterpret_cast<const DnsHeader*>(packet);
-        const uint8_t* p = packet + sizeof(DnsHeader);
+        const byte* p = start + sizeof(DnsHeader);
 
-        p = parseQuestions(packet, p, header->qdcount());
-        p = parseAnswers(packet, p, header->ancount());
+        p = parseQuestions(start, p, header->qdcount());
+        p = parseAnswers(start, p, header->ancount());
     }
 
     ~ResponseParser() {
@@ -334,7 +334,7 @@ void dnsQuery(IpAddress dnsServer, const char* hostname) {
     questions.add(hostname, DnsRecordType::A, DnsRecordClass::IN);
 
     size_t packetSize = sizeof(DnsHeader) + questions.size();
-    uint8_t* packet = new uint8_t[packetSize];
+    byte* packet = new byte[packetSize];
 
     DnsHeader* header = new (packet) DnsHeader{};
     header->setId(0x1234);
@@ -374,7 +374,7 @@ IpAddress dnsResolve(IpAddress dnsServer, const char* hostname, bool blocking) {
     }
 }
 
-void dnsRecv(uint8_t* buffer, size_t size) {
+void dnsRecv(void* buffer, size_t size) {
     if (size < sizeof(DnsHeader)) {
         return;
     }

@@ -3,14 +3,15 @@
 #include <stdint.h>
 
 #include "estd/print.h"
+#include "estd/stddef.h"
 
 class NetworkInterface;
 
 struct MacAddress {
-    uint8_t bytes[6] = {};
+    byte bytes[6] = {};
 
     MacAddress() = default;
-    MacAddress(uint8_t* bytes);
+    MacAddress(byte* bytes);
 
     MacAddress(const MacAddress& other);
     MacAddress& operator=(const MacAddress& other);
@@ -53,8 +54,8 @@ enum class EtherType : uint16_t {
 };
 
 class EthernetHeader {
-    uint8_t _destMac[6];
-    uint8_t _srcMac[6];
+    byte _destMac[6];
+    byte _srcMac[6];
     uint16_t _etherType;
 
 public:
@@ -69,6 +70,6 @@ public:
 
 static_assert(sizeof(EthernetHeader) == 14);
 
-void ethRecv(NetworkInterface* netif, uint8_t* buffer, size_t size);
+void ethRecv(NetworkInterface* netif, void* buffer, size_t size);
 void ethSend(NetworkInterface* netif, MacAddress destMac, EtherType ethType, void* buffer,
              size_t size);

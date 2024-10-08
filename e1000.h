@@ -13,7 +13,7 @@ class E1000Device : public NetworkInterface {
 public:
     E1000Device();
 
-    void sendPacket(uint8_t* buffer, size_t length) override;
+    void sendPacket(void* buffer, size_t length) override;
 
 private:
     template <typename T>

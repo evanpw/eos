@@ -96,7 +96,7 @@ static void arpInsert(IpAddress ip, MacAddress mac) {
     arpCache = newEntry;
 }
 
-void arpRecv(NetworkInterface* netif, uint8_t* buffer, size_t size) {
+void arpRecv(NetworkInterface* netif, void* buffer, size_t size) {
     if (size < sizeof(ArpHeader)) {
         return;
     }

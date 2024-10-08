@@ -9,8 +9,7 @@ Ext2File::Ext2File(Ext2FileSystem& fs, estd::unique_ptr<ext2::Inode> inode)
 : _fs(fs), _inode(estd::move(inode)) {}
 
 ssize_t Ext2File::read(OpenFileDescription& fd, void* buffer, size_t count) {
-    ssize_t bytesRead =
-        _fs.readFromFile(*_inode, reinterpret_cast<uint8_t*>(buffer), count, fd.offset);
+    ssize_t bytesRead = _fs.readFromFile(*_inode, buffer, count, fd.offset);
     if (bytesRead > 0) {
         // TODO: file descriptor needs locking
         fd.offset += bytesRead;
@@ -41,7 +40,7 @@ ssize_t Ext2File::readDir(OpenFileDescription& /*fd*/, void* buffer, size_t coun
 
     // Copy the directory entries from  dirBuffer to buffer, converting the structure as
     // we go
-    uint8_t* pbuffer = reinterpret_cast<uint8_t*>(buffer);
+    byte* pbuffer = reinterpret_cast<byte*>(buffer);
     uint64_t inOffset = 0;
     uint64_t outOffset = 0;
     while (inOffset < size) {

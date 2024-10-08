@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #include "estd/optional.h"
+#include "estd/stddef.h"
 
 enum class EtherType : uint16_t;
 class NetworkInterface;
@@ -27,9 +28,9 @@ class __attribute__((packed)) ArpHeader {
     uint8_t _hardwareLen;
     uint8_t _protocolLen;
     uint16_t _operation;
-    uint8_t _senderMac[6];
+    byte _senderMac[6];
     uint32_t _senderIp;
-    uint8_t _targetMac[6];
+    byte _targetMac[6];
     uint32_t _targetIp;
 
 public:
@@ -60,6 +61,6 @@ void arpInit();
 
 estd::optional<MacAddress> arpLookup(NetworkInterface* netif, IpAddress ip);
 
-void arpRecv(NetworkInterface* netif, uint8_t* buffer, size_t size);
+void arpRecv(NetworkInterface* netif, void* buffer, size_t size);
 void arpRequest(NetworkInterface* netif, IpAddress destIp);
 void arpReply(NetworkInterface* netif, MacAddress destMac, IpAddress destIp);

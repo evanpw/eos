@@ -29,7 +29,7 @@ DIR* opendir(const char* name) {
     // Start with a size of 4 KB and grow if necessary
     size_t bufferSize = 4096;
     while (true) {
-        dir->buffer = (uint8_t*)malloc(bufferSize);
+        dir->buffer = (char*)malloc(bufferSize);
 
         int64_t result = syscall(SYS_read_dir, fd, dir->buffer, bufferSize);
 
@@ -74,7 +74,7 @@ dirent* readdir(DIR* dir) {
         return nullptr;
     }
 
-    dirent* entry = (dirent*)&dir->buffer[dir->offset];
+    dirent* entry = reinterpret_cast<dirent*>(&dir->buffer[dir->offset]);
 
     // Partial record
     if (dir->offset + entry->d_reclen > dir->bufferSize) {

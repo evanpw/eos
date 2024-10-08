@@ -5,6 +5,7 @@
 #include "estd/assertions.h"
 #include "estd/bits.h"
 #include "estd/print.h"
+#include "estd/stddef.h"
 
 struct StringBuilder {
     void append(char c) {
@@ -69,12 +70,12 @@ private:
 
 class AMLParser {
 public:
-    AMLParser(uint8_t* code, size_t length)
+    AMLParser(byte* code, size_t length)
     : _codeStart(code), _codeEnd(code + length), _current(code) {}
 
     void parse() { TermList(_codeEnd); }
 
-    void TermList(uint8_t* listEnd) {
+    void TermList(byte* listEnd) {
         while (_current < listEnd) {
             switch (peek()) {
                 case ScopeOp:
@@ -123,7 +124,7 @@ public:
     // DefScope = ScopeOp PkgLength NameString TermList
     void DefScope() {
         expect(ScopeOp);
-        uint8_t* listEnd = startPackage();
+        byte* listEnd = startPackage();
         const char* name = NameString();
         println("DefScope: name={}", name);
         TermList(listEnd);
@@ -206,7 +207,7 @@ public:
     // DefField = FieldOp PkgLength NameString FieldFlags FieldList
     void DefField() {
         expect(FieldOp);
-        uint8_t* listEnd = startPackage();
+        byte* listEnd = startPackage();
         const char* name = NameString();
         uint8_t flags = FieldFlags();
         println("DefField: name={} flags={:08b}", name, flags);
@@ -217,7 +218,7 @@ public:
     uint8_t FieldFlags() { return consume(); }
 
     // FieldList = Nothing | <FieldElement FieldList>
-    void FieldList(uint8_t* listEnd) {
+    void FieldList(byte* listEnd) {
         while (_current < listEnd) {
             FieldElement();
         }
@@ -266,9 +267,9 @@ public:
     // DefMethod = MethodOp PkgLength NameString MethodFlags TermList
     void DefMethod() {
         expect(MethodOp);
-        uint8_t* listEnd = startPackage();
+        byte* listEnd = startPackage();
         const char* name = NameString();
-        uint8_t flags = MethodFlags();
+        byte flags = MethodFlags();
         println("DefMethod: name={} flags={:08b}", name, flags);
         TermList(listEnd);
     }
@@ -443,8 +444,8 @@ public:
         return (result << 4) | lowBits(leadByte, 4);
     }
 
-    uint8_t* startPackage() {
-        uint8_t* start = _current;
+    byte* startPackage() {
+        byte* start = _current;
         uint32_t pkgLength = PkgLength();
         return start + pkgLength;
     }
@@ -609,7 +610,7 @@ private:
         DataRegionOp = 0x88,
     };
 
-    void expect(uint8_t value) {
+    void expect(byte value) {
         if (_current == _codeEnd) {
             println("expected {:02X}, got EOF", value);
             ASSERT(_current < _codeEnd);
@@ -621,7 +622,7 @@ private:
         }
     }
 
-    bool accept(uint8_t value) {
+    bool accept(byte value) {
         if (_current == _codeEnd || *_current != value) {
             return false;
         } else {
@@ -630,23 +631,23 @@ private:
         }
     }
 
-    uint8_t consume() {
-        uint8_t value = peek();
+    byte consume() {
+        byte value = peek();
         ++_current;
         return value;
     }
 
-    uint8_t peek() {
+    byte peek() {
         ASSERT(_current < _codeEnd);
         return *_current;
     }
 
-    [[maybe_unused]] uint8_t* _codeStart;
-    uint8_t* _codeEnd;
-    uint8_t* _current;
+    [[maybe_unused]] byte* _codeStart;
+    byte* _codeEnd;
+    byte* _current;
 };
 
-void parseAML(uint8_t* code, size_t length) {
+void parseAML(byte* code, size_t length) {
     AMLParser parser(code, length);
     parser.parse();
 }

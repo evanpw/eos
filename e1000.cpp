@@ -306,7 +306,7 @@ void E1000Device::initTxRing() {
     _regs->tctl = _regs->tctl | TCTL_EN;
 }
 
-void E1000Device::sendPacket(uint8_t* buffer, size_t length) {
+void E1000Device::sendPacket(void* buffer, size_t length) {
     size_t idx = _regs->tdt;
     size_t nextIdx = (idx + 1) % _txDescCount;
 

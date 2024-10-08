@@ -32,7 +32,7 @@ struct FormatArg<IpAddress> : public FormatArgBase {
     FormatArg(IpAddress value) : value(value) {}
 
     void print(const FormatSpec&) const override {
-        uint8_t bytes[4];
+        byte bytes[4];
         memcpy(bytes, &value, sizeof(uint32_t));
 
         FormatSpec spec;
@@ -98,7 +98,7 @@ static_assert(sizeof(IpHeader) == 20);
 
 void ipInit();
 estd::optional<IpAddress> findRouteSourceIp(IpAddress destIp);
-void ipRecv(NetworkInterface* netif, uint8_t* buffer, size_t size);
+void ipRecv(NetworkInterface* netif, void* buffer, size_t size);
 bool ipBroadcast(NetworkInterface* netif, IpProtocol protocol, void* buffer, size_t size);
 bool ipSend(IpAddress destIp, IpProtocol protocol, void* buffer, size_t size);
 

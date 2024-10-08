@@ -127,8 +127,7 @@ uint32_t IDEChannel::readSignature() {
     uint8_t byte2 = readRegister(LBA1);
     uint8_t byte3 = readRegister(LBA2);
 
-    return (uint32_t(byte3) << 24) | (uint32_t(byte2) << 16) | (uint32_t(byte1) << 8) |
-           byte0;
+    return concatBits(byte3, byte2, byte1, byte0);
 }
 
 uint16_t IDEChannel::readData() {
@@ -216,7 +215,7 @@ bool ATADevice::readSectors(void* dest, uint64_t start, size_t count) {
     _channel.sendCommand(ReadPIOExt);
 
     // Each sector is read separately
-    uint8_t* ptr = static_cast<uint8_t*>(dest);
+    byte* ptr = static_cast<byte*>(dest);
     for (size_t sector = 0; sector < count; ++sector) {
         if (!_channel.waitForData()) {
             return false;

@@ -284,7 +284,7 @@ size_t MemoryManager::freePageCount() const {
 void MemoryManager::initializeHeap() {
     // Allocate and zero out a contiguous region to use as a heap
     PhysicalAddress physicalPages = pageAlloc(HEAP_SIZE / PAGE_SIZE);
-    _heap = physicalToVirtual(physicalPages).ptr<uint8_t>();
+    _heap = physicalToVirtual(physicalPages).ptr<byte>();
     println("mm: creating {} MiB kernel heap at address {:X}", HEAP_SIZE / MiB,
             physicalPages.value);
 
@@ -301,7 +301,7 @@ void* MemoryManager::kmalloc(size_t size) {
     size_t requiredSize = size + sizeof(BlockHeader);
 
     // Linear scan first-fit
-    uint8_t* ptr = _heap;
+    byte* ptr = _heap;
     while (ptr < _heap + HEAP_SIZE) {
         // TODO: use memcpy
         BlockHeader* header = reinterpret_cast<BlockHeader*>(ptr);
@@ -314,7 +314,7 @@ void* MemoryManager::kmalloc(size_t size) {
 
         // Coalesce free blocks
         while (true) {
-            uint8_t* nextPtr = ptr + header->size();
+            byte* nextPtr = ptr + header->size();
             BlockHeader* nextHeader = reinterpret_cast<BlockHeader*>(nextPtr);
 
             if (nextPtr >= _heap + HEAP_SIZE || !nextHeader->isFree()) {
@@ -356,7 +356,7 @@ void MemoryManager::kfree(void* ptr) {
     }
 
     // Locate the header for this heap block and verify that it looks good
-    uint8_t* blockPtr = reinterpret_cast<uint8_t*>(ptr) - sizeof(BlockHeader);
+    byte* blockPtr = reinterpret_cast<byte*>(ptr) - sizeof(BlockHeader);
     BlockHeader* header = reinterpret_cast<BlockHeader*>(blockPtr);
     ASSERT(blockPtr >= _heap);
     ASSERT(blockPtr < _heap + HEAP_SIZE);
@@ -370,7 +370,7 @@ void MemoryManager::kfree(void* ptr) {
 }
 
 void MemoryManager::showHeap() const {
-    uint8_t* ptr = _heap;
+    byte* ptr = _heap;
     while (ptr < _heap + HEAP_SIZE) {
         // TODO: use memcpy
         const BlockHeader* header = reinterpret_cast<const BlockHeader*>(ptr);

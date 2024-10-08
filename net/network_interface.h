@@ -30,7 +30,7 @@ public:
         _gateway = gateway;
     }
 
-    virtual void sendPacket(uint8_t* buffer, size_t length) = 0;
+    virtual void sendPacket(void* buffer, size_t length) = 0;
 
 protected:
     MacAddress _macAddress;

@@ -58,17 +58,17 @@ class DhcpHeader {
     uint32_t _xid;   // transaction id
     uint16_t _secs;  // seconds since client started began acquisition / renewal
     uint16_t _flags;
-    uint32_t _ciaddr;     // client ip address
-    uint32_t _yiaddr;     // 'your' client ip address
-    uint32_t _siaddr;     // server ip address
-    uint32_t _giaddr;     // relay agent ip address
-    uint8_t _chaddr[16];  // client hardware address
-    char _sname[64];      // server host name
-    char _file[128];      // boot file name
-    uint32_t _magic;      // magic cookie
-    uint8_t _options[];   // optional parameters field
+    uint32_t _ciaddr;  // client ip address
+    uint32_t _yiaddr;  // 'your' client ip address
+    uint32_t _siaddr;  // server ip address
+    uint32_t _giaddr;  // relay agent ip address
+    byte _chaddr[16];  // client hardware address
+    char _sname[64];   // server host name
+    char _file[128];   // boot file name
+    uint32_t _magic;   // magic cookie
+    byte _options[];   // optional parameters field
 
-    uint8_t* findOption(DhcpOption code);
+    byte* findOption(DhcpOption code);
 
 public:
     DhcpOperation op();
@@ -100,7 +100,7 @@ public:
     void setChaddr(MacAddress value);
     void setSname(const char* value);
     void setFile(const char* value);
-    void setOptions(uint8_t* data, size_t size);
+    void setOptions(byte* data, size_t size);
 
     bool checkMagic();
     void fillMagic();
@@ -112,8 +112,8 @@ public:
     bool broadcastAddress(IpAddress* broadcastAddress);
     DhcpMessageType messageType();
 
-    estd::vector<uint8_t> createDiscoverOptions();
+    estd::vector<byte> createDiscoverOptions();
 };
 
 void dhcpInit(NetworkInterface* netif);
-void dhcpRecv(NetworkInterface* netif, IpHeader* ipHeader, uint8_t* buffer, size_t size);
+void dhcpRecv(NetworkInterface* netif, IpHeader* ipHeader, void* buffer, size_t size);

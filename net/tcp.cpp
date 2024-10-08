@@ -16,9 +16,11 @@ uint16_t TcpHeader::computeChecksum(IpAddress srcIp, IpAddress destIp, size_t to
 
     uint32_t sum = 0;
 
-    uint8_t* bytes = reinterpret_cast<uint8_t*>(this);
+    byte* bytes = reinterpret_cast<byte*>(this);
     for (size_t i = 0; i + 1 < totalLen; i += 2) {
-        uint16_t word = (bytes[i] << 8) | bytes[i + 1];
+        byte highByte = bytes[i];
+        byte lowByte = bytes[i + 1];
+        uint16_t word = concatBits(highByte, lowByte);
         sum += word;
     }
 
@@ -73,7 +75,7 @@ uint8_t TcpHeader::cwr() { return _cwr; }
 uint16_t TcpHeader::windowSize() { return ntohs(_windowSize); }
 uint16_t TcpHeader::checksum() { return ntohs(_checksum); }
 uint16_t TcpHeader::urgentPointer() { return ntohs(_urgentPointer); }
-uint8_t* TcpHeader::data() { return _data; }
+byte* TcpHeader::data() { return _data; }
 
 void TcpHeader::setSourcePort(uint16_t value) { _sourcePort = htons(value); }
 void TcpHeader::setDestPort(uint16_t value) { _destPort = htons(value); }
@@ -136,7 +138,7 @@ struct TcpControlBlock {
 
     static constexpr size_t RECV_BUFFER_SIZE = 64 * KiB - 1;
 
-    uint8_t recvBuffer[RECV_BUFFER_SIZE];
+    byte recvBuffer[RECV_BUFFER_SIZE];
     uint32_t recvBufferUsed() { return sizeof(recvBuffer) - recv.window; }
     bool recvBufferEmpty() { return recvBufferUsed() == 0; }
 
@@ -316,8 +318,8 @@ TcpControlBlock* tcbLookup(uint16_t localPort, IpAddress remoteIp, uint16_t remo
     return tcbLookup(tcbList, localPort, remoteIp, remotePort);
 }
 
-void tcpRecvListen(TcpControlBlock* tcb, IpHeader* ipHeader, TcpHeader* tcpHeader,
-                   uint8_t*, size_t) {
+void tcpRecvListen(TcpControlBlock* tcb, IpHeader* ipHeader, TcpHeader* tcpHeader, void*,
+                   size_t) {
     ASSERT(tcb->lock.isLocked());
     ASSERT(tcpHeader->syn());
 
@@ -371,10 +373,10 @@ void tcpRecvListen(TcpControlBlock* tcb, IpHeader* ipHeader, TcpHeader* tcpHeade
     tcbChild->send.next++;
 }
 
-void tcpRecvEstablished(TcpControlBlock* tcb, TcpHeader* tcpHeader, uint8_t* data,
+void tcpRecvEstablished(TcpControlBlock* tcb, TcpHeader* tcpHeader, void* data,
                         size_t dataLen);
 
-void tcpRecvSynReceived(TcpControlBlock* tcb, TcpHeader* tcpHeader, uint8_t* data,
+void tcpRecvSynReceived(TcpControlBlock* tcb, TcpHeader* tcpHeader, void* data,
                         size_t dataLen) {
     ASSERT(tcb->lock.isLocked());
     ASSERT(tcpHeader->ack());
@@ -393,7 +395,7 @@ void tcpRecvSynReceived(TcpControlBlock* tcb, TcpHeader* tcpHeader, uint8_t* dat
     sys.scheduler().wakeThreads(tcb->connectionEstablished);
 }
 
-void tcpRecvEstablished(TcpControlBlock* tcb, TcpHeader* tcpHeader, uint8_t* data,
+void tcpRecvEstablished(TcpControlBlock* tcb, TcpHeader* tcpHeader, void* data,
                         size_t dataLen) {
     ASSERT(tcb->lock.isLocked());
     ASSERT(tcpHeader->seqNum() == tcb->recv.next);
@@ -440,10 +442,10 @@ void tcpRecvEstablished(TcpControlBlock* tcb, TcpHeader* tcpHeader, uint8_t* dat
     ipSend(tcb->remoteIp, IpProtocol::Tcp, &response, sizeof(TcpHeader));
 }
 
-void tcpRecvFinWait2(TcpControlBlock* tcb, TcpHeader* tcpHeader, uint8_t* data,
+void tcpRecvFinWait2(TcpControlBlock* tcb, TcpHeader* tcpHeader, void* data,
                      size_t dataLen);
 
-void tcpRecvFinWait1(TcpControlBlock* tcb, TcpHeader* tcpHeader, uint8_t* data,
+void tcpRecvFinWait1(TcpControlBlock* tcb, TcpHeader* tcpHeader, void* data,
                      size_t dataLen) {
     ASSERT(tcb->lock.isLocked());
     ASSERT(tcpHeader->seqNum() == tcb->recv.next);
@@ -467,7 +469,7 @@ void tcpRecvFinWait1(TcpControlBlock* tcb, TcpHeader* tcpHeader, uint8_t* data,
     }
 }
 
-void tcpRecvFinWait2(TcpControlBlock* tcb, TcpHeader* tcpHeader, uint8_t*, size_t) {
+void tcpRecvFinWait2(TcpControlBlock* tcb, TcpHeader* tcpHeader, void*, size_t) {
     ASSERT(tcb->lock.isLocked());
     ASSERT(tcpHeader->fin());
     ASSERT(tcpHeader->seqNum() == tcb->recv.next);
@@ -487,7 +489,7 @@ void tcpRecvFinWait2(TcpControlBlock* tcb, TcpHeader* tcpHeader, uint8_t*, size_
     ipSend(tcb->remoteIp, IpProtocol::Tcp, &response, sizeof(TcpHeader));
 }
 
-void tcpRecvLastAck(TcpControlBlock* tcb, TcpHeader* tcpHeader, uint8_t*, size_t) {
+void tcpRecvLastAck(TcpControlBlock* tcb, TcpHeader* tcpHeader, void*, size_t) {
     ASSERT(tcb->lock.isLocked());
     ASSERT(tcpHeader->ack());
     ASSERT(tcpHeader->seqNum() == tcb->recv.next);
@@ -497,7 +499,7 @@ void tcpRecvLastAck(TcpControlBlock* tcb, TcpHeader* tcpHeader, uint8_t*, size_t
     tcb->state = TcpState::CLOSED;
 }
 
-void tcpRecvSynSent(TcpControlBlock* tcb, TcpHeader* tcpHeader, uint8_t*, size_t) {
+void tcpRecvSynSent(TcpControlBlock* tcb, TcpHeader* tcpHeader, void*, size_t) {
     ASSERT(tcb->lock.isLocked());
     ASSERT(tcpHeader->syn());
     ASSERT(tcpHeader->ack());
@@ -524,7 +526,7 @@ void tcpRecvSynSent(TcpControlBlock* tcb, TcpHeader* tcpHeader, uint8_t*, size_t
     sys.scheduler().wakeThreads(tcb->connectionEstablished);
 }
 
-void tcpRecv(IpHeader* ipHeader, uint8_t* buffer, size_t size) {
+void tcpRecv(IpHeader* ipHeader, void* buffer, size_t size) {
     if (size < sizeof(TcpHeader)) {
         return;
     }
@@ -538,7 +540,7 @@ void tcpRecv(IpHeader* ipHeader, uint8_t* buffer, size_t size) {
     if (!tcb) return;
 
     size_t headerSize = tcpHeader->dataOffset() * 4;
-    uint8_t* data = buffer + headerSize;
+    byte* data = reinterpret_cast<byte*>(buffer) + headerSize;
     size_t dataLen = size - headerSize;
 
     switch (tcb->state) {
@@ -773,7 +775,7 @@ bool tcpSend(TcpHandle handle, const void* buffer, size_t size, bool push) {
     }
 
     size_t packetSize = sizeof(TcpHeader) + size;
-    uint8_t* packet = new uint8_t[packetSize];
+    byte* packet = new byte[packetSize];
 
     // Construct the header
     TcpHeader* tcpHeader = new (packet) TcpHeader;

@@ -65,7 +65,7 @@ estd::unique_ptr<Thread> Thread::createUserThread(Process* process,
     thread->rsp = bit_cast<uint64_t>(stackPtr);
 
     // Set up the initial user stack to pass arguments to the entry point
-    uint8_t* stackPtrK = mm.physicalToVirtual(thread->userStackTop).ptr<uint8_t>();
+    byte* stackPtrK = mm.physicalToVirtual(thread->userStackTop).ptr<byte>();
     VirtualAddress stackPtrU = thread->userStackTopVirt;
 
     // First count the number of arguments

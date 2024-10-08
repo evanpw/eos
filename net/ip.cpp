@@ -5,7 +5,7 @@
 
 #include "estd/bits.h"
 #include "estd/new.h"
-#include "estd/print.h"
+#include "estd/stddef.h"
 #include "net/arp.h"
 #include "net/ethernet.h"
 #include "net/network_interface.h"
@@ -21,9 +21,11 @@ IpAddress::IpAddress(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
 uint16_t IpHeader::computeChecksum() {
     uint32_t sum = 0;
 
-    uint8_t* bytes = reinterpret_cast<uint8_t*>(this);
+    byte* bytes = reinterpret_cast<byte*>(this);
     for (size_t i = 0; i < headerLen() * 4; i += 2) {
-        uint16_t word = (bytes[i] << 8) | bytes[i + 1];
+        uint8_t highByte = bytes[i];
+        uint8_t lowByte = bytes[i + 1];
+        uint16_t word = concatBits(highByte, lowByte);
         sum += word;
     }
 
@@ -60,7 +62,7 @@ void IpHeader::setProtocol(IpProtocol value) { _protocol = (uint8_t)value; }
 void IpHeader::setDestIp(IpAddress value) { _destIp = value; }
 void IpHeader::setSourceIp(IpAddress value) { _sourceIp = value; }
 
-void ipRecv(NetworkInterface* netif, uint8_t* buffer, size_t size) {
+void ipRecv(NetworkInterface* netif, void* buffer, size_t size) {
     if (size < sizeof(IpHeader)) {
         return;
     }
@@ -75,16 +77,16 @@ void ipRecv(NetworkInterface* netif, uint8_t* buffer, size_t size) {
         ipHeader->destIp() != IpAddress::broadcast())
         return;
 
-    buffer += ipHeader->headerLen() * 4;
+    byte* payload = reinterpret_cast<byte*>(buffer) + ipHeader->headerLen() * 4;
     size = ipHeader->totalLen() - ipHeader->headerLen() * 4;
 
     switch (ipHeader->protocol()) {
         case IpProtocol::Udp:
-            udpRecv(netif, ipHeader, buffer, size);
+            udpRecv(netif, ipHeader, payload, size);
             break;
 
         case IpProtocol::Tcp:
-            tcpRecv(ipHeader, buffer, size);
+            tcpRecv(ipHeader, payload, size);
             break;
 
         default:
@@ -98,7 +100,7 @@ struct Route {
 };
 
 struct PendingSend {
-    uint8_t* packet;
+    byte* packet;
     size_t totalSize;
     IpAddress nextHop;
     PendingSend* next = nullptr;
@@ -112,7 +114,7 @@ void ipInit() {
     sendQueue = nullptr;
 }
 
-void queueSend(uint8_t* packet, size_t totalSize, IpAddress destIp) {
+void queueSend(byte* packet, size_t totalSize, IpAddress destIp) {
     ASSERT(ipLock->isLocked());
     PendingSend* pendingSend = new PendingSend{packet, totalSize, destIp};
 
@@ -199,7 +201,7 @@ estd::optional<IpAddress> findRouteSourceIp(IpAddress) {
 
 bool ipSend(IpAddress destIp, IpProtocol protocol, void* buffer, size_t size) {
     size_t totalSize = sizeof(IpHeader) + size;
-    uint8_t* packet = new uint8_t[totalSize];
+    byte* packet = new byte[totalSize];
 
     IpHeader* ipHeader = new (packet) IpHeader;
     ipHeader->setTotalLen(totalSize);
@@ -231,7 +233,7 @@ bool ipSend(IpAddress destIp, IpProtocol protocol, void* buffer, size_t size) {
 bool ipBroadcast(NetworkInterface* netif, IpProtocol protocol, void* buffer,
                  size_t size) {
     size_t totalSize = sizeof(IpHeader) + size;
-    uint8_t* packet = new uint8_t[totalSize];
+    byte* packet = new byte[totalSize];
 
     IpHeader* ipHeader = new (packet) IpHeader;
     ipHeader->setTotalLen(totalSize);
