@@ -63,6 +63,7 @@ make_user_target(spam spam.cpp)
 make_user_target(cat cat.cpp)
 make_user_target(wget wget.cpp)
 make_user_target(serve serve.cpp)
+make_user_target(pipeTest pipeTest.cpp)
 
 add_custom_target(
     userland
@@ -72,6 +73,7 @@ add_custom_target(
     cat.elf
     wget.elf
     serve.elf
+    pipeTest.elf
 )
 
 set(USERLAND_BINARIES
@@ -80,5 +82,6 @@ set(USERLAND_BINARIES
     ${CMAKE_CURRENT_BINARY_DIR}/cat
     ${CMAKE_CURRENT_BINARY_DIR}/wget
     ${CMAKE_CURRENT_BINARY_DIR}/serve
+    ${CMAKE_CURRENT_BINARY_DIR}/pipeTest
     PARENT_SCOPE
 )

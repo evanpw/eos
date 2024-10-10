@@ -99,6 +99,13 @@ int main() {
             }
             pid_t child = launch("/bin/serve", argv);
             waitpid(child, nullptr, 0);
+        } else if (strcmp(cmd, "pipeTest") == 0) {
+            const char* argv[2] = {};
+            if (*args != '\0') {
+                argv[0] = args;
+            }
+            pid_t child = launch("/bin/pipeTest", argv);
+            waitpid(child, nullptr, 0);
         } else if (strcmp(cmd, "ls") == 0) {
             // ls with no arguments lists the current directory
             if (*args == '\0') {

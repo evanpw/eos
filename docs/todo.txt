@@ -10,3 +10,5 @@
 * split boot into multiple stages, and support grub
 * add support for USB
 * add a virtual file system
+* add redirection of stdin / stdout
+* actually use fd offset / access / etc correctly

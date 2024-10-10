@@ -22,6 +22,7 @@ enum {
     SYS_bind,
     SYS_listen,
     SYS_accept,
+    SYS_pipe,
 
     SYS_COUNT,
 };

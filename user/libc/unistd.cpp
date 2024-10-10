@@ -22,6 +22,8 @@ void _exit(int status) {
 
 void* sbrk(intptr_t incr) { return try_syscall<void*>(SYS_sbrk, incr); }
 
+int pipe(int filedes[2]) { return try_syscall(SYS_pipe, filedes); }
+
 int chdir(const char* path) { return try_syscall(SYS_chdir, path); }
 
 char* getcwd(char* buffer, size_t size) {

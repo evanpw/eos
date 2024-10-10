@@ -57,6 +57,7 @@ set(KERNEL_SOURCES
     page_map.cpp
     panic.cpp
     pci.cpp
+    pipe.cpp
     process.cpp
     processor.cpp
     scheduler.cpp

@@ -17,6 +17,7 @@ ssize_t read(int fd, void* buffer, size_t count);
 pid_t getpid();
 [[noreturn]] void _exit(int status);
 void* sbrk(intptr_t incr);
+int pipe(int filedes[2]);
 
 int chdir(const char* path);
 char* getcwd(char* buffer, size_t size);

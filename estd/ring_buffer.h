@@ -40,7 +40,7 @@ public:
         if (_tail >= _head) {
             return _tail - _head;
         } else {
-            return (_tail + N + 1) - _head;
+            return (N + 1) - (_head - _tail);
         }
     }
 
@@ -51,10 +51,10 @@ public:
 
 private:
     T* increment(T* ptr) {
-        ++ptr;
-
-        if (ptr == &_data[N + 1]) {
+        if (ptr == &_data[N]) {
             ptr = &_data[0];
+        } else {
+            ++ptr;
         }
 
         return ptr;

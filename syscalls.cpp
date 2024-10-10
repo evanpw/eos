@@ -10,6 +10,8 @@
 #include "fs/ext2_file.h"
 #include "klibc.h"
 #include "net/socket.h"
+#include "panic.h"
+#include "pipe.h"
 #include "process.h"
 #include "processor.h"
 #include "scheduler.h"
@@ -54,6 +56,7 @@ ssize_t sys_write(int fd, const void* buffer, size_t count) {
 
     OpenFileDescription& description = *process.openFiles[fd];
     File& file = *description.file;
+
     return file.write(description, buffer, count);
 }
 
@@ -299,6 +302,27 @@ int sys_accept(int sockfd, sockaddr* address, socklen_t* address_len) {
     return process.open(childSocket);
 }
 
+int sys_pipe(int pipefd[2]) {
+    Process& process = *currentThread->process;
+
+    PipePair pipe = Pipe::create();
+
+    int readFd = process.open(pipe.reader);
+    if (readFd < 0) {
+        return readFd;
+    }
+
+    int writeFd = process.open(pipe.writer);
+    if (writeFd < 0) {
+        process.close(readFd);
+        return writeFd;
+    }
+
+    pipefd[0] = readFd;
+    pipefd[1] = writeFd;
+    return 0;
+}
+
 // We don't have static initialization, so this is initialized at runtime
 SyscallHandler syscallTable[SYS_COUNT];
 
@@ -361,6 +385,13 @@ void initSyscalls() {
     syscallTable[SYS_bind] = bit_cast<SyscallHandler>((void*)sys_bind);
     syscallTable[SYS_listen] = bit_cast<SyscallHandler>((void*)sys_listen);
     syscallTable[SYS_accept] = bit_cast<SyscallHandler>((void*)sys_accept);
+    syscallTable[SYS_pipe] = bit_cast<SyscallHandler>((void*)sys_pipe);
+
+    for (int i = 0; i < SYS_COUNT; i++) {
+        if (!syscallTable[i]) {
+            panic("syscall: missing handler");
+        }
+    }
 
     println("syscall: init complete");
 }
