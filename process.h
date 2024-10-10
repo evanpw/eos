@@ -28,6 +28,13 @@ public:
 
     int waitProcess(pid_t pid);
 
+    pid_t acquirePid();
+    void releasePid(pid_t pid);
+
+    // Takes ownership
+    void insertProcess(Process* process);
+    void removeProcess(Process* process);
+
 private:
     static ProcessTable* _instance;
 
@@ -56,12 +63,8 @@ class Process {
 public:
     ~Process();
 
-    // Actually performed by ProcessTable, but access from Process for clarity
     static Process* create(const char* path, const char* argv[],
-                           uint32_t initialCwdIno = ext2::ROOT_INO) {
-        return ProcessTable::the().create(path, argv, initialCwdIno);
-    }
-    static void destroy(Process* process) { ProcessTable::the().destroy(process); }
+                           uint32_t initialCwdIno = ext2::ROOT_INO);
 
     VirtualAddress heapStart() const {
         return addressSpace->userMapBase() + imagePagesCount * PAGE_SIZE;

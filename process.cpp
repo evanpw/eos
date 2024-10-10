@@ -19,24 +19,30 @@ void ProcessTable::init() {
     _instance = new ProcessTable;
 }
 
-Process* ProcessTable::create(const char* path, const char* argv[],
-                              uint32_t initialCwdIno) {
+pid_t ProcessTable::acquirePid() {
     SpinlockLocker locker(_lock);
-
-    Process* process = new Process(_nextPid++, path, argv, initialCwdIno);
-    // TODO: write an emplace_back function for vector
-    _processes.push_back(estd::move(estd::unique_ptr<Process>(process)));
-    return process;
+    return _nextPid++;
 }
 
-void ProcessTable::destroy(Process* process) {
+void ProcessTable::releasePid(pid_t /*pid*/) {
+    // TODO: reuse pids
+}
+
+void ProcessTable::insertProcess(Process* process) {
+    SpinlockLocker locker(_lock);
+    _processes.push_back(estd::move(estd::unique_ptr<Process>(process)));
+}
+
+void ProcessTable::removeProcess(Process* process) {
     SpinlockLocker locker(_lock);
 
     for (size_t i = 0; i < _processes.size(); ++i) {
         if (_processes[i].get() != process) continue;
 
         estd::swap(_processes[i], _processes.back());
-        _processes.pop_back();
+        pid_t pid = process->pid;
+        _processes.pop_back();  // calls the process destructor
+        releasePid(pid);
 
         return;
     }
@@ -71,9 +77,19 @@ int ProcessTable::waitProcess(pid_t pid) {
     process->lock.unlock();
 
     // Remove the process from the process table and destroy it
-    destroy(process);
+    removeProcess(process);
 
     return 0;
+}
+
+Process* Process::create(const char* path, const char* argv[], uint32_t initialCwdIno) {
+    ProcessTable& ptable = ProcessTable::the();
+    pid_t pid = ptable.acquirePid();
+
+    Process* process = new Process(pid, path, argv, initialCwdIno);
+    ptable.insertProcess(process);
+
+    return process;
 }
 
 Process::Process(pid_t pid, const char* path, const char* argv[], uint32_t initialCwdIno)
