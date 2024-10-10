@@ -134,3 +134,17 @@ char* strdup(const char* s) {
     strcpy(newStr, s);
     return newStr;
 }
+
+char* strcat(char* __restrict dest, const char* __restrict src) {
+    char* d = dest;
+    const char* s = src;
+
+    while (*d) ++d;
+    while (*s) {
+        *d++ = *s++;
+    }
+
+    *d = '\0';
+
+    return dest;
+}

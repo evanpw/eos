@@ -41,6 +41,60 @@ const char* parseCommand(char* buffer) {
     return space + 1;
 }
 
+const char* findProgram(const char* name) {
+    DIR* dir = opendir("/bin");
+    struct dirent* entry;
+    while ((entry = readdir(dir)) != NULL) {
+        if (strcmp(entry->d_name, name) == 0) {
+            char* buffer = new char[64];
+            strcpy(buffer, "/bin/");
+            strcat(buffer, name);
+            return buffer;
+        }
+    }
+
+    return nullptr;
+}
+
+bool tryBuiltin(const char* cmd, const char* args) {
+    if (strcmp(cmd, "clear") == 0) {
+        clear();
+    } else if (strcmp(cmd, "hello") == 0) {
+        hello();
+    } else if (strcmp(cmd, "spam") == 0) {
+        spam();
+    } else if (strcmp(cmd, "ls") == 0) {
+        // ls with no arguments lists the current directory
+        if (*args == '\0') {
+            args = ".";
+        }
+
+        ls(args);
+    } else if (strcmp(cmd, "cd") == 0) {
+        // cd with no arguments goes to the root directory
+        if (*args == '\0') {
+            args = "/";
+        }
+
+        if (chdir(args) != 0) {
+            println("cd: no such file or directory");
+        }
+    } else if (strcmp(cmd, "echo") == 0) {
+        echo(args);
+    } else if (strcmp(cmd, "pwd") == 0) {
+        char buffer[64];
+        if (getcwd(buffer, 64)) {
+            println(buffer);
+        } else {
+            println("pwd: no such file or directory");
+        }
+    } else {
+        return false;
+    }
+
+    return true;
+}
+
 int main() {
     char buffer[64];
 
@@ -79,66 +133,21 @@ int main() {
         const char* cmd = buffer;
         const char* args = parseCommand(buffer);
 
-        if (strcmp(cmd, "clear") == 0) {
-            clear();
-        } else if (strcmp(cmd, "hello") == 0) {
-            hello();
-        } else if (strcmp(cmd, "spam") == 0) {
-            spam();
-        } else if (strcmp(cmd, "wget") == 0) {
-            const char* argv[2] = {};
-            if (*args != '\0') {
-                argv[0] = args;
-            }
-            pid_t child = launch("/bin/wget", argv);
-            waitpid(child, nullptr, 0);
-        } else if (strcmp(cmd, "serve") == 0) {
-            const char* argv[2] = {};
-            if (*args != '\0') {
-                argv[0] = args;
-            }
-            pid_t child = launch("/bin/serve", argv);
-            waitpid(child, nullptr, 0);
-        } else if (strcmp(cmd, "pipeTest") == 0) {
-            const char* argv[2] = {};
-            if (*args != '\0') {
-                argv[0] = args;
-            }
-            pid_t child = launch("/bin/pipeTest", argv);
-            waitpid(child, nullptr, 0);
-        } else if (strcmp(cmd, "ls") == 0) {
-            // ls with no arguments lists the current directory
-            if (*args == '\0') {
-                args = ".";
-            }
+        if (tryBuiltin(cmd, args)) {
+            continue;
+        }
 
-            ls(args);
-        } else if (strcmp(cmd, "cd") == 0) {
-            // cd with no arguments goes to the root directory
-            if (*args == '\0') {
-                args = "/";
-            }
-
-            if (chdir(args) != 0) {
-                println("cd: no such file or directory");
-            }
-        } else if (strcmp(cmd, "pwd") == 0) {
-            if (getcwd(buffer, 64)) {
-                println(buffer);
-            } else {
-                println("pwd: no such file or directory");
-            }
-        } else if (strcmp(cmd, "echo") == 0) {
-            echo(args);
-        } else if (strcmp(cmd, "cat") == 0) {
+        const char* fullPath = findProgram(cmd);
+        if (fullPath) {
             const char* argv[2] = {};
             if (*args != '\0') {
                 argv[0] = args;
             }
-            pid_t child = launch("/bin/cat", argv);
+            pid_t child = launch(fullPath, argv);
             waitpid(child, nullptr, 0);
+            delete[] fullPath;
         } else {
-            println("no such command: {}", buffer);
+            println("{}: command not found", cmd);
         }
     }
 
