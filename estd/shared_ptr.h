@@ -1,5 +1,6 @@
 #pragma once
 #include "estd/atomic.h"
+#include "estd/utility.h"
 
 namespace estd {
 
@@ -78,5 +79,10 @@ private:
     T* _ptr;
     AtomicInt* _refCount;
 };
+
+template <typename T, typename... Args>
+estd::shared_ptr<T> make_shared(Args&&... args) {
+    return estd::shared_ptr<T>(new T(estd::forward<Args>(args)...));
+}
 
 }  // namespace estd
