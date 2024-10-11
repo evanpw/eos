@@ -105,9 +105,9 @@ Process::Process(pid_t pid, const char* path, const char* argv[], uint32_t initi
     ASSERT(inode);
 
     // Allocate a fresh piece of page-aligned physical memory to store it
-    imagePagesCount = ceilDiv(inode->size(), PAGE_SIZE);
-    imagePages = mm.pageAlloc(imagePagesCount);
-    byte* ptr = mm.physicalToVirtual(imagePages).ptr<byte>();
+    textPagesCount = ceilDiv(inode->size(), PAGE_SIZE);
+    textPages = mm.pageAlloc(textPagesCount);
+    byte* ptr = mm.physicalToVirtual(textPages).ptr<byte>();
 
     // Read the executable from disk
     if (!sys.fs().readFullFile(*inode, ptr)) {
@@ -116,8 +116,7 @@ Process::Process(pid_t pid, const char* path, const char* argv[], uint32_t initi
 
     // Create user address space and map the executable image into it
     addressSpace = mm.kaddressSpace().makeUserAddressSpace();
-    VirtualAddress entryPoint = addressSpace->userMapBase();
-    addressSpace->mapPages(entryPoint, imagePages, imagePagesCount);
+    addressSpace->mapPages(textStart(), textPages, textPagesCount);
 
     // Find the program name by taking everything after the last slash
     const char* p = path;
@@ -128,12 +127,59 @@ Process::Process(pid_t pid, const char* path, const char* argv[], uint32_t initi
     }
     const char* programName = p;
 
-    thread = Thread::createUserThread(this, entryPoint, programName, argv);
+    thread = Thread::createUserThread(this, textStart(), programName, argv);
     sys.scheduler().startThread(thread.get());
 }
 
+Process* Process::fork(TrapRegisters& trapRegs) {
+    ProcessTable& ptable = ProcessTable::the();
+
+    Process* child = new Process;
+    child->pid = ptable.acquirePid();
+
+    for (size_t i = 0; i < RLIMIT_NOFILE; ++i) {
+        child->openFiles[i] = openFiles[i];
+    }
+
+    child->cwdIno = cwdIno;
+    child->status = ProcessStatus::Running;
+    child->exitBlocker.assign(new Blocker);
+
+    child->textPagesCount = textPagesCount;
+    child->textPages = mm.pageAlloc(textPagesCount);
+
+    // TODO: use copy-on-write instead of copying up front
+    byte* destPtr = mm.physicalToVirtual(child->textPages).ptr<byte>();
+    byte* srcPtr = mm.physicalToVirtual(textPages).ptr<byte>();
+    memcpy(destPtr, srcPtr, textPagesCount * PAGE_SIZE);
+
+    child->heapPagesCount = heapPagesCount;
+    if (child->heapPagesCount > 0) {
+        child->heapPages = mm.pageAlloc(child->heapPagesCount);
+        byte* destPtr = mm.physicalToVirtual(child->heapPages).ptr<byte>();
+        byte* srcPtr = mm.physicalToVirtual(heapPages).ptr<byte>();
+        memcpy(destPtr, srcPtr, heapPagesCount * PAGE_SIZE);
+    }
+
+    child->addressSpace = mm.kaddressSpace().makeUserAddressSpace();
+
+    child->addressSpace->mapPages(child->textStart(), child->textPages,
+                                  child->textPagesCount);
+    if (child->heapPagesCount > 0) {
+        child->addressSpace->mapPages(child->heapStart(), child->heapPages,
+                                      child->heapPagesCount);
+    }
+
+    child->thread = Thread::createUserThread(child, thread.get(), trapRegs);
+
+    ptable.insertProcess(child);
+    sys.scheduler().startThread(child->thread.get());
+
+    return child;
+}
+
 Process::~Process() {
-    mm.pageFree(imagePages, imagePagesCount);
+    mm.pageFree(textPages, textPagesCount);
 
     if (heapPagesCount > 0) {
         mm.pageFree(heapPages, heapPagesCount);

@@ -3,6 +3,7 @@
 
 #include "address.h"
 #include "estd/memory.h"
+#include "trap.h"
 
 class Process;
 
@@ -17,10 +18,17 @@ struct Thread {
     // which is used by switchContext to restore the thread context and resume execution
     uint64_t rsp;
 
+    // For exec
     static estd::unique_ptr<Thread> createUserThread(Process* process,
                                                      VirtualAddress entryPoint,
                                                      const char* programName,
                                                      const char* argv[]);
+
+    // For fork
+    static estd::unique_ptr<Thread> createUserThread(Process* process,
+                                                     Thread* parentThread,
+                                                     TrapRegisters& parentTrap);
+
     static estd::unique_ptr<Thread> createKernelThread(VirtualAddress entryPoint);
 
     Process* process;

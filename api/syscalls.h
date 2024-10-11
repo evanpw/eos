@@ -23,6 +23,7 @@ enum {
     SYS_listen,
     SYS_accept,
     SYS_pipe,
+    SYS_fork,
 
     SYS_COUNT,
 };

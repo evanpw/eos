@@ -34,6 +34,8 @@ char* getcwd(char* buffer, size_t size) {
     return buffer;
 }
 
+pid_t fork() { return try_syscall(SYS_fork); }
+
 // Non-standard
 int sleep(int ticks) { return syscall(SYS_sleep, ticks); }
 

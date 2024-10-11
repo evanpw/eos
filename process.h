@@ -11,6 +11,7 @@
 #include "scheduler.h"
 #include "spinlock.h"
 #include "thread.h"
+#include "trap.h"
 
 static constexpr int RLIMIT_NOFILE = 256;
 
@@ -66,8 +67,12 @@ public:
     static Process* create(const char* path, const char* argv[],
                            uint32_t initialCwdIno = ext2::ROOT_INO);
 
+    Process* fork(TrapRegisters& trapRegs);
+
+    VirtualAddress textStart() const { return addressSpace->userMapBase(); }
+
     VirtualAddress heapStart() const {
-        return addressSpace->userMapBase() + imagePagesCount * PAGE_SIZE;
+        return addressSpace->userMapBase() + textPagesCount * PAGE_SIZE;
     }
 
     size_t heapSize() const { return heapPagesCount * PAGE_SIZE; }
@@ -75,7 +80,7 @@ public:
     void createHeap(size_t size);
 
     pid_t pid;
-    estd::unique_ptr<OpenFileDescription> openFiles[RLIMIT_NOFILE] = {};
+    estd::shared_ptr<OpenFileDescription> openFiles[RLIMIT_NOFILE] = {};
     uint32_t cwdIno;
 
     // This spinlock should really protect everything, but for now it only protects status
@@ -90,8 +95,8 @@ public:
     estd::unique_ptr<Thread> thread;
 
     // TODO: more flexible handling of process memory
-    PhysicalAddress imagePages;
-    uint64_t imagePagesCount;
+    PhysicalAddress textPages;
+    uint64_t textPagesCount;
 
     PhysicalAddress heapPages = 0;
     uint64_t heapPagesCount = 0;
@@ -101,5 +106,6 @@ public:
     void exit();
 
 private:
+    Process() = default;
     Process(pid_t pid, const char* path, const char* argv[], uint32_t initialCwdIno);
 };

@@ -64,6 +64,7 @@ make_user_target(cat cat.cpp)
 make_user_target(wget wget.cpp)
 make_user_target(serve serve.cpp)
 make_user_target(pipeTest pipeTest.cpp)
+make_user_target(forkTest forkTest.cpp)
 
 add_custom_target(
     userland
@@ -74,6 +75,7 @@ add_custom_target(
     wget.elf
     serve.elf
     pipeTest.elf
+    forkTest.elf
 )
 
 set(USERLAND_BINARIES
@@ -83,5 +85,6 @@ set(USERLAND_BINARIES
     ${CMAKE_CURRENT_BINARY_DIR}/wget
     ${CMAKE_CURRENT_BINARY_DIR}/serve
     ${CMAKE_CURRENT_BINARY_DIR}/pipeTest
+    ${CMAKE_CURRENT_BINARY_DIR}/forkTest
     PARENT_SCOPE
 )

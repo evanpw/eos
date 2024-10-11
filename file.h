@@ -13,7 +13,7 @@ struct OpenFileDescription {
     estd::shared_ptr<File> file;
     off_t offset = 0;
 
-    static estd::unique_ptr<OpenFileDescription> create(
+    static estd::shared_ptr<OpenFileDescription> create(
         const estd::shared_ptr<File>& file);
 };
 

@@ -109,11 +109,63 @@ estd::unique_ptr<Thread> Thread::createUserThread(Process* process,
     return estd::unique_ptr<Thread>(thread);
 }
 
+estd::unique_ptr<Thread> Thread::createUserThread(Process* process, Thread* parentThread,
+                                                  TrapRegisters& parentTrap) {
+    Thread* thread = new Thread;
+    thread->process = process;
+
+    // Allocate and map a user mode stack
+    PhysicalAddress userStackBottom = mm.pageAlloc(4);
+    VirtualAddress userStackBottomVirt = process->addressSpace->vmalloc(4);
+
+    thread->userStackTop = userStackBottom + 4 * PAGE_SIZE;
+    thread->userStackTopVirt = userStackBottomVirt + 4 * PAGE_SIZE;
+    thread->userStackPages = 4;
+
+    process->addressSpace->mapPages(userStackBottomVirt, userStackBottom, 4);
+
+    // Allocate a kernel stack
+    PhysicalAddress kernelStackBottom = mm.pageAlloc(4);
+
+    thread->kernelStackTop = kernelStackBottom + 4 * PAGE_SIZE;
+    thread->kernelStackPages = 4;
+
+    VirtualAddress stackTop = mm.physicalToVirtual(thread->kernelStackTop);
+
+    // Construct an initial kernel stack that's the same as the parent's upon entry,
+    // except the return value is zero (the parent's return value will be the child's pid)
+    uint64_t* stackPtr = stackTop.ptr<uint64_t>();
+    stackPtr -= sizeof(TrapRegisters) / sizeof(uint64_t);
+    memcpy(stackPtr, &parentTrap, sizeof(TrapRegisters));
+
+    TrapRegisters& regs = *reinterpret_cast<TrapRegisters*>(stackPtr);
+    regs.rax = 0;
+
+    // On top of that, construct a stack which looks like the one constructed by
+    // switchContext, except that the return address is syscallExitAsm, which pops all
+    // the registers from TrapRegisters and issues a sysret to enter user mode
+    stackPtr -= sizeof(ThreadContext) / sizeof(uint64_t);
+    memset(stackPtr, 0, sizeof(ThreadContext));
+
+    ThreadContext& ctx = *new (stackPtr) ThreadContext;
+    ctx.returnAddress = bit_cast<uint64_t>((void*)syscallExitAsm);
+
+    thread->kernelStack = stackTop.value;
+    thread->rsp = bit_cast<uint64_t>(stackPtr);
+
+    // Copy the parent's user stack to the child identically
+    byte* srcPtr = mm.physicalToVirtual(parentThread->userStackBottom()).ptr<byte>();
+    byte* destPtr = mm.physicalToVirtual(thread->userStackBottom()).ptr<byte>();
+    memcpy(destPtr, srcPtr, thread->userStackPages * PAGE_SIZE);
+
+    return estd::unique_ptr<Thread>(thread);
+}
+
 estd::unique_ptr<Thread> Thread::createKernelThread(VirtualAddress entryPoint) {
     Thread* thread = new Thread;
     thread->process = nullptr;
 
-    // Allocate a user mode stack
+    // No user mode stack needed
     thread->userStackTop = 0;
 
     // Allocate a kernel stack

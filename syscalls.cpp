@@ -323,6 +323,13 @@ int sys_pipe(int pipefd[2]) {
     return 0;
 }
 
+pid_t sys_fork(TrapRegisters& trapRegs) {
+    Process& process = *currentThread->process;
+
+    Process* child = process.fork(trapRegs);
+    return child->pid;
+}
+
 // We don't have static initialization, so this is initialized at runtime
 SyscallHandler syscallTable[SYS_COUNT];
 
@@ -333,6 +340,12 @@ extern "C" void syscallEntryAsm();
 extern "C" void syscallEntry(TrapRegisters& regs) {
     if (regs.rax >= SYS_COUNT) {
         regs.rax = -1;
+        return;
+    }
+
+    if (regs.rax == SYS_fork) {
+        // Fork is a special case because it needs access to the trap registers
+        regs.rax = sys_fork(regs);
         return;
     }
 
@@ -386,10 +399,12 @@ void initSyscalls() {
     syscallTable[SYS_listen] = bit_cast<SyscallHandler>((void*)sys_listen);
     syscallTable[SYS_accept] = bit_cast<SyscallHandler>((void*)sys_accept);
     syscallTable[SYS_pipe] = bit_cast<SyscallHandler>((void*)sys_pipe);
+    syscallTable[SYS_fork] = bit_cast<SyscallHandler>((void*)sys_fork);
 
     for (int i = 0; i < SYS_COUNT; i++) {
         if (!syscallTable[i]) {
-            panic("syscall: missing handler");
+            println("syscall: missing handler: {}", i);
+            panic();
         }
     }
 
