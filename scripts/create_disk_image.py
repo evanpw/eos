@@ -108,13 +108,14 @@ with open(loop_filename, "r+b") as fh:
 with tempfile.TemporaryDirectory() as tmpdir:
     runcmd(f"mount {loop_filename}p1 {tmpdir}")
     os.mkdir(f"{tmpdir}/bin")
-    os.mkdir(f"{tmpdir}/etc")
 
     try:
         for filename in user_files:
             dest_name = os.path.basename(filename).removesuffix(".bin")
             shutil.copy(filename, f"{tmpdir}/bin/{dest_name}")
 
-        shutil.copy(f"{src_dir}/version.txt", f"{tmpdir}/etc")
+        rootfs = f"{src_dir}/rootfs/"
+        for path in glob.glob(f"{rootfs}/*"):
+            shutil.copytree(path, f"{tmpdir}/{path.removeprefix(rootfs)}")
     finally:
         runcmd(f"umount {tmpdir}")

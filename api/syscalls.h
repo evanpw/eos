@@ -25,6 +25,7 @@ enum {
     SYS_pipe,
     SYS_fork,
     SYS_execvp,
+    SYS_isatty,
 
     SYS_COUNT,
 };

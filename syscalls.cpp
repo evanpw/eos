@@ -16,6 +16,7 @@
 #include "processor.h"
 #include "scheduler.h"
 #include "system.h"
+#include "terminal.h"  // IWYU pragma: keep
 #include "thread.h"
 #include "timer.h"
 #include "trap.h"
@@ -90,6 +91,11 @@ int64_t sys_sleep(int ticks) {
 int64_t sys_open(const char* path, int /*oflag*/) {
     // TODO: handle flags correctly
     Process& process = *currentThread->process;
+
+    // TODO: use a vfs rather than special-casing a few special files
+    if (strcmp(path, "/dev/tty") == 0) {
+        return process.open(sys.terminal());
+    }
 
     uint32_t ino = sys.fs().lookup(process.cwdIno, path);
     if (ino == ext2::BAD_INO) {
@@ -337,6 +343,19 @@ int sys_execvp(const char* path, const char* argv[]) {
     return process.execvp(path, argv);
 }
 
+int sys_isatty(int fd) {
+    Process& process = *currentThread->process;
+
+    if (fd < 0 || fd >= RLIMIT_NOFILE || !process.openFiles[fd]) {
+        return -EBADF;
+    }
+
+    OpenFileDescription& description = *process.openFiles[fd];
+    File& file = *description.file;
+
+    return file.isTty() ? 1 : 0;
+}
+
 // We don't have static initialization, so this is initialized at runtime
 SyscallHandler syscallTable[SYS_COUNT];
 
@@ -408,6 +427,7 @@ void initSyscalls() {
     syscallTable[SYS_pipe] = bit_cast<SyscallHandler>((void*)sys_pipe);
     syscallTable[SYS_fork] = bit_cast<SyscallHandler>((void*)sys_fork);
     syscallTable[SYS_execvp] = bit_cast<SyscallHandler>((void*)sys_execvp);
+    syscallTable[SYS_isatty] = bit_cast<SyscallHandler>((void*)sys_isatty);
 
     for (int i = 0; i < SYS_COUNT; i++) {
         if (!syscallTable[i]) {

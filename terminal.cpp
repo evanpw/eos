@@ -1,5 +1,6 @@
 #include "terminal.h"
 
+#include "estd/print.h"
 #include "estd/vector.h"
 #include "klibc.h"
 #include "system.h"
@@ -832,6 +833,7 @@ void Terminal::echo(char c) {
         _x = 0;
         ++_y;
         if (_y == _screen.height()) {
+            println("scroll up from wrapping");
             _screen.scrollUp();
             --_y;
         }
@@ -848,6 +850,7 @@ void Terminal::carriageReturn() {
 void Terminal::newline() {
     ++_y;
     if (_y == _screen.height()) {
+        println("scroll up from newline");
         _screen.scrollUp();
         --_y;
     }

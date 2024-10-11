@@ -40,6 +40,8 @@ int execvp(const char* path, const char* argv[]) {
     return try_syscall(SYS_execvp, path, argv);
 }
 
+int isatty(int filedes) { return try_syscall(SYS_isatty, filedes); }
+
 // Non-standard
 int sleep(int ticks) { return syscall(SYS_sleep, ticks); }
 
