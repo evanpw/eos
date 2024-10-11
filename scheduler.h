@@ -45,7 +45,8 @@ public:
     void start();
 
     void startThread(Thread* thread);
-    void threadExit();
+    [[noreturn]] void threadExit();
+    [[noreturn]] void replaceThread(Thread* newThread);
 
     void sleepThread(const estd::shared_ptr<Blocker>& blocker, Spinlock* lock = nullptr);
     void wakeThreads(const estd::shared_ptr<Blocker>& blocker);
@@ -65,5 +66,5 @@ private:
     size_t nextIdx = 0;
     Spinlock _schedLock;
 
-    estd::unique_ptr<Thread> _idleThread;
+    Thread* _idleThread;
 };

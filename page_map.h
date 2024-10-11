@@ -52,6 +52,7 @@ public:
     PhysicalAddress virtualToPhysical(VirtualAddress virtAddr);
 
     estd::unique_ptr<UserAddressSpace> makeUserAddressSpace();
+    void clearUserAddressSpace(UserAddressSpace& userSpace);
 
 private:
     MemoryManager& _mm;

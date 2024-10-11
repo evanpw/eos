@@ -19,6 +19,7 @@ pid_t getpid();
 void* sbrk(intptr_t incr);
 int pipe(int filedes[2]);
 pid_t fork();
+int execvp(const char* path, const char* argv[]);
 
 int chdir(const char* path);
 char* getcwd(char* buffer, size_t size);

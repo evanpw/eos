@@ -24,6 +24,7 @@ enum {
     SYS_accept,
     SYS_pipe,
     SYS_fork,
+    SYS_execvp,
 
     SYS_COUNT,
 };

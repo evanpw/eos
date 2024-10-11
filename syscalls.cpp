@@ -330,6 +330,13 @@ pid_t sys_fork(TrapRegisters& trapRegs) {
     return child->pid;
 }
 
+int sys_execvp(const char* path, const char* argv[]) {
+    Process& process = *currentThread->process;
+
+    // This will only return if there's an error
+    return process.execvp(path, argv);
+}
+
 // We don't have static initialization, so this is initialized at runtime
 SyscallHandler syscallTable[SYS_COUNT];
 
@@ -400,6 +407,7 @@ void initSyscalls() {
     syscallTable[SYS_accept] = bit_cast<SyscallHandler>((void*)sys_accept);
     syscallTable[SYS_pipe] = bit_cast<SyscallHandler>((void*)sys_pipe);
     syscallTable[SYS_fork] = bit_cast<SyscallHandler>((void*)sys_fork);
+    syscallTable[SYS_execvp] = bit_cast<SyscallHandler>((void*)sys_execvp);
 
     for (int i = 0; i < SYS_COUNT; i++) {
         if (!syscallTable[i]) {

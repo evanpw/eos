@@ -128,7 +128,83 @@ Process::Process(pid_t pid, const char* path, const char* argv[], uint32_t initi
     const char* programName = p;
 
     thread = Thread::createUserThread(this, textStart(), programName, argv);
-    sys.scheduler().startThread(thread.get());
+    sys.scheduler().startThread(thread);
+}
+
+int Process::execvp(const char* path, const char* argv[]) {
+    // Make a copy of the arguments in kernel memory before we wipe the address space
+    char* pathCopy = new char[strlen(path) + 1];
+    memcpy(pathCopy, path, strlen(path) + 1);
+
+    estd::vector<const char*> argvCopy;
+    for (size_t i = 0; argv[i]; ++i) {
+        char* argCopy = new char[strlen(argv[i]) + 1];
+        memcpy(argCopy, argv[i], strlen(argv[i]) + 1);
+        argvCopy.push_back(argCopy);
+    }
+    argvCopy.push_back(nullptr);
+
+    // Close all open files
+    for (size_t i = 0; i < RLIMIT_NOFILE; ++i) {
+        openFiles[i].clear();
+    }
+
+    open(sys.terminal());  // stdin
+    open(sys.terminal());  // stdout
+    open(sys.terminal());  // stderr
+
+    // Free and unmap any physical memory used by the process
+    mm.pageFree(textPages, textPagesCount);
+    if (heapPagesCount > 0) {
+        mm.pageFree(heapPages, heapPagesCount);
+        heapPagesCount = 0;
+    }
+
+    mm.kaddressSpace().clearUserAddressSpace(*addressSpace);
+
+    // Look up the executable on disk
+    uint32_t ino = sys.fs().lookup(cwdIno, pathCopy);
+    ASSERT(ino != ext2::BAD_INO);
+    auto inode = sys.fs().readInode(ino);
+    ASSERT(inode);
+
+    // Allocate a fresh piece of page-aligned physical memory to store it
+    textPagesCount = ceilDiv(inode->size(), PAGE_SIZE);
+    textPages = mm.pageAlloc(textPagesCount);
+    byte* ptr = mm.physicalToVirtual(textPages).ptr<byte>();
+
+    // Read the executable from disk
+    if (!sys.fs().readFullFile(*inode, ptr)) {
+        panic("failed to read file");
+    }
+
+    // Map the executable image into the user address space
+    addressSpace->mapPages(textStart(), textPages, textPagesCount);
+
+    // Find the program name by taking everything after the last slash
+    const char* p = pathCopy;
+    const char* lastSlash = strchr(pathCopy, '/');
+    while (lastSlash) {
+        p = lastSlash + 1;
+        lastSlash = strchr(p, '/');
+    }
+    const char* programName = p;
+
+    // Unlink the old thread from this process, so that we don't destroy the process
+    // when the thread exits
+    thread->process = nullptr;
+
+    // Replace the current thread with a new one
+    thread = Thread::createUserThread(this, textStart(), programName, argvCopy.data());
+
+    delete[] pathCopy;
+    for (const char* arg : argvCopy) {
+        delete[] arg;
+    }
+
+    // This won't return, and the scheduler will delete the old thread once it's no
+    // longer running
+    sys.scheduler().replaceThread(thread);
 }
 
 Process* Process::fork(TrapRegisters& trapRegs) {
@@ -170,10 +246,10 @@ Process* Process::fork(TrapRegisters& trapRegs) {
                                       child->heapPagesCount);
     }
 
-    child->thread = Thread::createUserThread(child, thread.get(), trapRegs);
+    child->thread = Thread::createUserThread(child, thread, trapRegs);
 
     ptable.insertProcess(child);
-    sys.scheduler().startThread(child->thread.get());
+    sys.scheduler().startThread(child->thread);
 
     return child;
 }
@@ -221,4 +297,5 @@ void Process::exit() {
     ASSERT(status == ProcessStatus::Exiting);
     status = ProcessStatus::Exited;
     sys.scheduler().wakeThreadsLocked(exitBlocker);
+    // Thread cleanup is handled by the scheduler, so we don't have to do that here
 }

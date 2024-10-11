@@ -69,6 +69,8 @@ public:
 
     Process* fork(TrapRegisters& trapRegs);
 
+    int execvp(const char* path, const char* argv[]);
+
     VirtualAddress textStart() const { return addressSpace->userMapBase(); }
 
     VirtualAddress heapStart() const {
@@ -92,7 +94,7 @@ public:
     estd::shared_ptr<Blocker> exitBlocker;
 
     estd::unique_ptr<UserAddressSpace> addressSpace;
-    estd::unique_ptr<Thread> thread;
+    Thread* thread;
 
     // TODO: more flexible handling of process memory
     PhysicalAddress textPages;

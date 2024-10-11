@@ -36,6 +36,10 @@ char* getcwd(char* buffer, size_t size) {
 
 pid_t fork() { return try_syscall(SYS_fork); }
 
+int execvp(const char* path, const char* argv[]) {
+    return try_syscall(SYS_execvp, path, argv);
+}
+
 // Non-standard
 int sleep(int ticks) { return syscall(SYS_sleep, ticks); }
 

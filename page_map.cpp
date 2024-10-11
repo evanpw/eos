@@ -3,7 +3,6 @@
 #include <string.h>
 
 #include "mm.h"
-#include "system.h"
 
 // Page map flags
 constexpr uint64_t PAGE_PRESENT = 1 << 0;
@@ -116,8 +115,13 @@ void KernelAddressSpace::buildLinearMemoryMap(uint64_t physicalMemoryRange) {
 }
 
 estd::unique_ptr<UserAddressSpace> KernelAddressSpace::makeUserAddressSpace() {
-    // Create a fresh empty PML4
-    PhysicalAddress upml4 = _mm.pageAlloc();
+    UserAddressSpace* userSpace = new UserAddressSpace(*this, _mm.pageAlloc());
+    clearUserAddressSpace(*userSpace);
+    return estd::unique_ptr<UserAddressSpace>(userSpace);
+}
+
+void KernelAddressSpace::clearUserAddressSpace(UserAddressSpace& userAddrSpace) {
+    PhysicalAddress upml4 = userAddrSpace.pml4();
 
     // Every user process shares the kernel page mappings
     PageMapEntry* kptr = physicalToVirtual(_pml4).ptr<PageMapEntry>();
@@ -128,8 +132,6 @@ estd::unique_ptr<UserAddressSpace> KernelAddressSpace::makeUserAddressSpace() {
     for (size_t i = 1; i < _linearMapOffset.pageMapIndex(4); ++i) {
         ASSERT(uptr[i] == 0);
     }
-
-    return estd::unique_ptr<UserAddressSpace>(new UserAddressSpace(*this, upml4));
 }
 
 UserAddressSpace::UserAddressSpace(KernelAddressSpace& kaddr, PhysicalAddress pml4)

@@ -77,7 +77,7 @@ void Scheduler::start() {
         nextIdx = (nextIdx + 1) % runQueue.size();
         enterContext(initialThread);
     } else {
-        enterContext(_idleThread.get());
+        enterContext(_idleThread);
     }
 }
 
@@ -99,7 +99,7 @@ void Scheduler::yield() {
         nextIdx = (nextIdx + 1) % runQueue.size();
     } else {
         ASSERT(nextIdx == 0);
-        toThread = _idleThread.get();
+        toThread = _idleThread;
     }
 
     // We have to temporarily unlock the sched lock, or we'll deadlock on the next
@@ -129,10 +129,7 @@ void Scheduler::threadExit() {
         Thread* lastThread = runQueue.back();
         runQueue[i] = lastThread;
         runQueue.pop_back();
-
-        if (currentThread->process) {
-            deadQueue.push_back(currentThread);
-        }
+        deadQueue.push_back(currentThread);
 
         if (!runQueue.empty()) {
             nextIdx = (i + 1) % runQueue.size();
@@ -147,13 +144,35 @@ void Scheduler::threadExit() {
     panic("Thread not found");
 }
 
+void Scheduler::replaceThread(Thread* newThread) {
+    SpinlockLocker locker(_schedLock);
+
+    for (size_t i = 0; i < runQueue.size(); ++i) {
+        if (runQueue[i] != currentThread) continue;
+
+        runQueue[i] = newThread;
+        deadQueue.push_back(currentThread);
+
+        // Switch to another thread
+        yield();
+    }
+
+    panic("Thread not found");
+}
+
 void Scheduler::cleanupDeadThreads() {
     ASSERT(_schedLock.isLocked());
 
     for (Thread* thread : deadQueue) {
         ASSERT(thread != currentThread);
-        ASSERT(thread->process);
-        thread->process->exit();
+
+        Process* process = thread->process;
+        delete thread;
+
+        if (process) {
+            process->thread = nullptr;
+            process->exit();
+        }
     }
 
     deadQueue.clear();

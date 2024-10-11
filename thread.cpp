@@ -15,10 +15,8 @@ Thread* currentThread;
 extern "C" void syscallExitAsm();
 extern "C" void irqExitAsm();
 
-estd::unique_ptr<Thread> Thread::createUserThread(Process* process,
-                                                  VirtualAddress entryPoint,
-                                                  const char* programName,
-                                                  const char* argv[]) {
+Thread* Thread::createUserThread(Process* process, VirtualAddress entryPoint,
+                                 const char* programName, const char* argv[]) {
     Thread* thread = new Thread;
     thread->process = process;
 
@@ -106,11 +104,11 @@ estd::unique_ptr<Thread> Thread::createUserThread(Process* process,
     regs.rsi = stackPtrU.value;
     regs.rspPrev = stackPtrU.value;
 
-    return estd::unique_ptr<Thread>(thread);
+    return thread;
 }
 
-estd::unique_ptr<Thread> Thread::createUserThread(Process* process, Thread* parentThread,
-                                                  TrapRegisters& parentTrap) {
+Thread* Thread::createUserThread(Process* process, Thread* parentThread,
+                                 TrapRegisters& parentTrap) {
     Thread* thread = new Thread;
     thread->process = process;
 
@@ -158,10 +156,10 @@ estd::unique_ptr<Thread> Thread::createUserThread(Process* process, Thread* pare
     byte* destPtr = mm.physicalToVirtual(thread->userStackBottom()).ptr<byte>();
     memcpy(destPtr, srcPtr, thread->userStackPages * PAGE_SIZE);
 
-    return estd::unique_ptr<Thread>(thread);
+    return thread;
 }
 
-estd::unique_ptr<Thread> Thread::createKernelThread(VirtualAddress entryPoint) {
+Thread* Thread::createKernelThread(VirtualAddress entryPoint) {
     Thread* thread = new Thread;
     thread->process = nullptr;
 
@@ -200,7 +198,7 @@ estd::unique_ptr<Thread> Thread::createKernelThread(VirtualAddress entryPoint) {
     thread->kernelStack = stackTop.value;
     thread->rsp = bit_cast<uint64_t>(stackPtr);
 
-    return estd::unique_ptr<Thread>(thread);
+    return thread;
 }
 
 Thread::~Thread() {

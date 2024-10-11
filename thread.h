@@ -2,7 +2,6 @@
 #pragma once
 
 #include "address.h"
-#include "estd/memory.h"
 #include "trap.h"
 
 class Process;
@@ -19,17 +18,14 @@ struct Thread {
     uint64_t rsp;
 
     // For exec
-    static estd::unique_ptr<Thread> createUserThread(Process* process,
-                                                     VirtualAddress entryPoint,
-                                                     const char* programName,
-                                                     const char* argv[]);
+    static Thread* createUserThread(Process* process, VirtualAddress entryPoint,
+                                    const char* programName, const char* argv[]);
 
     // For fork
-    static estd::unique_ptr<Thread> createUserThread(Process* process,
-                                                     Thread* parentThread,
-                                                     TrapRegisters& parentTrap);
+    static Thread* createUserThread(Process* process, Thread* parentThread,
+                                    TrapRegisters& parentTrap);
 
-    static estd::unique_ptr<Thread> createKernelThread(VirtualAddress entryPoint);
+    static Thread* createKernelThread(VirtualAddress entryPoint);
 
     Process* process;
 
