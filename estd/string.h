@@ -2,6 +2,8 @@
 
 #include <stddef.h>
 
+#include "estd/print.h"
+
 namespace estd {
 
 class string {
@@ -38,3 +40,16 @@ private:
 string operator+(const char* lhs, const string& rhs);
 
 }  // namespace estd
+
+// Custom formatter for estd::print
+template <>
+struct FormatArg<estd::string> : public FormatArgBase {
+    FormatArg(const estd::string& value) : value(value) {}
+
+    void print(const FormatSpec& spec) const override {
+        printString(spec, value.c_str());
+    }
+
+private:
+    const estd::string& value;
+};

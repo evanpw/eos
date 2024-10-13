@@ -5,6 +5,7 @@
 #include "estd/assertions.h"
 #include "estd/new.h"
 #include "estd/traits.h"
+#include "estd/utility.h"
 
 // TODO: better error handling / checking
 
@@ -24,21 +25,21 @@ struct FormatArgBase {
     virtual void print(const FormatSpec& spec) const = 0;
 };
 
-template <typename T>
+template <typename T, typename = void>
 struct FormatArg : public FormatArgBase {};
 
-template <>
-struct FormatArg<uint64_t> : public FormatArgBase {
-    FormatArg(uint64_t value) : value(value) {}
+template <typename T>
+struct FormatArg<T, estd::enable_if_t<estd::is_integral_v<T>>> : public FormatArgBase {
+    FormatArg(T value) : value(value) {}
 
-    void print(const FormatSpec& spec) const override { printInt(spec, value); }
+    void print(const FormatSpec& spec) const override { printInt(spec, (uint64_t)value); }
 
 private:
-    uint64_t value;
+    T value;
 };
 
 template <>
-struct FormatArg<const void*> : public FormatArgBase {
+struct FormatArg<void*> : public FormatArgBase {
     FormatArg(const void* value) : value(value) {}
 
     void print(const FormatSpec& spec) const override { printInt(spec, (uint64_t)value); }
@@ -48,7 +49,7 @@ private:
 };
 
 template <>
-struct FormatArg<const char*> : public FormatArgBase {
+struct FormatArg<char*> : public FormatArgBase {
     FormatArg(const char* value) : value(value) {}
 
     void print(const FormatSpec& spec) const override { printString(spec, value); }
@@ -61,51 +62,41 @@ template <typename T>
 struct normalize_type {
     using type = T;
 };
-
-// Print all integral types as uint64_t
-template <>
-struct normalize_type<unsigned int> {
-    using type = uint64_t;
+template <typename T>
+struct normalize_type<const T> {
+    using type = typename normalize_type<T>::type;
 };
-template <>
-struct normalize_type<unsigned char> {
-    using type = uint64_t;
+template <typename T>
+struct normalize_type<T&> {
+    using type = typename normalize_type<T>::type;
 };
-template <>
-struct normalize_type<short unsigned int> {
-    using type = uint64_t;
+template <typename T>
+struct normalize_type<T&&> {
+    using type = typename normalize_type<T>::type;
 };
-template <>
-struct normalize_type<bool> {
-    using type = uint64_t;
-};
-template <>
-struct normalize_type<int> {
-    using type = uint64_t;
-};
-template <>
-struct normalize_type<long int> {
-    using type = uint64_t;
-};
-
-// Specialize for char* and const char* to print as strings
-template <>
-struct normalize_type<const char*> {
-    using type = const char*;
-};
-template <>
-struct normalize_type<char*> {
-    using type = const char*;
-};
-
-// All other pointers are converted to const void*, which is printed as an address
 template <typename T>
 struct normalize_type<const T*> {
-    using type = const void*;
+    using type = typename normalize_type<T*>::type;
 };
+
+// Print char pointers or arrays as strings
+template <>
+struct normalize_type<char*> {
+    using type = char*;
+};
+template <size_t N>
+struct normalize_type<char[N]> {
+    using type = char*;
+};
+template <>
+struct normalize_type<char[]> {
+    using type = char*;
+};
+
+// All other pointers are converted to const void* and printed as an address
 template <typename T>
 struct normalize_type<T*> {
-    using type = const void*;
+    using type = void*;
 };
 
 template <typename T>
@@ -115,7 +106,7 @@ class FormatArgHolder {
 public:
     template <typename T>
     FormatArgHolder(T&& value) {
-        using ArgType = FormatArg<normalize_type_t<estd::remove_reference_t<T>>>;
+        using ArgType = FormatArg<normalize_type_t<T>>;
         static_assert(sizeof(ArgType) <= sizeof(_storage));
         new (_storage) ArgType(value);
     }
@@ -136,7 +127,8 @@ struct FormatArgs {
 template <size_t N>
 struct SizedFormatArgs : public FormatArgs {
     template <typename... Args>
-    SizedFormatArgs(Args... args) : args{FormatArgHolder(args)...} {}
+    SizedFormatArgs(Args&&... args)
+    : args{FormatArgHolder(estd::forward<Args>(args))...} {}
 
     FormatArgHolder args[N];
     size_t index = 0;
@@ -171,15 +163,15 @@ struct FormatStringParser {
 void _printImpl(FormatStringParser& parser, FormatArgs& args);
 
 template <typename... Args>
-void print(const char* fmtstr, Args... args) {
+void print(const char* fmtstr, Args&&... args) {
     FormatStringParser parser(fmtstr);
-    SizedFormatArgs formatArgs(args...);
+    SizedFormatArgs formatArgs(estd::forward<Args>(args)...);
 
     _printImpl(parser, formatArgs);
 }
 
 template <typename... Args>
-void println(const char* fmtstr, Args... args) {
-    print(fmtstr, args...);
+void println(const char* fmtstr, Args&&... args) {
+    print(fmtstr, estd::forward<Args>(args)...);
     printChar('\n');
 }

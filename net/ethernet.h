@@ -26,7 +26,7 @@ static_assert(sizeof(MacAddress) == 6);
 // Custom formatter for estd::print
 template <>
 struct FormatArg<MacAddress> : public FormatArgBase {
-    FormatArg(MacAddress value) : value(value) {}
+    FormatArg(const MacAddress& value) : value(value) {}
 
     void print(const FormatSpec&) const override {
         FormatSpec spec = {.base = 16, .padTo = 2, .padChar = '0', .uppercase = true};
@@ -44,7 +44,7 @@ struct FormatArg<MacAddress> : public FormatArgBase {
     }
 
 private:
-    MacAddress value;
+    const MacAddress& value;
 };
 
 enum class EtherType : uint16_t {

@@ -29,7 +29,7 @@ static_assert(sizeof(IpAddress) == 4);
 // Custom formatter for estd::print
 template <>
 struct FormatArg<IpAddress> : public FormatArgBase {
-    FormatArg(IpAddress value) : value(value) {}
+    FormatArg(const IpAddress& value) : value(value) {}
 
     void print(const FormatSpec&) const override {
         byte bytes[4];
@@ -46,7 +46,7 @@ struct FormatArg<IpAddress> : public FormatArgBase {
     }
 
 private:
-    IpAddress value;
+    const IpAddress& value;
 };
 
 enum class IpProtocol : uint8_t {

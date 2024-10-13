@@ -4,6 +4,7 @@
 
 #include "api/errno.h"
 #include "estd/print.h"
+#include "estd/traits.h"
 #include "klibc.h"
 #include "units.h"
 
@@ -22,7 +23,8 @@ bool Ext2FileSystem::readSuperBlock() {
     }
 
     if (_superBlock->magic != ext2::SUPER_MAGIC) {
-        println("ext2: superblock magic number is wrong: {:04X}", _superBlock->magic);
+        println("ext2: superblock magic number is wrong: {:04X}",
+                estd::make_copy(_superBlock->magic));
         return false;
     }
 

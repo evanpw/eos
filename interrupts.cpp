@@ -4,6 +4,7 @@
 #include "estd/assertions.h"
 #include "estd/bits.h"
 #include "estd/print.h"
+#include "estd/traits.h"
 #include "io.h"
 #include "mm.h"
 #include "panic.h"
@@ -79,21 +80,21 @@ void handleException(uint8_t vector, const char* name, TrapRegisters& regs,
                      uint64_t errorCode) {
     println("CPU EXCEPTION {} ({})", vector, name);
     println("errorCode: 0x{:X}", errorCode);
-    println("rip: 0x{:X}", regs.rip);
-    println("cs: 0x{:X}", regs.cs);
-    println("rflags: 0x{:X}", regs.rflags);
-    println("rsp: 0x{:X}", regs.rsp);
-    println("ss: 0x{:X}", regs.ss);
+    println("rip: 0x{:X}", estd::make_copy(regs.rip));
+    println("cs: 0x{:X}", estd::make_copy(regs.cs));
+    println("rflags: 0x{:X}", estd::make_copy(regs.rflags));
+    println("rsp: 0x{:X}", estd::make_copy(regs.rsp));
+    println("ss: 0x{:X}", estd::make_copy(regs.ss));
     halt();
 }
 
 void handleException(uint8_t vector, const char* name, TrapRegisters& regs) {
     println("CPU EXCEPTION {} ({})", vector, name);
-    println("rip: 0x{:X}", regs.rip);
-    println("cs: 0x{:X}", regs.cs);
-    println("rflags: 0x{:X}", regs.rflags);
-    println("rsp: 0x{:X}", regs.rsp);
-    println("ss: 0x{:X}", regs.ss);
+    println("rip: 0x{:X}", estd::make_copy(regs.rip));
+    println("cs: 0x{:X}", estd::make_copy(regs.cs));
+    println("rflags: 0x{:X}", estd::make_copy(regs.rflags));
+    println("rsp: 0x{:X}", estd::make_copy(regs.rsp));
+    println("ss: 0x{:X}", estd::make_copy(regs.ss));
     halt();
 }
 

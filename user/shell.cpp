@@ -76,7 +76,7 @@ struct ExternalCommand : public ShellCommand {
         execvp(path.c_str(), argv);  // should not return
 
         // This is reached only if execvp fails
-        println("{}: error executing: {}", name.c_str(), errno);
+        println("{}: error executing: {}", name, errno);
         return 1;
     }
 
@@ -310,7 +310,7 @@ estd::optional<Pipeline> Pipeline::parse(const CommandLibrary& library,
 
         command.command = library.lookup(cmd);
         if (!command.command) {
-            println("{}: command not found", cmd.c_str());
+            println("{}: command not found", cmd);
             return {};
         }
 

@@ -156,7 +156,8 @@ static void copyString(char* dest, const char* src, size_t n) {
 void printTableHeader(TableHeader* header) {
     char buffer[64];
     copyString(buffer, reinterpret_cast<const char*>(&header->signature), 4);
-    println("{}: length {}, revision {}", buffer, header->length, header->revision);
+    println("{}: length {}, revision {}", buffer, estd::make_copy(header->length),
+            header->revision);
 }
 
 // Differentiated System Description Table (DSDT)
