@@ -196,11 +196,7 @@ bool ATADevice::readSectors(void* dest, uint64_t start, size_t count) {
     // TODO: add support for LBA28
     ASSERT(_lba48);
 
-    while (!_readLock.tryLock()) {
-        sys.scheduler().sleepThread(_readBlocker);
-    }
-
-    ASSERT(_channel.isIdle());
+    MutexLocker locker(_lock);
 
     // Enable LBA addressing
     _channel.selectDrive(_drive, true);
@@ -231,7 +227,6 @@ bool ATADevice::readSectors(void* dest, uint64_t start, size_t count) {
         ptr += SECTOR_SIZE;
     }
 
-    _readLock.unlock();
     return true;
 }
 

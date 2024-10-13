@@ -42,7 +42,6 @@ System::System() {
     _terminal.assign(new Terminal(*_keyboard, *_screen));
     initSyscalls();
     _pciDevices.assign(new PCIDevices);
-    _ideController.assign(new IDEController);
     _netif.assign(new E1000Device);
     arpInit();
     tcpInit();
@@ -52,6 +51,7 @@ System::System() {
     initACPI();
     _scheduler.assign(new Scheduler);
     _timer.assign(new Timer);
+    _ideController.assign(new IDEController);
 
     _fs = Ext2FileSystem::create(_ideController->rootPartition());
     ASSERT(_fs);

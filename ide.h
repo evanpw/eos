@@ -6,9 +6,8 @@
 
 #include "disk.h"
 #include "estd/memory.h"
+#include "estd/mutex.h"
 #include "estd/print.h"
-#include "scheduler.h"
-#include "spinlock.h"
 
 class IDEChannel;
 enum class DriveSelector;
@@ -19,7 +18,7 @@ struct IDEDevice : public DiskDevice {
 
 public:
     IDEDevice(IDEChannel& channel, DriveSelector drive)
-    : _channel(channel), _drive(drive), _readBlocker(new Blocker) {}
+    : _channel(channel), _drive(drive) {}
 
     virtual ~IDEDevice() = default;
 
@@ -35,12 +34,7 @@ protected:
     bool _lba48 = false;
     size_t _numSectors = 0;
 
-    // TODO: this is pretty complicated for just avoiding more than one thread entering
-    // readSectors at a time. Is there a simpler way? There's also the issue that we don't
-    // really need to be holding a spinlock (and disabling interrupts) for the entire
-    // duration of the read.
-    Spinlock _readLock;
-    estd::shared_ptr<Blocker> _readBlocker;
+    Mutex _lock;
 };
 
 // A standard (non-packet) ATA device
