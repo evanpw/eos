@@ -5,6 +5,7 @@
 #include <unistd.h>
 
 #include "estd/print.h"
+#include "estd/string.h"
 #include "estd/vector.h"
 
 void appendString(estd::vector<char>& v, const char* str) {
@@ -29,23 +30,19 @@ int main(int argc, char* argv[]) {
     }
 
     // Send an HTTP request for the root file]
-    estd::vector<char> request;
-    appendString(request, "GET /");
-    appendString(request, argc > 1 ? argv[1] : "");
-    appendString(request,
-                 " HTTP/1.1\r\nHost: gh.evanpw.com\r\nConnection: close\r\n\r\n");
-    ssize_t bytesSent = send(fd, request.data(), request.size(), 0);
+    estd::string request = "GET /";
+    if (argc > 1) {
+        request += argv[1];
+    }
+    request += " HTTP/1.1\r\nHost: gh.evanpw.com\r\nConnection: close\r\n\r\n";
+
+    ssize_t bytesSent = send(fd, request.c_str(), request.size(), 0);
     if (bytesSent < 0) {
         println("send failed");
         return 1;
     }
 
-    // Switch to alternate terminal mode
-    print("\033[?1049h");
-
     // Echo the result to the terminal
-    bool needToWait = false;
-    size_t linesWritten = 0;
     char* buffer = new char[64 * 1024];
     while (true) {
         ssize_t bytesRead = recv(fd, buffer, 64 * 1024, 0);
@@ -56,36 +53,8 @@ int main(int argc, char* argv[]) {
             break;
         }
 
-        for (size_t i = 0; i < bytesRead; ++i) {
-            if (buffer[i] == '\n') {
-                linesWritten++;
-            }
-
-            // TODO: track line wrapping as well
-            if (linesWritten == 25) {
-                // Wait for a key before continuing
-                char c;
-                read(STDIN_FILENO, &c, 1);
-
-                // Clear the screen and continue with the next line
-                print("\033[2J");
-                linesWritten = 0;
-                needToWait = false;
-                continue;
-            }
-
-            putchar(buffer[i]);
-            needToWait = true;
-        }
+        write(STDOUT_FILENO, buffer, bytesRead);
     }
-    delete[] buffer;
-
-    // If we've printed something since the last screen clear, wait for a key
-    char c;
-    read(STDIN_FILENO, &c, 1);
-
-    // Switch back to normal terminal mode
-    print("\033[?1049l");
 
     close(fd);
     return 0;
