@@ -24,6 +24,17 @@ public:
         }
     }
 
+    bool tryLock() {
+        _flag = Processor::saveAndDisableInterrupts();
+
+        if (_locked.exchange(true)) {
+            Processor::restoreInterrupts(_flag);
+            return false;
+        }
+
+        return true;
+    }
+
     void unlock(bool restoreInterrupts = true) {
         ASSERT(isLocked());
         _locked.store(false);
