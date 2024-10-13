@@ -1,3 +1,4 @@
 build/
 network.pcap
 .cache/
+debug.log
