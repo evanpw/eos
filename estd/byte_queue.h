@@ -31,14 +31,9 @@ public:
             bytesWritten += sizeToWrite;
             dataPtr += sizeToWrite;
             dataSize -= sizeToWrite;
+            _tail = increment(_tail, sizeToWrite);
 
-            if (sizeToWrite == roomLeft) {
-                _tail = &_data[0];
-            } else {
-                _tail += sizeToWrite;
-            }
-
-            if (dataSize == 0) return bytesWritten;
+            if (dataSize == 0 || full()) return bytesWritten;
         }
 
         ASSERT(_tail < _head);
@@ -50,7 +45,7 @@ public:
             memcpy(_tail, dataPtr, sizeToWrite);
 
             bytesWritten += sizeToWrite;
-            _tail += sizeToWrite;
+            _tail = increment(_tail, sizeToWrite);
         }
 
         return bytesWritten;
