@@ -1,5 +1,6 @@
 #pragma once
 #include "estd/atomic.h"
+#include "estd/stddef.h"  // IWYU pragma: keep
 #include "estd/utility.h"
 
 namespace estd {
@@ -11,6 +12,7 @@ class shared_ptr {
 
 public:
     shared_ptr() : _ptr(nullptr), _refCount(nullptr) {}
+    shared_ptr(nullptr_t) : _ptr(nullptr), _refCount(nullptr) {}
     explicit shared_ptr(T* ptr) : _ptr(ptr), _refCount(new AtomicInt(1)) {}
 
     ~shared_ptr() { clear(); }

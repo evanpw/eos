@@ -42,6 +42,8 @@ int execvp(const char* path, const char* argv[]) {
 
 int isatty(int filedes) { return try_syscall(SYS_isatty, filedes); }
 
+int dup2(int filedes, int filedes2) { return try_syscall(SYS_dup2, filedes, filedes2); }
+
 // Non-standard
 int sleep(int ticks) { return syscall(SYS_sleep, ticks); }
 

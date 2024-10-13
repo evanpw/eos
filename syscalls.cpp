@@ -111,6 +111,31 @@ int64_t sys_open(const char* path, int /*oflag*/) {
     return process.open(file);
 }
 
+int64_t sys_dup2(int oldfd, int newfd) {
+    Process& process = *currentThread->process;
+
+    if (oldfd < 0 || oldfd >= RLIMIT_NOFILE || !process.openFiles[oldfd]) {
+        println("bad old fd: {}", (bool)process.openFiles[oldfd]);
+        return -EBADF;
+    }
+
+    if (newfd < 0 || newfd >= RLIMIT_NOFILE) {
+        println("bad new fd");
+        return -EBADF;
+    }
+
+    if (oldfd == newfd) {
+        return newfd;
+    }
+
+    if (process.openFiles[newfd]) {
+        process.close(newfd);
+    }
+
+    process.openFiles[newfd] = process.openFiles[oldfd];
+    return newfd;
+}
+
 int64_t sys_close(int fd) {
     Process& process = *currentThread->process;
     return process.close(fd);
@@ -428,6 +453,7 @@ void initSyscalls() {
     syscallTable[SYS_fork] = bit_cast<SyscallHandler>((void*)sys_fork);
     syscallTable[SYS_execvp] = bit_cast<SyscallHandler>((void*)sys_execvp);
     syscallTable[SYS_isatty] = bit_cast<SyscallHandler>((void*)sys_isatty);
+    syscallTable[SYS_dup2] = bit_cast<SyscallHandler>((void*)sys_dup2);
 
     for (int i = 0; i < SYS_COUNT; i++) {
         if (!syscallTable[i]) {

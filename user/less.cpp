@@ -107,9 +107,6 @@ int main(int argc, char* argv[]) {
         tty = STDIN_FILENO;
     }
 
-    println("fd={}, tty={}", fd, tty);
-    sleep(500);
-
     // Switch to alternate terminal mode
     print("\033[?1049h");
 

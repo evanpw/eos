@@ -7,4 +7,5 @@ qemu-system-x86_64 \
     -netdev user,id=net0,hostfwd=udp::10080-:80,hostfwd=tcp::10080-:80 \
     -device e1000,netdev=net0 \
     -object filter-dump,id=f1,netdev=net0,file=network.pcap \
+    -s \
     $@

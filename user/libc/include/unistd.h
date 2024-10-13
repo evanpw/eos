@@ -21,6 +21,7 @@ int pipe(int filedes[2]);
 pid_t fork();
 int execvp(const char* path, const char* argv[]);
 int isatty(int filedes);
+int dup2(int filedes, int filedes2);
 
 int chdir(const char* path);
 char* getcwd(char* buffer, size_t size);

@@ -21,6 +21,7 @@ set(ESTD_SOURCES
     ${CMAKE_SOURCE_DIR}/estd/assertions.cpp
     ${CMAKE_SOURCE_DIR}/estd/new.cpp
     ${CMAKE_SOURCE_DIR}/estd/print.cpp
+    ${CMAKE_SOURCE_DIR}/estd/string.cpp
 )
 
 # Parts of libc that are safe to use in the kernel

@@ -130,6 +130,16 @@ public:
         new (&_data[_size++]) T(estd::move(value));
     }
 
+    template <typename... Args>
+    void emplace_back(Args&&... args) {
+        if (_size == _capacity) {
+            reserve(_capacity == 0 ? 1 : 2 * _capacity);
+        }
+
+        ASSERT(_capacity > _size);
+        new (&_data[_size++]) T(estd::forward<Args>(args)...);
+    }
+
     void pop_back() {
         ASSERT(_size > 0);
         _data[_size - 1].~T();
@@ -161,6 +171,8 @@ public:
 
     iterator begin() { return data(); }
     iterator end() { return data() + size(); }
+    const_iterator begin() const { return data(); }
+    const_iterator end() const { return data() + size(); }
     const_iterator cbegin() { return data(); }
     const_iterator cend() { return data() + size(); }
 

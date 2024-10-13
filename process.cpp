@@ -144,15 +144,6 @@ int Process::execvp(const char* path, const char* argv[]) {
     }
     argvCopy.push_back(nullptr);
 
-    // Close all open files
-    for (size_t i = 0; i < RLIMIT_NOFILE; ++i) {
-        openFiles[i].clear();
-    }
-
-    open(sys.terminal());  // stdin
-    open(sys.terminal());  // stdout
-    open(sys.terminal());  // stderr
-
     // Free and unmap any physical memory used by the process
     mm.pageFree(textPages, textPagesCount);
     if (heapPagesCount > 0) {
@@ -296,6 +287,14 @@ void Process::exit() {
     SpinlockLocker locker(lock);
     ASSERT(status == ProcessStatus::Exiting);
     status = ProcessStatus::Exited;
+
+    // We can clean up most of the process resources here, since it'll never return to
+    // user mode, but we have to keep the Process object around until the parent has
+    // called waitpid
+    for (size_t i = 0; i < RLIMIT_NOFILE; ++i) {
+        openFiles[i].clear();
+    }
+
     sys.scheduler().wakeThreadsLocked(exitBlocker);
     // Thread cleanup is handled by the scheduler, so we don't have to do that here
 }
