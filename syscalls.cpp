@@ -381,6 +381,20 @@ int sys_isatty(int fd) {
     return file.isTty() ? 1 : 0;
 }
 
+int sys_ioctl(int fd, int op, void* argp) {
+    Process& process = *currentThread->process;
+
+    if (fd < 0 || fd >= RLIMIT_NOFILE || !process.openFiles[fd]) {
+        return -EBADF;
+    }
+
+    OpenFileDescription& description = *process.openFiles[fd];
+    File& file = *description.file;
+    int result = file.ioctl(description, op, argp);
+    println("returned from file.ioctl");
+    return result;
+}
+
 // We don't have static initialization, so this is initialized at runtime
 SyscallHandler syscallTable[SYS_COUNT];
 
@@ -454,6 +468,7 @@ void initSyscalls() {
     syscallTable[SYS_execvp] = bit_cast<SyscallHandler>((void*)sys_execvp);
     syscallTable[SYS_isatty] = bit_cast<SyscallHandler>((void*)sys_isatty);
     syscallTable[SYS_dup2] = bit_cast<SyscallHandler>((void*)sys_dup2);
+    syscallTable[SYS_ioctl] = bit_cast<SyscallHandler>((void*)sys_ioctl);
 
     for (int i = 0; i < SYS_COUNT; i++) {
         if (!syscallTable[i]) {

@@ -1,5 +1,7 @@
 // TTY driver combining the keyboard and the screen
 #pragma once
+#include <termios.h>
+
 #include "estd/ring_buffer.h"
 #include "estd/small_vector.h"
 #include "file.h"
@@ -19,6 +21,7 @@ public:
     // From File
     ssize_t read(OpenFileDescription& fd, void* buffer, size_t count) override;
     ssize_t write(OpenFileDescription& fd, const void* buffer, size_t count) override;
+    int ioctl(OpenFileDescription& fd, int op, void* argp) override;
     bool isTty() const override { return true; }
 
 private:
@@ -26,7 +29,9 @@ private:
     Terminal(KeyboardDevice& keyboard, Screen& screen);
 
     bool handleInput(char c);
-    void handleOutput(char c);
+    bool handleInputCanonical(char c);
+    bool handleInputRaw(char c);
+    void handleOutput(char c, bool shouldEcho = true);
     void handleEscapeSequence();
     bool parseEscapeSequence();
     bool parseCSI();
@@ -40,6 +45,9 @@ private:
     Screen& _screen;
 
     Spinlock _lock;
+
+    // Terminal settings
+    termios _settings = {};
 
     // Input / keyboard
     RingBuffer<char, TERMINAL_INPUT_BUFFER_SIZE> _inputBuffer;

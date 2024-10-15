@@ -1,5 +1,9 @@
 #include "terminal.h"
 
+#include <asm/termbits.h>
+#include <string.h>
+
+#include "estd/print.h"
 #include "estd/vector.h"
 #include "klibc.h"
 #include "system.h"
@@ -7,6 +11,24 @@
 Terminal::Terminal(KeyboardDevice& keyboard, Screen& screen)
 : _keyboard(keyboard), _screen(screen), _inputBlocker(new Blocker) {
     _keyboard.addListener(this);
+
+    _settings.c_iflag = ICRNL | IXON;
+    _settings.c_oflag = OPOST | ONLCR | NL0 | CR0 | TAB0 | BS0 | VT0 | FF0;
+    _settings.c_cflag = CS8 | CREAD;
+    _settings.c_lflag = ECHO | ECHOE | ECHOK | ICANON | IEXTEN | ISIG | ECHOCTL;
+    _settings.c_cc[VEOF] = '\x04';  // Ctrl-D
+    _settings.c_cc[VEOL] = 0;
+    _settings.c_cc[VERASE] = '\x7F';   // Ctrl-? or Backspace
+    _settings.c_cc[VINTR] = '\x03';    // Ctrl-C
+    _settings.c_cc[VKILL] = '\x15';    // Ctrl-U
+    _settings.c_cc[VQUIT] = '\x1C';    // Ctrl-Backslash
+    _settings.c_cc[VSTART] = '\x11';   // Ctrl-Q
+    _settings.c_cc[VSTOP] = '\x13';    // Ctrl-S
+    _settings.c_cc[VSUSP] = '\x1A';    // Ctrl-Z
+    _settings.c_cc[VWERASE] = '\x17';  // Ctrl-W
+    _settings.c_cc[VLNEXT] = '\x16';   // Ctrl-V
+    _settings.c_cc[VMIN] = 1;
+    _settings.c_cc[VTIME] = 0;
 }
 
 const char* keyCodeToString(KeyCode keyCode) {
@@ -223,7 +245,7 @@ char keyCodeToAsciiUnshifted(KeyCode keyCode) {
         case KeyCode::Escape:
             return '\033';
         case KeyCode::Backspace:
-            return '\b';
+            return '\x7F';
         case KeyCode::One:
             return '1';
         case KeyCode::Two:
@@ -364,7 +386,7 @@ char keyCodeToAsciiShifted(KeyCode keyCode) {
         case KeyCode::Escape:
             return '\033';
         case KeyCode::Backspace:
-            return '\b';
+            return '\x7F';
         case KeyCode::One:
             return '!';
         case KeyCode::Two:
@@ -514,17 +536,27 @@ void Terminal::onKeyEvent(const KeyboardEvent& event) {
                          : keyCodeToAsciiUnshifted(event.key);
 
         if (handleInput(c)) {
-            handleOutput(c);
+            bool echo = _settings.c_lflag & ECHO;
+            handleOutput(c, echo);
         }
     }
 }
 
 bool Terminal::handleInput(char c) {
+    if (_settings.c_lflag & ICANON) {
+        return handleInputCanonical(c);
+    } else {
+        return handleInputRaw(c);
+    }
+}
+
+bool Terminal::handleInputCanonical(char c) {
     // Key which doesn't correspond to any ascii character (e.g., F1)
     if (c == '\0') return false;
 
     // Backspace deletes rather than appends a character to the input buffer
-    if (c == '\b') {
+    if (c == '\x7F') {
+        // TODO: don't delete past the beginning of the line or EOF
         if (!_inputBuffer.empty()) {
             char dc = _inputBuffer.popBack();
             if (dc == '\n') {
@@ -556,7 +588,23 @@ bool Terminal::handleInput(char c) {
     return true;
 }
 
-void Terminal::handleOutput(char c) {
+bool Terminal::handleInputRaw(char c) {
+    // Key which doesn't correspond to any ascii character (e.g., F1)
+    if (c == '\0') return false;
+
+    // If the input buffer is nearly full, discard any further input
+    if (_inputBuffer.full() || _inputBuffer.almostFull()) return false;
+
+    _inputBuffer.push(c);
+
+    if (_inputBuffer.size() == 1) {
+        sys.scheduler().wakeThreads(_inputBlocker);
+    }
+
+    return true;
+}
+
+void Terminal::handleOutput(char c, bool shouldEcho) {
     // Start or continuance of an escape sequence
     if (!_outputBuffer.empty()) {
         // If the escape sequence is too long, it's invalid
@@ -574,7 +622,9 @@ void Terminal::handleOutput(char c) {
     }
 
     // Ordinary printable character
-    echo(c);
+    if (shouldEcho) {
+        echo(c);
+    }
 }
 
 void Terminal::handleEscapeSequence() {
@@ -811,17 +861,30 @@ bool Terminal::parseDEC() {
 }
 
 void Terminal::echo(char c) {
-    if (c == '\r') {
-        carriageReturn();
-        return;
-    } else if (c == '\n') {
-        // ONLCR: map NL to CR-NL
-        carriageReturn();
-        newline();
-        return;
-    } else if (c == '\b') {
-        backspace();
-        return;
+    if (_settings.c_oflag & OPOST) {
+        if (c == '\r') {
+            if (_settings.c_oflag & OCRNL) {
+                // OCRNL: map CR to NL
+                newline();
+            } else {
+                carriageReturn();
+            }
+
+            return;
+        } else if (c == '\n') {
+            if (_settings.c_oflag & ONLCR) {
+                // ONLCR: map NL to CR-NL
+                carriageReturn();
+                newline();
+            } else {
+                newline();
+            }
+
+            return;
+        } else if (c == '\x7F') {
+            backspace();
+            return;
+        }
     }
 
     _screen.putChar(_x, _y, c, _bg, _fg);
@@ -875,8 +938,14 @@ void Terminal::backspace() {
 ssize_t Terminal::read(OpenFileDescription&, void* buffer, size_t count) {
     SpinlockLocker locker(_lock);
 
-    // Block until at least one byte is available
-    while (_inputLines == 0) {
+    // Block until some input is available (depending on the input mode)
+    while (true) {
+        if (_settings.c_lflag & ICANON) {
+            if (_inputLines > 0) break;
+        } else {
+            if (_inputBuffer.size() >= (size_t)_settings.c_cc[VMIN]) break;
+        }
+
         sys.scheduler().sleepThread(_inputBlocker, &_lock);
     }
 
@@ -884,16 +953,24 @@ ssize_t Terminal::read(OpenFileDescription&, void* buffer, size_t count) {
     size_t bytesRead = 0;
     char* dest = static_cast<char*>(buffer);
 
-    // Read all complete lines as long as space remains in the buffer
-    while (_inputLines > 0 && bytesRead < count) {
-        char c = _inputBuffer.pop();
+    if (_settings.c_lflag & ICANON) {
+        // Read all complete lines as long as space remains in the buffer
+        while (_inputLines > 0 && bytesRead < count) {
+            char c = _inputBuffer.pop();
 
-        *dest++ = c;
-        ++bytesRead;
+            *dest++ = c;
+            ++bytesRead;
 
-        if (c == '\n') {
-            ASSERT(_inputLines > 0);
-            --_inputLines;
+            if (c == '\n') {
+                ASSERT(_inputLines > 0);
+                --_inputLines;
+            }
+        }
+    } else {
+        // Read all available characters as long as space remains in the buffer
+        while (!_inputBuffer.empty() && bytesRead < count) {
+            *dest++ = _inputBuffer.pop();
+            ++bytesRead;
         }
     }
 
@@ -912,4 +989,26 @@ ssize_t Terminal::write(OpenFileDescription&, const void* buffer, size_t count) 
     }
 
     return count;
+}
+
+int Terminal::ioctl(OpenFileDescription&, int op, void* argp) {
+    println("Terminal::ioctl");
+    SpinlockLocker locker(_lock);
+    println("got lock");
+
+    if (op == TCGETS) {
+        println("TCGETS");
+        memcpy(argp, &_settings, sizeof(termios));
+        return 0;
+    } else if (op == TCSETS) {
+        println("TCSETS");
+        // TODO: If we switch from canonical to non-canonical mode, wake up any
+        // readers. If we switch form non-canonical to canonical, count up the number of
+        // lines in the input buffer
+        memcpy(&_settings, argp, sizeof(termios));
+        println("returning");
+        return 0;
+    } else {
+        return -EINVAL;
+    }
 }

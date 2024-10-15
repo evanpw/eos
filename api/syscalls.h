@@ -27,6 +27,7 @@ enum {
     SYS_execvp,
     SYS_isatty,
     SYS_dup2,
+    SYS_ioctl,
 
     SYS_COUNT,
 };
