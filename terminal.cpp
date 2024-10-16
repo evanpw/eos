@@ -3,7 +3,6 @@
 #include <asm/termbits.h>
 #include <string.h>
 
-#include "estd/print.h"
 #include "estd/vector.h"
 #include "klibc.h"
 #include "system.h"
@@ -31,494 +30,241 @@ Terminal::Terminal(KeyboardDevice& keyboard, Screen& screen)
     _settings.c_cc[VTIME] = 0;
 }
 
-const char* keyCodeToString(KeyCode keyCode) {
+static const char* parseKeyCode(KeyCode keyCode, bool shift, bool ctrl) {
+    auto selectFrom = [&](const char* normal, const char* ifShift, const char* ifCtrl,
+                          const char* ifShiftCtrl) {
+        if (!shift && !ctrl) {
+            return normal;
+        } else if (shift && !ctrl) {
+            return ifShift;
+        } else if (!shift && ctrl) {
+            return ifCtrl;
+        } else {
+            return ifShiftCtrl;
+        }
+    };
+
     switch (keyCode) {
+        // These keys have no ASCII or escape-code equivalent
         case KeyCode::Unknown:
-            return "Unknown";
-        case KeyCode::Escape:
-            return "Escape";
-        case KeyCode::One:
-            return "One";
-        case KeyCode::Two:
-            return "Two";
-        case KeyCode::Three:
-            return "Three";
-        case KeyCode::Four:
-            return "Four";
-        case KeyCode::Five:
-            return "Five";
-        case KeyCode::Six:
-            return "Six";
-        case KeyCode::Seven:
-            return "Seven";
-        case KeyCode::Eight:
-            return "Eight";
-        case KeyCode::Nine:
-            return "Nine";
-        case KeyCode::Zero:
-            return "Zero";
-        case KeyCode::Minus:
-            return "Minus";
-        case KeyCode::Equals:
-            return "Equals";
-        case KeyCode::Backspace:
-            return "Backspace";
-        case KeyCode::Tab:
-            return "Tab";
-        case KeyCode::Q:
-            return "Q";
-        case KeyCode::W:
-            return "W";
-        case KeyCode::E:
-            return "E";
-        case KeyCode::R:
-            return "R";
-        case KeyCode::T:
-            return "T";
-        case KeyCode::Y:
-            return "Y";
-        case KeyCode::U:
-            return "U";
-        case KeyCode::I:
-            return "I";
-        case KeyCode::O:
-            return "O";
-        case KeyCode::P:
-            return "P";
-        case KeyCode::LBracket:
-            return "LBracket";
-        case KeyCode::RBracket:
-            return "RBracket";
-        case KeyCode::Enter:
-            return "Enter";
-        case KeyCode::LCtrl:
-            return "LCtrl";
-        case KeyCode::A:
-            return "A";
-        case KeyCode::S:
-            return "S";
-        case KeyCode::D:
-            return "D";
-        case KeyCode::F:
-            return "F";
-        case KeyCode::G:
-            return "G";
-        case KeyCode::H:
-            return "H";
-        case KeyCode::J:
-            return "J";
-        case KeyCode::K:
-            return "K";
-        case KeyCode::L:
-            return "L";
-        case KeyCode::Semicolon:
-            return "Semicolon";
-        case KeyCode::Apostrophe:
-            return "Apostrophe";
-        case KeyCode::Backtick:
-            return "Backtick";
-        case KeyCode::LShift:
-            return "LShift";
-        case KeyCode::Backslash:
-            return "Backslash";
-        case KeyCode::Z:
-            return "Z";
-        case KeyCode::X:
-            return "X";
-        case KeyCode::C:
-            return "C";
-        case KeyCode::V:
-            return "V";
-        case KeyCode::B:
-            return "B";
-        case KeyCode::N:
-            return "N";
-        case KeyCode::M:
-            return "M";
-        case KeyCode::Comma:
-            return "Comma";
-        case KeyCode::Period:
-            return "Period";
-        case KeyCode::Slash:
-            return "Slash";
-        case KeyCode::RShift:
-            return "RShift";
-        case KeyCode::KeypadAsterisk:
-            return "KeypadAsterisk";
-        case KeyCode::LAlt:
-            return "LAlt";
-        case KeyCode::Space:
-            return "Space";
         case KeyCode::CapsLock:
-            return "CapsLock";
-        case KeyCode::F1:
-            return "F1";
-        case KeyCode::F2:
-            return "F2";
-        case KeyCode::F3:
-            return "F3";
-        case KeyCode::F4:
-            return "F4";
-        case KeyCode::F5:
-            return "F5";
-        case KeyCode::F6:
-            return "F6";
-        case KeyCode::F7:
-            return "F7";
-        case KeyCode::F8:
-            return "F8";
-        case KeyCode::F9:
-            return "F9";
-        case KeyCode::F10:
-            return "F10";
+        case KeyCode::LCtrl:
+        case KeyCode::LShift:
+        case KeyCode::RShift:
+        case KeyCode::LAlt:
         case KeyCode::NumLock:
-            return "NumLock";
         case KeyCode::ScrollLock:
-            return "ScrollLock";
-        case KeyCode::Keypad7:
-            return "Keypad7";
-        case KeyCode::Keypad8:
-            return "Keypad8";
-        case KeyCode::Keypad9:
-            return "Keypad9";
-        case KeyCode::KeypadMinus:
-            return "KeypadMinus";
-        case KeyCode::Keypad4:
-            return "Keypad4";
-        case KeyCode::Keypad5:
-            return "Keypad5";
-        case KeyCode::Keypad6:
-            return "Keypad6";
-        case KeyCode::KeypadPlus:
-            return "KeypadPlus";
-        case KeyCode::Keypad1:
-            return "Keypad1";
-        case KeyCode::Keypad2:
-            return "Keypad2";
-        case KeyCode::Keypad3:
-            return "Keypad3";
-        case KeyCode::Keypad0:
-            return "Keypad0";
-        case KeyCode::KeypadDot:
-            return "KeypadDot";
-        case KeyCode::F11:
-            return "F11";
-        case KeyCode::F12:
-            return "F12";
-        case KeyCode::KeypadEnter:
-            return "KeypadEnter";
         case KeyCode::RCtrl:
-            return "RCtrl";
-        case KeyCode::KeypadSlash:
-            return "KeypadSlash";
         case KeyCode::RAlt:
-            return "RAlt";
-        case KeyCode::Home:
-            return "Home";
-        case KeyCode::Up:
-            return "Up";
-        case KeyCode::PageUp:
-            return "PageUp";
-        case KeyCode::Left:
-            return "Left";
-        case KeyCode::Right:
-            return "Right";
-        case KeyCode::End:
-            return "End";
-        case KeyCode::Down:
-            return "Down";
-        case KeyCode::PageDown:
-            return "PageDown";
-        case KeyCode::Insert:
-            return "Insert";
-        case KeyCode::Delete:
-            return "Delete";
         case KeyCode::Menu:
-            return "Menu";
         default:
-            return "<unknown>";
-    }
-}
+            return nullptr;
 
-char keyCodeToAsciiUnshifted(KeyCode keyCode) {
-    switch (keyCode) {
-        case KeyCode::Escape:
-            return '\033';
-        case KeyCode::Backspace:
-            return '\x7F';
+        // Regular number keys
         case KeyCode::One:
-            return '1';
+            return selectFrom("1", "!", "1", nullptr);
         case KeyCode::Two:
-            return '2';
+            return selectFrom("2", "@", "\0", nullptr);
         case KeyCode::Three:
-            return '3';
+            return selectFrom("3", "#", "\x1B", nullptr);
         case KeyCode::Four:
-            return '4';
+            return selectFrom("4", "$", "\x1C", nullptr);
         case KeyCode::Five:
-            return '5';
+            return selectFrom("5", "%", "\x1D", nullptr);
         case KeyCode::Six:
-            return '6';
+            return selectFrom("6", "^", "\x1E", nullptr);
         case KeyCode::Seven:
-            return '7';
+            return selectFrom("7", "&", "\x1F", nullptr);
         case KeyCode::Eight:
-            return '8';
+            return selectFrom("8", "*", "\x7F", "\x7F");
         case KeyCode::Nine:
-            return '9';
+            return selectFrom("9", "(", "9", "9");
         case KeyCode::Zero:
-            return '0';
-        case KeyCode::Minus:
-            return '-';
-        case KeyCode::Equals:
-            return '=';
-        case KeyCode::Q:
-            return 'q';
-        case KeyCode::W:
-            return 'w';
-        case KeyCode::E:
-            return 'e';
-        case KeyCode::R:
-            return 'r';
-        case KeyCode::T:
-            return 't';
-        case KeyCode::Y:
-            return 'y';
-        case KeyCode::U:
-            return 'u';
-        case KeyCode::I:
-            return 'i';
-        case KeyCode::O:
-            return 'o';
-        case KeyCode::P:
-            return 'p';
-        case KeyCode::LBracket:
-            return '[';
-        case KeyCode::RBracket:
-            return ']';
-        case KeyCode::A:
-            return 'a';
-        case KeyCode::S:
-            return 's';
-        case KeyCode::D:
-            return 'd';
-        case KeyCode::F:
-            return 'f';
-        case KeyCode::G:
-            return 'g';
-        case KeyCode::H:
-            return 'h';
-        case KeyCode::J:
-            return 'j';
-        case KeyCode::K:
-            return 'k';
-        case KeyCode::L:
-            return 'l';
-        case KeyCode::Semicolon:
-            return ';';
-        case KeyCode::Apostrophe:
-            return '\'';
-        case KeyCode::Backtick:
-            return '`';
-        case KeyCode::Backslash:
-            return '\\';
-        case KeyCode::Z:
-            return 'z';
-        case KeyCode::X:
-            return 'x';
-        case KeyCode::C:
-            return 'c';
-        case KeyCode::V:
-            return 'v';
-        case KeyCode::B:
-            return 'b';
-        case KeyCode::N:
-            return 'n';
-        case KeyCode::M:
-            return 'm';
-        case KeyCode::Comma:
-            return ',';
-        case KeyCode::Period:
-            return '.';
-        case KeyCode::Slash:
-            return '/';
-        case KeyCode::KeypadAsterisk:
-            return '*';
-        case KeyCode::Space:
-            return ' ';
-        case KeyCode::Keypad7:
-            return '7';
-        case KeyCode::Keypad8:
-            return '8';
-        case KeyCode::Keypad9:
-            return '9';
-        case KeyCode::KeypadMinus:
-            return '-';
-        case KeyCode::Keypad4:
-            return '4';
-        case KeyCode::Keypad5:
-            return '5';
-        case KeyCode::Keypad6:
-            return '6';
-        case KeyCode::KeypadPlus:
-            return '+';
-        case KeyCode::Keypad1:
-            return '1';
-        case KeyCode::Keypad2:
-            return '2';
-        case KeyCode::Keypad3:
-            return '3';
-        case KeyCode::Keypad0:
-            return '0';
-        case KeyCode::KeypadDot:
-            return '.';
-        case KeyCode::KeypadSlash:
-            return '/';
-        case KeyCode::Enter:
-            return '\n';
-        case KeyCode::KeypadEnter:
-            return '\n';
-        default:
-            return '\0';
-    }
-}
+            return selectFrom("0", ")", nullptr, nullptr);
 
-char keyCodeToAsciiShifted(KeyCode keyCode) {
-    switch (keyCode) {
-        case KeyCode::Escape:
-            return '\033';
-        case KeyCode::Backspace:
-            return '\x7F';
-        case KeyCode::One:
-            return '!';
-        case KeyCode::Two:
-            return '@';
-        case KeyCode::Three:
-            return '#';
-        case KeyCode::Four:
-            return '$';
-        case KeyCode::Five:
-            return '%';
-        case KeyCode::Six:
-            return '^';
-        case KeyCode::Seven:
-            return '&';
-        case KeyCode::Eight:
-            return '*';
-        case KeyCode::Nine:
-            return '(';
-        case KeyCode::Zero:
-            return ')';
-        case KeyCode::Minus:
-            return '_';
-        case KeyCode::Equals:
-            return '+';
-        case KeyCode::Q:
-            return 'Q';
-        case KeyCode::W:
-            return 'W';
-        case KeyCode::E:
-            return 'E';
-        case KeyCode::R:
-            return 'R';
-        case KeyCode::T:
-            return 'T';
-        case KeyCode::Y:
-            return 'Y';
-        case KeyCode::U:
-            return 'U';
-        case KeyCode::I:
-            return 'I';
-        case KeyCode::O:
-            return 'O';
-        case KeyCode::P:
-            return 'P';
-        case KeyCode::LBracket:
-            return '{';
-        case KeyCode::RBracket:
-            return '}';
+        // Letter keys
         case KeyCode::A:
-            return 'A';
-        case KeyCode::S:
-            return 'S';
-        case KeyCode::D:
-            return 'D';
-        case KeyCode::F:
-            return 'F';
-        case KeyCode::G:
-            return 'G';
-        case KeyCode::H:
-            return 'H';
-        case KeyCode::J:
-            return 'J';
-        case KeyCode::K:
-            return 'K';
-        case KeyCode::L:
-            return 'L';
-        case KeyCode::Semicolon:
-            return ':';
-        case KeyCode::Apostrophe:
-            return '"';
-        case KeyCode::Backtick:
-            return '~';
-        case KeyCode::Backslash:
-            return '|';
-        case KeyCode::Z:
-            return 'Z';
-        case KeyCode::X:
-            return 'X';
-        case KeyCode::C:
-            return 'C';
-        case KeyCode::V:
-            return 'V';
+            return selectFrom("a", "A", "\x01", "\x01");
         case KeyCode::B:
-            return 'B';
-        case KeyCode::N:
-            return 'N';
+            return selectFrom("b", "B", "\x02", "\x02");
+        case KeyCode::C:
+            return selectFrom("c", "C", "\x03", "\x03");
+        case KeyCode::D:
+            return selectFrom("d", "D", "\x04", "\x04");
+        case KeyCode::E:
+            return selectFrom("e", "E", "\x05", "\x05");
+        case KeyCode::F:
+            return selectFrom("f", "F", "\x06", "\x06");
+        case KeyCode::G:
+            return selectFrom("g", "G", "\x07", "\x07");
+        case KeyCode::H:
+            return selectFrom("h", "H", "\x08", "\x08");
+        case KeyCode::I:
+            return selectFrom("i", "I", "\x09", "\x09");
+        case KeyCode::J:
+            return selectFrom("j", "J", "\x0A", "\x0A");
+        case KeyCode::K:
+            return selectFrom("k", "K", "\x0B", "\x0B");
+        case KeyCode::L:
+            return selectFrom("l", "L", "\x0C", "\x0C");
         case KeyCode::M:
-            return 'M';
+            return selectFrom("m", "M", "\x0D", "\x0D");
+        case KeyCode::N:
+            return selectFrom("n", "N", "\x0E", "\x0E");
+        case KeyCode::O:
+            return selectFrom("o", "O", "\x0F", "\x0F");
+        case KeyCode::P:
+            return selectFrom("p", "P", "\x10", "\x10");
+        case KeyCode::Q:
+            return selectFrom("q", "Q", "\x11", "\x11");
+        case KeyCode::R:
+            return selectFrom("r", "R", "\x12", "\x12");
+        case KeyCode::S:
+            return selectFrom("s", "S", "\x13", "\x13");
+        case KeyCode::T:
+            return selectFrom("t", "T", "\x14", "\x14");
+        case KeyCode::U:
+            return selectFrom("u", "U", "\x15", "\x15");
+        case KeyCode::V:
+            return selectFrom("v", "V", "\x16", "\x16");
+        case KeyCode::W:
+            return selectFrom("w", "W", "\x17", "\x17");
+        case KeyCode::X:
+            return selectFrom("x", "X", "\x18", "\x18");
+        case KeyCode::Y:
+            return selectFrom("y", "Y", "\x19", "\x19");
+        case KeyCode::Z:
+            return selectFrom("z", "Z", "\x1A", "\x1A");
+
+        // Symbol keys
+        case KeyCode::LBracket:
+            return selectFrom("[", "{", "\x1B", "\x1B");
+        case KeyCode::RBracket:
+            return selectFrom("]", "}", "\x1D", "\x1D");
+        case KeyCode::Semicolon:
+            return selectFrom(";", ":", ";", ":");
+        case KeyCode::Apostrophe:
+            return selectFrom("'", "\"", "'", "\"");
+        case KeyCode::Backtick:
+            return selectFrom("`", "~", "\0", "\x1E");
+        case KeyCode::Backslash:
+            return selectFrom("\\", "|", "\x1C", "\x1C");
         case KeyCode::Comma:
-            return '<';
+            return selectFrom(",", "<", nullptr, nullptr);
         case KeyCode::Period:
-            return '>';
+            return selectFrom(".", ">", ".", nullptr);
         case KeyCode::Slash:
-            return '?';
-        case KeyCode::KeypadAsterisk:
-            return '*';
+            return selectFrom("/", "?", "\x1F", "\x7F");
+        case KeyCode::Minus:
+            return selectFrom("-", "_", nullptr, "\x1F");
+        case KeyCode::Equals:
+            return selectFrom("=", "+", nullptr, "+");
         case KeyCode::Space:
-            return ' ';
-        case KeyCode::Keypad7:
-            return '7';
-        case KeyCode::Keypad8:
-            return '8';
-        case KeyCode::Keypad9:
-            return '9';
-        case KeyCode::KeypadMinus:
-            return '-';
-        case KeyCode::Keypad4:
-            return '4';
-        case KeyCode::Keypad5:
-            return '5';
-        case KeyCode::Keypad6:
-            return '6';
-        case KeyCode::KeypadPlus:
-            return '+';
-        case KeyCode::Keypad1:
-            return '1';
-        case KeyCode::Keypad2:
-            return '2';
-        case KeyCode::Keypad3:
-            return '3';
-        case KeyCode::Keypad0:
-            return '0';
-        case KeyCode::KeypadDot:
-            return '>';
-        case KeyCode::KeypadSlash:
-            return '<';
+            return selectFrom(" ", " ", "\0", nullptr);
+
+        // Navigation keys
+        case KeyCode::Backspace:
+            return selectFrom("\x7F", "\x7F", "\x08", "\x08");
+        case KeyCode::Tab:
+            return selectFrom("\t", "\x1B[Z", nullptr, nullptr);
         case KeyCode::Enter:
-            return '\n';
+            return selectFrom("\r", "\r", "\n", "\n");
+        case KeyCode::Up:
+            return selectFrom("\x1B[A", "\x1B[1;2A", "\x1B[1;5A", "\x1B[1;6A");
+        case KeyCode::Down:
+            return selectFrom("\x1B[B", "\x1B[1;2B", "\x1B[1;5B", "\x1B[1;6B");
+        case KeyCode::Right:
+            return selectFrom("\x1B[C", "\x1B[1;2C", "\x1B[1;5C", "\x1B[1;6C");
+        case KeyCode::Left:
+            return selectFrom("\x1B[D", "\x1B[1;2D", "\x1B[1;5D", "\x1B[1;6D");
+        case KeyCode::Home:
+            return selectFrom("\x1B[1~", "\x1B[1;2H", "\x1B[1;5H", nullptr);
+        case KeyCode::End:
+            return selectFrom("\x1B[4~", "\x1B[1;2F", "\x1B[1;5F", nullptr);
+        case KeyCode::PageUp:
+            return selectFrom("\x1B[5~", "\x1B[5;2~", "\x1B[5;5~", nullptr);
+        case KeyCode::PageDown:
+            return selectFrom("\x1B[6~", "\x1B[6;2~", "\x1B[6;5~", nullptr);
+
+        // Keypad keys
+        // TODO: handle NumLock (this assumes NumLock is off)
+        case KeyCode::Keypad1:
+            // Equivalent to End
+            return selectFrom("\x1B[4~", "\x1B[1;2F", "\x1B[1;5F", nullptr);
+        case KeyCode::Keypad2:
+            // Equivalent to Down
+            return selectFrom("\x1B[B", "\x1B[1;2B", "\x1B[1;5B", "\x1B[1;6B");
+        case KeyCode::Keypad3:
+            // Equivalent to PageDown
+            return selectFrom("\x1B[6~", "\x1B[6;2~", "\x1B[6;5~", nullptr);
+        case KeyCode::Keypad4:
+            // Equivalent to Left
+            return selectFrom("\x1B[D", "\x1B[1;2D", "\x1B[1;5D", "\x1B[1;6D");
+        case KeyCode::Keypad5:
+            return selectFrom("\x1B[OE", "\x1B[1;2E", "\x1B[1;5E", "\x1B[1;6E");
+        case KeyCode::Keypad6:
+            // Equivalent to Right
+            return selectFrom("\x1B[C", "\x1B[1;2C", "\x1B[1;5C", "\x1B[1;6C");
+        case KeyCode::Keypad7:
+            // Equivalent to Home
+            return selectFrom("\x1B[1~", "\x1B[1;2H", "\x1B[1;5H", nullptr);
+        case KeyCode::Keypad8:
+            // Equivalent to Up
+            return selectFrom("\x1B[A", "\x1B[1;2A", "\x1B[1;5A", "\x1B[1;6A");
+        case KeyCode::Keypad9:
+            // Equivalent to PageUp
+            return selectFrom("\x1B[5~", "\x1B[5;2~", "\x1B[5;5~", nullptr);
+        case KeyCode::Keypad0:
+            // Equivalent to Insert
+            return selectFrom("\x1B[2~", nullptr, "\x1B[2;5~", "\x1B[2;6~");
+        case KeyCode::KeypadAsterisk:
+            return "*";
+        case KeyCode::KeypadMinus:
+            return "-";
+        case KeyCode::KeypadPlus:
+            return "+";
+        case KeyCode::KeypadSlash:
+            return selectFrom("/", "/", "\x1F", "\x1F");
+        case KeyCode::KeypadDot:
+            // Equivalent to Delete
+            return selectFrom("\x1B[3~", "\x1B[3;2~", "\x1B[3;5~", "\x1B[3;6~");
         case KeyCode::KeypadEnter:
-            return '\n';
-        default:
-            return '\0';
+            // Equivalent to Enter
+            return selectFrom("\r", "\r", "\n", "\n");
+
+        // Function keys
+        case KeyCode::F1:
+            return selectFrom("\x1B[OP", "\x1B[1;2P", "\x1B[1;5P", "\x1B[1;6P");
+        case KeyCode::F2:
+            return selectFrom("\x1B[OQ", "\x1B[1;2Q", "\x1B[1;5Q", "\x1B[1;6Q");
+        case KeyCode::F3:
+            return selectFrom("\x1B[OR", "\x1B[1;2R", "\x1B[1;5R", "\x1B[1;6R");
+        case KeyCode::F4:
+            return selectFrom("\x1B[OS", "\x1B[1;2S", "\x1B[1;5S", "\x1B[1;6S");
+        case KeyCode::F5:
+            return selectFrom("\x1B[15~", "\x1B[15;2~", "\x1B[15;5~", "\x1B[15;6~");
+        case KeyCode::F6:
+            return selectFrom("\x1B[17~", "\x1B[17;2~", "\x1B[17;5~", "\x1B[17;6~");
+        case KeyCode::F7:
+            return selectFrom("\x1B[18~", "\x1B[18;2~", "\x1B[18;5~", "\x1B[18;6~");
+        case KeyCode::F8:
+            return selectFrom("\x1B[19~", "\x1B[19;2~", "\x1B[19;5~", "\x1B[19;6~");
+        case KeyCode::F9:
+            return selectFrom("\x1B[20~", "\x1B[20;2~", "\x1B[20;5~", "\x1B[20;6~");
+        case KeyCode::F10:
+            return selectFrom("\x1B[21~", "\x1B[21;2~", "\x1B[21;5~", "\x1B[21;6~");
+        case KeyCode::F11:
+            return selectFrom("\x1B[23~", "\x1B[23;2~", "\x1B[23;5~", "\x1B[23;6~");
+        case KeyCode::F12:
+            return selectFrom("\x1B[24~", "\x1B[24;2~", "\x1B[24;5~", "\x1B[24;6~");
+
+        // Other special keys
+        case KeyCode::Insert:
+            return selectFrom("\x1B[2~", nullptr, "\x1B[2;5~", "\x1B[2;6~");
+        case KeyCode::Delete:
+            return selectFrom("\x1B[3~", "\x1B[3;2~", "\x1B[3;5~", "\x1B[3;6~");
+        case KeyCode::Escape:
+            return selectFrom("\x1B", "\x1B", nullptr, nullptr);
     }
 }
 
@@ -530,14 +276,35 @@ void Terminal::onKeyEvent(const KeyboardEvent& event) {
 
     if (event.pressed) {
         // TODO: pass modifiers in with the event
-        bool shifted =
+        bool shift =
             _keyboard.isPressed(KeyCode::LShift) || _keyboard.isPressed(KeyCode::RShift);
-        char c = shifted ? keyCodeToAsciiShifted(event.key)
-                         : keyCodeToAsciiUnshifted(event.key);
+        bool ctrl =
+            _keyboard.isPressed(KeyCode::LCtrl) || _keyboard.isPressed(KeyCode::RCtrl);
 
-        if (handleInput(c)) {
+        const char* str = parseKeyCode(event.key, shift, ctrl);
+        if (str) {
             bool echo = _settings.c_lflag & ECHO;
-            handleOutput(c, echo);
+
+            // Special case for keys which map to a null character
+            if (str[0] == '\0') {
+                if (handleInput(0)) {
+                    handleOutput(0, echo);
+                }
+                return;
+            }
+
+            for (size_t i = 0; str[i] != '\0'; i++) {
+                char c = str[i];
+
+                // ICRNL: convert carriage return to newline on input
+                if (_settings.c_iflag & ICRNL && c == '\r') {
+                    c = '\n';
+                }
+
+                if (handleInput(c)) {
+                    handleOutput(c, echo);
+                }
+            }
         }
     }
 }
@@ -551,9 +318,6 @@ bool Terminal::handleInput(char c) {
 }
 
 bool Terminal::handleInputCanonical(char c) {
-    // Key which doesn't correspond to any ascii character (e.g., F1)
-    if (c == '\0') return false;
-
     // Backspace deletes rather than appends a character to the input buffer
     if (c == '\x7F') {
         // TODO: don't delete past the beginning of the line or EOF
@@ -589,9 +353,6 @@ bool Terminal::handleInputCanonical(char c) {
 }
 
 bool Terminal::handleInputRaw(char c) {
-    // Key which doesn't correspond to any ascii character (e.g., F1)
-    if (c == '\0') return false;
-
     // If the input buffer is nearly full, discard any further input
     if (_inputBuffer.full() || _inputBuffer.almostFull()) return false;
 
@@ -992,21 +753,17 @@ ssize_t Terminal::write(OpenFileDescription&, const void* buffer, size_t count) 
 }
 
 int Terminal::ioctl(OpenFileDescription&, int op, void* argp) {
-    println("Terminal::ioctl");
     SpinlockLocker locker(_lock);
-    println("got lock");
 
     if (op == TCGETS) {
-        println("TCGETS");
         memcpy(argp, &_settings, sizeof(termios));
         return 0;
     } else if (op == TCSETS) {
-        println("TCSETS");
         // TODO: If we switch from canonical to non-canonical mode, wake up any
         // readers. If we switch form non-canonical to canonical, count up the number of
         // lines in the input buffer
+        // If ECHOCTL is turned on, then flush the output buffer and echo the contents
         memcpy(&_settings, argp, sizeof(termios));
-        println("returning");
         return 0;
     } else {
         return -EINVAL;

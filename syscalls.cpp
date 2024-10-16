@@ -115,12 +115,10 @@ int64_t sys_dup2(int oldfd, int newfd) {
     Process& process = *currentThread->process;
 
     if (oldfd < 0 || oldfd >= RLIMIT_NOFILE || !process.openFiles[oldfd]) {
-        println("bad old fd: {}", (bool)process.openFiles[oldfd]);
         return -EBADF;
     }
 
     if (newfd < 0 || newfd >= RLIMIT_NOFILE) {
-        println("bad new fd");
         return -EBADF;
     }
 
@@ -390,9 +388,7 @@ int sys_ioctl(int fd, int op, void* argp) {
 
     OpenFileDescription& description = *process.openFiles[fd];
     File& file = *description.file;
-    int result = file.ioctl(description, op, argp);
-    println("returned from file.ioctl");
-    return result;
+    return file.ioctl(description, op, argp);
 }
 
 // We don't have static initialization, so this is initialized at runtime
