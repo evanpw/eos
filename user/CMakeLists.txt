@@ -66,7 +66,7 @@ make_user_target(cat cat.cpp)
 make_user_target(wget wget.cpp)
 make_user_target(serve serve.cpp)
 make_user_target(less less.cpp)
-make_user_target(rawterm rawterm.cpp)
+make_user_target(showkey showkey.cpp)
 
 add_custom_target(
     userland
@@ -77,7 +77,7 @@ add_custom_target(
     wget.elf
     serve.elf
     less.elf
-    rawterm.elf
+    showkey.elf
 )
 
 set(USERLAND_BINARIES
@@ -87,6 +87,6 @@ set(USERLAND_BINARIES
     ${CMAKE_CURRENT_BINARY_DIR}/wget
     ${CMAKE_CURRENT_BINARY_DIR}/serve
     ${CMAKE_CURRENT_BINARY_DIR}/less
-    ${CMAKE_CURRENT_BINARY_DIR}/rawterm
+    ${CMAKE_CURRENT_BINARY_DIR}/showkey
     PARENT_SCOPE
 )

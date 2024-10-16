@@ -31,12 +31,13 @@ private:
     bool handleInput(char c);
     bool handleInputCanonical(char c);
     bool handleInputRaw(char c);
-    void handleOutput(char c, bool shouldEcho = true);
+    void handleOutput(char c);
     void handleEscapeSequence();
     bool parseEscapeSequence();
     bool parseCSI();
     bool parseDEC();
     void echo(char c);
+    void putchar(char c);
     void carriageReturn();
     void newline();
     void backspace();

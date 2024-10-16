@@ -3,6 +3,7 @@
 #include <asm/termbits.h>
 #include <string.h>
 
+#include "estd/print.h"
 #include "estd/vector.h"
 #include "klibc.h"
 #include "system.h"
@@ -268,6 +269,12 @@ static const char* parseKeyCode(KeyCode keyCode, bool shift, bool ctrl) {
     }
 }
 
+bool isControlChar(char c) {
+    // Exclude tab, newline, carriage return, and backspace since they have special roles
+    return ((c < 0x20 || c == 0x7F) && c != '\t' && c != '\n' && c != '\r' &&
+            c != '\x7F');
+}
+
 void Terminal::onKeyEvent(const KeyboardEvent& event) {
     SpinlockLocker locker(_lock);
 
@@ -283,17 +290,7 @@ void Terminal::onKeyEvent(const KeyboardEvent& event) {
 
         const char* str = parseKeyCode(event.key, shift, ctrl);
         if (str) {
-            bool echo = _settings.c_lflag & ECHO;
-
-            // Special case for keys which map to a null character
-            if (str[0] == '\0') {
-                if (handleInput(0)) {
-                    handleOutput(0, echo);
-                }
-                return;
-            }
-
-            for (size_t i = 0; str[i] != '\0'; i++) {
+            for (size_t i = 0; str[i] != '\0' || i == 0; i++) {
                 char c = str[i];
 
                 // ICRNL: convert carriage return to newline on input
@@ -301,8 +298,19 @@ void Terminal::onKeyEvent(const KeyboardEvent& event) {
                     c = '\n';
                 }
 
-                if (handleInput(c)) {
-                    handleOutput(c, echo);
+                if (!handleInput(c)) {
+                    // Discard the character if it couldn't be handled
+                    continue;
+                }
+
+                if (_settings.c_lflag & ECHO) {
+                    if (isControlChar(c) && (_settings.c_lflag & ECHOCTL)) {
+                        // ECHOCTL: echo control characters as ^X
+                        handleOutput('^');
+                        handleOutput(c ^ 0x40);
+                    } else {
+                        handleOutput(c);
+                    }
                 }
             }
         }
@@ -365,7 +373,7 @@ bool Terminal::handleInputRaw(char c) {
     return true;
 }
 
-void Terminal::handleOutput(char c, bool shouldEcho) {
+void Terminal::handleOutput(char c) {
     // Start or continuance of an escape sequence
     if (!_outputBuffer.empty()) {
         // If the escape sequence is too long, it's invalid
@@ -383,9 +391,7 @@ void Terminal::handleOutput(char c, bool shouldEcho) {
     }
 
     // Ordinary printable character
-    if (shouldEcho) {
-        echo(c);
-    }
+    putchar(c);
 }
 
 void Terminal::handleEscapeSequence() {
@@ -621,7 +627,7 @@ bool Terminal::parseDEC() {
     return true;
 }
 
-void Terminal::echo(char c) {
+void Terminal::putchar(char c) {
     if (_settings.c_oflag & OPOST) {
         if (c == '\r') {
             if (_settings.c_oflag & OCRNL) {
