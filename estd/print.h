@@ -4,6 +4,7 @@
 
 #include "estd/assertions.h"
 #include "estd/new.h"
+#include "estd/stddef.h"
 #include "estd/traits.h"
 #include "estd/utility.h"
 
@@ -56,6 +57,19 @@ struct FormatArg<char*> : public FormatArgBase {
 
 private:
     const char* value;
+};
+
+template <>
+struct FormatArg<byte> : public FormatArgBase {
+    FormatArg(byte value) : value(value) {}
+
+    void print(const FormatSpec&) const override {
+        FormatSpec spec = {.base = 16, .padTo = 2, .padChar = '0', .uppercase = true};
+        printInt(spec, (uint64_t)value);
+    }
+
+private:
+    byte value;
 };
 
 template <typename T>

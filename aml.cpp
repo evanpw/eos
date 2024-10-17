@@ -269,7 +269,7 @@ public:
         expect(MethodOp);
         byte* listEnd = startPackage();
         const char* name = NameString();
-        byte flags = MethodFlags();
+        uint8_t flags = MethodFlags();
         println("DefMethod: name={} flags={:08b}", name, flags);
         TermList(listEnd);
     }
@@ -610,20 +610,20 @@ private:
         DataRegionOp = 0x88,
     };
 
-    void expect(byte value) {
+    void expect(uint8_t value) {
         if (_current == _codeEnd) {
             println("expected {:02X}, got EOF", value);
             ASSERT(_current < _codeEnd);
-        } else if (*_current != value) {
-            println("expected {:02X}, got {:02X}", value, *_current);
-            ASSERT(*_current == value);
+        } else if (peek() != value) {
+            println("expected {:02X}, got {:02X}", value, peek());
+            ASSERT(peek() == value);
         } else {
             ++_current;
         }
     }
 
-    bool accept(byte value) {
-        if (_current == _codeEnd || *_current != value) {
+    bool accept(uint8_t value) {
+        if (_current == _codeEnd || peek() != value) {
             return false;
         } else {
             ++_current;
@@ -631,15 +631,15 @@ private:
         }
     }
 
-    byte consume() {
-        byte value = peek();
+    uint8_t consume() {
+        uint8_t value = peek();
         ++_current;
         return value;
     }
 
-    byte peek() {
+    uint8_t peek() {
         ASSERT(_current < _codeEnd);
-        return *_current;
+        return static_cast<uint8_t>(*_current);
     }
 
     [[maybe_unused]] byte* _codeStart;

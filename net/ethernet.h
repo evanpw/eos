@@ -29,18 +29,8 @@ struct FormatArg<MacAddress> : public FormatArgBase {
     FormatArg(const MacAddress& value) : value(value) {}
 
     void print(const FormatSpec&) const override {
-        FormatSpec spec = {.base = 16, .padTo = 2, .padChar = '0', .uppercase = true};
-        printInt(spec, value.bytes[0]);
-        printChar(':');
-        printInt(spec, value.bytes[1]);
-        printChar(':');
-        printInt(spec, value.bytes[2]);
-        printChar(':');
-        printInt(spec, value.bytes[3]);
-        printChar(':');
-        printInt(spec, value.bytes[4]);
-        printChar(':');
-        printInt(spec, value.bytes[5]);
+        ::print("{}:{}:{}:{}:{}:{}", value.bytes[0], value.bytes[1], value.bytes[2],
+                value.bytes[3], value.bytes[4], value.bytes[5]);
     }
 
 private:

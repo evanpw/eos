@@ -58,7 +58,7 @@ bool DhcpHeader::subnetMask(IpAddress* subnetMask) {
 
 estd::vector<IpAddress> DhcpHeader::routers() {
     byte* start = findOption(DhcpOption::Router);
-    uint8_t length = start[1];
+    uint8_t length = static_cast<uint8_t>(start[1]);
 
     estd::vector<IpAddress> routers;
     for (byte* p = start + 2; p < start + 2 + length; p += 4) {
@@ -72,7 +72,7 @@ estd::vector<IpAddress> DhcpHeader::routers() {
 
 estd::vector<IpAddress> DhcpHeader::dnsServers() {
     byte* start = findOption(DhcpOption::Dns);
-    uint8_t length = start[1];
+    uint8_t length = static_cast<uint8_t>(start[1]);
 
     estd::vector<IpAddress> dnsServers;
     for (byte* p = start + 2; p < start + 2 + length; p += 4) {
@@ -124,7 +124,7 @@ void DhcpHeader::setChaddr(MacAddress value) {
 estd::vector<byte> DhcpHeader::createDiscoverOptions() {
     estd::vector<byte> options;
     options.push_back((byte)DhcpOption::MessageType);
-    options.push_back(1);
+    options.push_back((byte)1);
     options.push_back((byte)DhcpMessageType::Discover);
     options.push_back((byte)DhcpOption::End);
     return estd::move(options);

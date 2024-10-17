@@ -16,6 +16,7 @@ struct IpAddress {
     IpAddress() = default;
     IpAddress(uint32_t value) : value(value) {}
     IpAddress(uint8_t a, uint8_t b, uint8_t c, uint8_t d);
+    IpAddress(const byte* bytes) { memcpy(&value, bytes, sizeof(uint32_t)); }
 
     operator uint32_t() const { return value; }
     explicit operator bool() const { return value != 0; }
@@ -32,17 +33,10 @@ struct FormatArg<IpAddress> : public FormatArgBase {
     FormatArg(const IpAddress& value) : value(value) {}
 
     void print(const FormatSpec&) const override {
-        byte bytes[4];
+        uint8_t bytes[4];
         memcpy(bytes, &value, sizeof(uint32_t));
 
-        FormatSpec spec;
-        printInt(spec, bytes[0]);
-        printChar('.');
-        printInt(spec, bytes[1]);
-        printChar('.');
-        printInt(spec, bytes[2]);
-        printChar('.');
-        printInt(spec, bytes[3]);
+        ::print("{}.{}.{}.{}", bytes[0], bytes[1], bytes[2], bytes[3]);
     }
 
 private:

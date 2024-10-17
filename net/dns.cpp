@@ -36,6 +36,13 @@ class QuestionBuilder {
     size_t _count = 0;
     estd::vector<byte> _bytes;
 
+    void push8(uint8_t value) { _bytes.push_back(static_cast<byte>(value)); }
+
+    void push16(uint16_t value) {
+        push8(highBits((uint16_t)value, 8));
+        push8(lowBits((uint16_t)value, 8));
+    }
+
 public:
     bool add(const char* hostname, DnsRecordType type, DnsRecordClass cls) {
         // The hostname is encoded as a list of labels, each preceded by a length byte
@@ -47,9 +54,9 @@ public:
             // Maximum label length is 63 bytes
             if (len >= 64) return false;
 
-            _bytes.push_back(len);
+            push8(len);
             for (size_t i = 0; i < len; ++i) {
-                _bytes.push_back(*p++);
+                push8(*p++);
             }
 
             // Skip the dot
@@ -57,15 +64,12 @@ public:
         }
 
         // The list of labels is null-terminated
-        _bytes.push_back(0);
+        push8(0);
 
-        // Then comes the record type, 2 bytes in network byte order
-        _bytes.push_back(highBits((uint16_t)type, 8));
-        _bytes.push_back(lowBits((uint16_t)type, 8));
-
-        // And the class code, in the same format
-        _bytes.push_back(highBits((uint16_t)cls, 8));
-        _bytes.push_back(lowBits((uint16_t)cls, 8));
+        // Then comes the record type, 2 bytes in network byte order, and the class code
+        // in the same format
+        push16((uint16_t)type);
+        push16((uint16_t)cls);
 
         return true;
     };
@@ -92,14 +96,14 @@ struct DnsRecord {
     IpAddress ip() const {
         ASSERT(type == DnsRecordType::A);
         ASSERT(rdlength == 4);
-        return IpAddress(rdata[0], rdata[1], rdata[2], rdata[3]);
+        return IpAddress(rdata);
     }
 };
 
 class ResponseParser {
     const byte* parseName(const byte* packet, const byte* start,
                           estd::vector<char>& result) {
-        const byte* p = start;
+        const uint8_t* p = reinterpret_cast<const uint8_t*>(start);
 
         // Domain names are sequence of labels ending in a zero byte, a pointer, or a
         // sequence of labels ending with a pointer
@@ -116,7 +120,7 @@ class ResponseParser {
                 uint16_t offset = concatBits(upperByte, lowerByte);
 
                 parseName(packet, packet + offset, result);
-                return p;
+                return reinterpret_cast<const byte*>(p);
             }
 
             // Otherwise, this is a label
@@ -129,7 +133,7 @@ class ResponseParser {
 
         // Skip the null terminator of the sequence of labels
         ASSERT(*p == 0);
-        return ++p;
+        return reinterpret_cast<const byte*>(++p);
     }
 
     const byte* parseQuestions(const byte* packet, const byte* start, size_t count) {

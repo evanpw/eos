@@ -1,6 +1,5 @@
 #include "timer.h"
 
-#include "estd/stddef.h"
 #include "interrupts.h"
 #include "io.h"
 #include "scheduler.h"
@@ -18,7 +17,7 @@ enum : uint16_t {
 };
 
 // Commands are combinations of these flags
-enum : byte {
+enum : uint8_t {
     PIT_CMD_CHANNEL0 = 0,
     PIT_CMD_CHANNEL1 = 0x40,
     PIT_CMD_CHANNEL2 = 0x80,

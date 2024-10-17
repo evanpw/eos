@@ -23,8 +23,8 @@ uint16_t IpHeader::computeChecksum() {
 
     byte* bytes = reinterpret_cast<byte*>(this);
     for (size_t i = 0; i < headerLen() * 4; i += 2) {
-        uint8_t highByte = bytes[i];
-        uint8_t lowByte = bytes[i + 1];
+        uint8_t highByte = (uint8_t)bytes[i];
+        uint8_t lowByte = (uint8_t)bytes[i + 1];
         uint16_t word = concatBits(highByte, lowByte);
         sum += word;
     }

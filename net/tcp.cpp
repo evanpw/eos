@@ -18,15 +18,15 @@ uint16_t TcpHeader::computeChecksum(IpAddress srcIp, IpAddress destIp, size_t to
 
     byte* bytes = reinterpret_cast<byte*>(this);
     for (size_t i = 0; i + 1 < totalLen; i += 2) {
-        byte highByte = bytes[i];
-        byte lowByte = bytes[i + 1];
+        uint8_t highByte = (uint8_t)bytes[i];
+        uint8_t lowByte = (uint8_t)bytes[i + 1];
         uint16_t word = concatBits(highByte, lowByte);
         sum += word;
     }
 
     // Handle an odd-sized buffer by padding with a zero byte
     if (totalLen % 2) {
-        sum += (bytes[totalLen - 1] << 8);
+        sum += ((uint8_t)bytes[totalLen - 1] << 8);
     }
 
     // Subtract off the embedded checksum
