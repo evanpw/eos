@@ -10,7 +10,6 @@
 * add support for USB
 * add a virtual file system
 * actually use fd offset / access / etc correctly
-* add non-blocking terminal input, non-echo mode, and non-canonical mode
 * allow negative ints in print / println
 * support stderr in print / println
 * use interrupts for reading from disk
