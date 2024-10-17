@@ -1,16 +1,21 @@
 #include <errno.h>
 #include <stdio.h>
 #include <sys/wait.h>
+#include <termios.h>
 #include <unistd.h>
 
 #include "estd/print.h"
 
 static constexpr size_t BUFFER_SIZE = 4096;
 
-char waitForKey(int tty) {
+void waitForKey(int tty, char mustBe = '\0') {
     char c;
-    read(tty, &c, 1);
-    return c;
+    while (true) {
+        size_t n = read(tty, &c, 1);
+        if (n == 1 && (mustBe == '\0' || c == mustBe)) {
+            break;
+        }
+    }
 }
 
 int doLess(int fd, int tty) {
@@ -51,11 +56,11 @@ int doLess(int fd, int tty) {
                 }
             }
 
-            // Once we reach the last line, we print a message and wait for a keypress
+            // Once we reach the last line, we print a message and wait for a space
             // to continue
             if (currentRow == 24) {
                 print("\033[30;47m-- More --\033[m");
-                waitForKey(tty);
+                waitForKey(tty, ' ');
 
                 // Clear the screen and continue with the next line
                 print("\033[2J");
@@ -69,7 +74,7 @@ int doLess(int fd, int tty) {
 
     if (screenDirty) {
         print("\033[30;47m-- END --\033[m");
-        waitForKey(tty);
+        waitForKey(tty, 'q');
     }
 
     return 0;
@@ -110,16 +115,28 @@ int main(int argc, char* argv[]) {
     // Switch to alternate terminal mode
     print("\033[?1049h");
 
+    // Save the existing terminal settings and turn off canonical mode
+    termios oldSettings;
+    tcgetattr(tty, &oldSettings);
+
+    termios newSettings = oldSettings;
+    newSettings.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(tty, TCSANOW, &newSettings);
+
     int result = doLess(fd, tty);
 
     // Switch back to normal terminal mode
     print("\033[?1049l");
 
+    int exitCode = 0;
     if (result != 0) {
         println("{}: read error: {}", argv[0], result);
-        return 1;
+        exitCode = 1;
     }
 
+    // Switch back to previous terminal settings
+    tcsetattr(tty, TCSANOW, &oldSettings);
+
     close(fd);
-    return 0;
+    return exitCode;
 }

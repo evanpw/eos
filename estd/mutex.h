@@ -19,11 +19,12 @@ public:
         while (_locked) {
             sys.scheduler().sleepThread(_blocker, &_spinlock);
         }
+        _locked = true;
     }
 
     void unlock() {
         SpinlockLocker locker(_spinlock);
-        ASSERT(!_locked);
+        ASSERT(_locked);
         _locked = false;
         sys.scheduler().wakeThreads(_blocker);
     }

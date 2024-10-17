@@ -155,7 +155,10 @@ int Process::execvp(const char* path, const char* argv[]) {
 
     // Look up the executable on disk
     uint32_t ino = sys.fs().lookup(cwdIno, pathCopy);
-    ASSERT(ino != ext2::BAD_INO);
+    if (ino == ext2::BAD_INO) {
+        return -ENOENT;
+    }
+
     auto inode = sys.fs().readInode(ino);
     ASSERT(inode);
 

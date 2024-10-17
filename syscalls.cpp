@@ -388,6 +388,7 @@ int sys_ioctl(int fd, int op, void* argp) {
 
     OpenFileDescription& description = *process.openFiles[fd];
     File& file = *description.file;
+
     return file.ioctl(description, op, argp);
 }
 

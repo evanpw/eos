@@ -3,7 +3,6 @@
 #include <asm/termbits.h>
 #include <string.h>
 
-#include "estd/print.h"
 #include "estd/vector.h"
 #include "klibc.h"
 #include "system.h"
