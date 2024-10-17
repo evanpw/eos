@@ -379,7 +379,7 @@ int sys_isatty(int fd) {
     return file.isTty() ? 1 : 0;
 }
 
-int sys_ioctl(int fd, int op, void* argp) {
+int64_t sys_ioctl(int fd, int op, void* argp) {
     Process& process = *currentThread->process;
 
     if (fd < 0 || fd >= RLIMIT_NOFILE || !process.openFiles[fd]) {

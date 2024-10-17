@@ -28,7 +28,7 @@ struct File {
 
     virtual ssize_t read(OpenFileDescription& fd, void* buffer, size_t count) = 0;
     virtual ssize_t write(OpenFileDescription& fd, const void* buffer, size_t count) = 0;
-    virtual int ioctl(OpenFileDescription& /*fd*/, int /*op*/, void* /*argp*/) {
+    virtual int64_t ioctl(OpenFileDescription& /*fd*/, int /*op*/, void* /*argp*/) {
         return -ENODEV;
     }
     virtual ssize_t readDir(OpenFileDescription& /*fd*/, void* /*buffer*/,

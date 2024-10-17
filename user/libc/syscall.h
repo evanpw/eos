@@ -2,7 +2,8 @@
 #include <stdint.h>
 
 #include "api/syscalls.h"  // IWYU pragma: export
-#include "errno.h"         // IWYU pragma: keep
+#include "errno.h"
+#include "sys/ioctl.h"
 
 int64_t __syscall(uint64_t function, uint64_t arg1 = 0, uint64_t arg2 = 0,
                   uint64_t arg3 = 0, uint64_t arg4 = 0, uint64_t arg5 = 0,
@@ -30,4 +31,16 @@ inline R try_syscall(uint64_t function, Arg1 arg1 = 0, Arg2 arg2 = 0, Arg3 arg3 
     }
 
     return (R)result;
+}
+
+template <typename R = int64_t, typename Arg = void*>
+inline R try_ioctl(int fd, int op, Arg argp) {
+    int64_t result = ioctl(fd, op, (void*)argp);
+
+    if (result < 0) {
+        errno = -result;
+        return -1;
+    }
+
+    return 0;
 }

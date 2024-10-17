@@ -757,20 +757,33 @@ ssize_t Terminal::write(OpenFileDescription&, const void* buffer, size_t count) 
     return count;
 }
 
-int Terminal::ioctl(OpenFileDescription&, int op, void* argp) {
+int64_t Terminal::ioctl(OpenFileDescription&, int op, void* argp) {
     SpinlockLocker locker(_lock);
 
-    if (op == TCGETS) {
-        memcpy(argp, &_settings, sizeof(termios));
-        return 0;
-    } else if (op == TCSETS) {
-        // TODO: If we switch from canonical to non-canonical mode, wake up any
-        // readers. If we switch form non-canonical to canonical, count up the number of
-        // lines in the input buffer
-        // If ECHOCTL is turned on, then flush the output buffer and echo the contents
-        memcpy(&_settings, argp, sizeof(termios));
-        return 0;
-    } else {
-        return -EINVAL;
+    switch (op) {
+        case TCGETS:
+            memcpy(argp, &_settings, sizeof(termios));
+            return 0;
+
+        case TCSETS:
+            // TODO: If we switch from canonical to non-canonical mode, wake up any
+            // readers. If we switch form non-canonical to canonical, count up the number
+            // of lines in the input buffer If ECHOCTL is turned on, then flush the output
+            // buffer and echo the contents
+            memcpy(&_settings, argp, sizeof(termios));
+            return 0;
+
+        case TIOCGWINSZ: {
+            winsize* ws = static_cast<winsize*>(argp);
+            ws->ws_row = _screen.height();
+            ws->ws_col = _screen.width();
+            return 0;
+        }
+
+        case TIOCSWINSZ:
+            return -EINVAL;
+
+        default:
+            return -EINVAL;
     }
 }

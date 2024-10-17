@@ -133,6 +133,11 @@ struct termios {
     cc_t c_cc[NCCS];   // control characters
 };
 
+struct winsize {
+    uint16_t ws_row;
+    uint16_t ws_col;
+};
+
 // Attribute selection for tcsetattr
 enum {
     TCSANOW,
@@ -168,6 +173,9 @@ int tcsendbreak(int fd, int duration);
 
 int tcgetattr(int fd, struct termios* termios_p);
 int tcsetattr(int fd, int optional_actions, const struct termios* termios_p);
+
+int tcgetwinsize(int fd, struct winsize* winsize_p);
+int tcsetwinsize(int fd, const struct winsize* winsize_p);
 
 // Not in POSIX
 void cfmakeraw(struct termios* termios_p);

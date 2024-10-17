@@ -4,6 +4,8 @@
 #include <errno.h>
 #include <sys/ioctl.h>
 
+#include "syscall.h"
+
 speed_t cfgetispeed(const termios* termios_p) { return B38400; }
 
 speed_t cfgetospeed(const termios* termios_p) { return B38400; }
@@ -51,26 +53,18 @@ int tcsendbreak(int fd, int duration) {
     return -1;
 }
 
-int tcgetattr(int fd, termios* termios_p) {
-    int result = ioctl(fd, TCGETS, termios_p);
-
-    if (result < 0) {
-        errno = -result;
-        return -1;
-    }
-
-    return 0;
-}
+int tcgetattr(int fd, termios* termios_p) { return try_ioctl(fd, TCGETS, termios_p); }
 
 int tcsetattr(int fd, int optional_actions, const termios* termios_p) {
-    int result = ioctl(fd, TCSETS, (void*)termios_p);
+    return try_ioctl(fd, TCSETS, termios_p);
+}
 
-    if (result < 0) {
-        errno = -result;
-        return -1;
-    }
+int tcgetwinsize(int fd, winsize* winsize_p) {
+    return try_ioctl(fd, TIOCGWINSZ, winsize_p);
+}
 
-    return 0;
+int tcsetwinsize(int fd, const winsize* winsize_p) {
+    return try_ioctl(fd, TIOCSWINSZ, winsize_p);
 }
 
 void cfmakeraw(termios* termios_p) {

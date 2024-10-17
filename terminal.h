@@ -21,7 +21,7 @@ public:
     // From File
     ssize_t read(OpenFileDescription& fd, void* buffer, size_t count) override;
     ssize_t write(OpenFileDescription& fd, const void* buffer, size_t count) override;
-    int ioctl(OpenFileDescription& fd, int op, void* argp) override;
+    int64_t ioctl(OpenFileDescription& fd, int op, void* argp) override;
     bool isTty() const override { return true; }
 
 private:
