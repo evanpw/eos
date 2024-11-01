@@ -1,3 +1,4 @@
+#include <bits/stdio.h>
 #include <unistd.h>
 
 #include "heap.h"
@@ -7,6 +8,7 @@ extern "C" int main(int argc, char* argv[]);
 
 void _start(int argc, char* argv[]) {
     initHeap();
+    initStdio();
 
     int result = main(argc, argv);
     _exit(result);

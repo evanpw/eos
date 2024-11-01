@@ -1,9 +1,9 @@
 #include "termios.h"
 
-#include <asm/termbits.h>
 #include <errno.h>
 #include <sys/ioctl.h>
 
+#include "api/ioctls.h"
 #include "syscall.h"
 
 speed_t cfgetispeed(const termios* termios_p) { return B38400; }

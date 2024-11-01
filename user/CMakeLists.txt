@@ -67,6 +67,7 @@ make_user_target(wget wget.cpp)
 make_user_target(serve serve.cpp)
 make_user_target(less less.cpp)
 make_user_target(showkey showkey.cpp)
+make_user_target(testStdio testStdio.cpp)
 
 add_custom_target(
     userland
@@ -78,6 +79,7 @@ add_custom_target(
     serve.elf
     less.elf
     showkey.elf
+    testStdio.elf
 )
 
 set(USERLAND_BINARIES
@@ -88,5 +90,6 @@ set(USERLAND_BINARIES
     ${CMAKE_CURRENT_BINARY_DIR}/serve
     ${CMAKE_CURRENT_BINARY_DIR}/less
     ${CMAKE_CURRENT_BINARY_DIR}/showkey
+    ${CMAKE_CURRENT_BINARY_DIR}/testStdio
     PARENT_SCOPE
 )

@@ -1,8 +1,8 @@
 #include "terminal.h"
 
-#include <asm/termbits.h>
 #include <string.h>
 
+#include "api/ioctls.h"
 #include "estd/vector.h"
 #include "klibc.h"
 #include "system.h"

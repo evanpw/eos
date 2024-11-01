@@ -1,6 +1,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/wait.h>
@@ -403,6 +404,7 @@ int main() {
         } else {
             print("$ ");
         }
+        fflush(stdout);
 
         bytesRead = read(STDIN_FILENO, buffer, 63);
         if (bytesRead == 0) {
