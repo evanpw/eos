@@ -392,6 +392,17 @@ int64_t sys_ioctl(int fd, int op, void* argp) {
     return file.ioctl(description, op, argp);
 }
 
+int64_t sys_lseek(int fd, int64_t offset, int whence) {
+    Process& process = *currentThread->process;
+
+    if (fd < 0 || fd >= RLIMIT_NOFILE || !process.openFiles[fd]) {
+        return -EBADF;
+    }
+
+    OpenFileDescription& description = *process.openFiles[fd];
+    return description.lseek(offset, whence);
+}
+
 // We don't have static initialization, so this is initialized at runtime
 SyscallHandler syscallTable[SYS_COUNT];
 
@@ -466,6 +477,7 @@ void initSyscalls() {
     syscallTable[SYS_isatty] = bit_cast<SyscallHandler>((void*)sys_isatty);
     syscallTable[SYS_dup2] = bit_cast<SyscallHandler>((void*)sys_dup2);
     syscallTable[SYS_ioctl] = bit_cast<SyscallHandler>((void*)sys_ioctl);
+    syscallTable[SYS_lseek] = bit_cast<SyscallHandler>((void*)sys_lseek);
 
     for (int i = 0; i < SYS_COUNT; i++) {
         if (!syscallTable[i]) {

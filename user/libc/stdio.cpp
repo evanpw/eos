@@ -64,6 +64,10 @@ static void flushReadBuffer(FILE* stream) {
 }
 
 static bool flushWriteBuffer(FILE* stream) {
+    if (stream->writeTail == 0) {
+        return true;
+    }
+
     bool result = doWrite(stream, stream->buffer, stream->writeTail);
     stream->writeTail = 0;
     return result;
@@ -119,8 +123,8 @@ int fgetc(FILE* stream) {
         return c;
     }
 
-    // TODO: flush writes if necessary (write followed by read with no flush is UB
-    // according to the spec)
+    // Write followed by a read with no flush is UB by spec, but we'll be nice and flush
+    flushWriteBuffer(stream);
 
     // Satisfy the request from the buffer if possible
     if (stream->readHead < stream->readTail) {
@@ -259,14 +263,18 @@ int fflush(FILE* stream) {
         return EOF;
     }
 
-    if (stream->writeTail != 0) {
-        if (!flushWriteBuffer(stream)) {
-            return EOF;
-        }
+    if (!flushWriteBuffer(stream)) {
+        return EOF;
     }
 
-    // TODO: sync read position
-    flushReadBuffer(stream);
+    if (stream->readHead != stream->readTail) {
+        // Back up the file descriptor's offset to match the stream's (once the
+        // previously-read bytes are dropped)
+        size_t readBuffered = stream->readTail - stream->readHead;
+        off_t newOffset = lseek(stream->fd, -(off_t)readBuffered, SEEK_CUR);
+
+        flushReadBuffer(stream);
+    }
 
     return 0;
 }
@@ -293,4 +301,37 @@ int puts(const char* s) {
     }
 
     return 0;
+}
+
+// https://pubs.opengroup.org/onlinepubs/9799919799/functions/fseek.html
+int fseek(FILE* stream, long offset, int whence) {
+    return fseeko(stream, offset, whence);
+}
+
+int fseeko(FILE* stream, off_t offset, int whence) {
+    if (fflush(stream) == EOF) {
+        return -1;
+    }
+
+    off_t newOffset = lseek(stream->fd, offset, whence);
+    if (newOffset < 0) {
+        return -1;
+    }
+
+    stream->flags &= ~_IO_EOF;
+
+    return 0;
+}
+
+// https://pubs.opengroup.org/onlinepubs/9799919799/functions/ftell.html
+long ftell(FILE* stream) { return ftello(stream); }
+
+off_t ftello(FILE* stream) {
+    off_t fdOffset = lseek(stream->fd, 0, SEEK_CUR);
+    if (fdOffset < 0) {
+        return -1;
+    }
+
+    size_t readBuffered = stream->readTail - stream->readHead;
+    return fdOffset - readBuffered;
 }

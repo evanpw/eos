@@ -2,6 +2,7 @@
 #pragma once
 #include <fcntl.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <sys/types.h>
 
 #ifdef __cplusplus
@@ -25,6 +26,8 @@ int dup2(int filedes, int filedes2);
 
 int chdir(const char* path);
 char* getcwd(char* buffer, size_t size);
+
+off_t lseek(int fd, off_t offset, int whence);
 
 // Non-standard
 int sleep(int ticks);

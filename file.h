@@ -15,6 +15,8 @@ struct OpenFileDescription {
 
     static estd::shared_ptr<OpenFileDescription> create(
         const estd::shared_ptr<File>& file);
+
+    off_t lseek(off_t offset, int whence);
 };
 
 namespace ext2 {
@@ -35,6 +37,9 @@ struct File {
                             size_t /*count*/) {
         return -ENOTDIR;
     }
+
+    virtual size_t size() const { return 0; }
+    virtual bool isSeekable() const { return false; }
 
     virtual bool hasInode() const { return false; }
     virtual bool isSocket() const { return false; }

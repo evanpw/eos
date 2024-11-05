@@ -28,6 +28,7 @@ enum {
     SYS_isatty,
     SYS_dup2,
     SYS_ioctl,
+    SYS_lseek,
 
     SYS_COUNT,
 };

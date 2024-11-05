@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stddef.h>
+#include <sys/types.h>
 
 #include "bits/stdio.h"
 
@@ -16,6 +17,10 @@ typedef struct _IO_FILE FILE;
 
 #define EOF -1
 #define BUFSIZ 4096
+
+#define SEEK_SET 0
+#define SEEK_CUR 1
+#define SEEK_END 2
 
 int fileno(FILE* stream);
 int feof(FILE* stream);
@@ -42,6 +47,11 @@ int setvbuf(FILE* stream, char* buf, int type, size_t size);
 void setbuf(FILE* stream, char* buf);
 
 int fflush(FILE* stream);
+
+int fseek(FILE* stream, long offset, int whence);
+int fseeko(FILE* stream, off_t offset, int whence);
+long ftell(FILE* stream);
+off_t ftello(FILE* stream);
 
 #ifdef __cplusplus
 }

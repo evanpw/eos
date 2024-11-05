@@ -44,6 +44,10 @@ int isatty(int filedes) { return try_syscall(SYS_isatty, filedes); }
 
 int dup2(int filedes, int filedes2) { return try_syscall(SYS_dup2, filedes, filedes2); }
 
+off_t lseek(int fd, off_t offset, int whence) {
+    return try_syscall(SYS_lseek, fd, offset, whence);
+}
+
 // Non-standard
 int sleep(int ticks) { return syscall(SYS_sleep, ticks); }
 
